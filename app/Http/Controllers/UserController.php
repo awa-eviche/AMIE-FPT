@@ -418,7 +418,7 @@ private function redirectAgentToHisView($request)
     $allowedRoles = [
         'formateur', 'intendant', 'surveillant',
         'directeur_etude', 'comptable_matiere',
-        'chef_de_travaux', 'assistante', 'gestionnaire', 'censeur',
+        'chef_de_travaux', 'assistante', 'gestionnaire', 'censeur', 'chef_etablissement',
     ];
 
     // Filtres existants

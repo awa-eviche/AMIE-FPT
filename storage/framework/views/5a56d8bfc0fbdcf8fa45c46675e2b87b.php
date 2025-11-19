@@ -1,0 +1,1 @@
+<link href="<?php echo e(asset('assets/libs/sweetalert2/sweetalert2.min.css')); ?>" rel="stylesheet" type="text/css" /><?php /**PATH C:\env_dev\projets\AmieFPT\AMIE-FPT\resources\views/layouts/v1/partials/swal/_style.blade.php ENDPATH**/ ?>
