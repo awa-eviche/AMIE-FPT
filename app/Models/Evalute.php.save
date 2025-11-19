@@ -1,0 +1,31 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Evalute extends Model
+{
+    use HasFactory;
+    protected $fillable = [
+        "inscription_id",
+        "critere_id",
+        "element_competence_id",
+        "type",
+        "observations",
+   "semestre",
+        "enCours",
+        // "element_competence_id",
+        // "type",
+        "acquis",
+        "nonAcquis",
+        "date",
+"note",
+        "statut"
+    ];
+
+
+
+
+}

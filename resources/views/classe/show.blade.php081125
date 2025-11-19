@@ -1,0 +1,406 @@
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Informations détaillées de la classe') }}
+        </h2>
+    </x-slot>
+
+    <div class="p-4">
+        <div class="bg-white shadow rounded-lg p-6">
+
+            {{-- ==== En-tête principale ==== --}}
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold">{{ $classe->libelle }}</h2>
+                    <a href="{{ route('classe.index') }}" class="text-blue-600 hover:underline text-sm">
+                        &larr; Retour à la liste des classes
+                    </a>
+                </div>
+                @php
+    $user = auth()->user();
+@endphp
+
+@if(
+    $user->hasRole('chef_de_travaux') ||
+    $user->hasRole('chef_etablissement') ||
+    $user->hasRole('directeur_etude')
+)
+<div onclick="window.location='{{ route('classe.formateurs.assign', $classe->id) }}'"
+     style="background-color:#0E7490; cursor: pointer; width: fit-content;"
+     class="bg-cyan-700 text-white hover:bg-cyan-800 rounded-lg text-sm px-4 py-2 cursor-pointer" >  <i class="fa fa-user-plus"></i>
+    Assigner des formateurs
+</div>
+@endif 
+                <div class="flex flex-wrap gap-2 mt-3 sm:mt-0">
+                    <form id="exportForm" method="GET" action="{{ route('classe.exportPdf', $classe->id) }}">
+                        <input type="hidden" name="annee_academique_id" id="annee_academique_export">
+                        <button type="button" onclick="exportPdf()"
+                            class="bg-blue-700 text-white text-sm px-4 py-2 rounded hover:bg-blue-800">
+                            Exporter la liste PDF
+                        </button>
+                    </form>
+
+                    @php $user = auth()->user(); @endphp
+                    @if($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement')||
+                    $user->hasRole('directeur_etude'))
+                        <button onclick="window.location='{{ route('classe.edit', $classe->id) }}'" style="background-color:#006D3A; cursor: pointer;"
+                            class="bg-green-700 text-white text-sm px-4 py-2 rounded hover:bg-green-800 cursor-pointer">
+                            Modifier
+                        </button>
+                        <form action="{{ route('classe.destroy', $classe->id) }}" method="POST"
+                            onsubmit="return confirm('Supprimer cette classe ?')">
+                            @csrf @method('DELETE')
+                            <button type="submit"
+                                class="bg-red-600 text-white text-sm px-4 py-2 rounded hover:bg-red-700">
+                                Supprimer
+                            </button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+
+            {{-- ==== Bloc Détails de la classe ==== --}}
+            <div class="border border-gray-200 rounded-lg p-5 mb-8 bg-gray-50 w-full">
+    <h3 class="bg-gray-100 p-2 text-md font-bold text-orange-600 mb-4">
+        Détails de la classe : {{ $classe->libelle }}
+    </h3>
+
+    <div class="flex flex-col lg:flex-row gap-8">
+        {{-- Bloc Informations générales --}}
+        <div class="lg:w-1/2 w-full bg-white shadow-sm rounded-md p-4 border border-gray-100">
+            <h4 class="font-bold text-lg mb-3 text-gray-800 border-b pb-2">Informations générales</h4>
+            <div class="grid grid-cols-2 text-sm gap-y-2">
+                <span class="text-gray-600">Établissement :</span>
+                <span class="font-semibold text-gray-900">{{ $classe->etablissement->nom }}</span>
+
+                <span class="text-gray-600">Filière :</span>
+                <span class="font-semibold text-gray-900">{{ $classe->niveau_etude->metier->filiere->nom }}</span>
+
+                <span class="text-gray-600">Métier :</span>
+                <span class="font-semibold text-gray-900">{{ $classe->niveau_etude->metier->nom }}</span>
+
+                <span class="text-gray-600">Niveau :</span>
+                <span class="font-semibold text-gray-900">{{ $classe->niveau_etude->nom }}</span>
+
+                <span class="text-gray-600">Modalité :</span>
+                <span class="font-semibold text-gray-900">{{ $classe->modalite }}</span>
+            </div>
+        </div>
+
+        {{-- Bloc Disciplines au programme --}}
+        <div class="lg:w-1/2 w-full bg-white shadow-sm rounded-md p-4 border border-gray-100">
+            <h4 class="font-bold text-lg mb-3 text-gray-800 border-b pb-2">
+                {{ $classe->modalite === 'PPO' ? 'Matières au programme' : 'Compétences au programme' }}
+            </h4>
+
+            <div class="text-sm grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                @if($classe->modalite === 'PPO')
+                    @forelse($matieres as $matiere)
+                        <div class="flex items-center mb-1">
+                            <i class="fa fa-star text-gray-400 mr-2"></i>
+                            <span><strong>{{ $matiere->code }}</strong> — {{ $matiere->nom }}</span>
+                        </div>
+                    @empty
+                        <p class="text-gray-500">Aucune matière définie.</p>
+                    @endforelse
+                @elseif($classe->modalite === 'APC')
+                    @forelse($competences as $comp)
+                        <div class="flex items-center mb-1">
+                            <i class="fa fa-check text-green-500 mr-2"></i>
+                            <span><strong>{{ $comp->code }}</strong> — {{ $comp->nom }}</span>
+                        </div>
+                    @empty
+                        <p class="text-gray-500">Aucune compétence définie.</p>
+                    @endforelse
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
+
+
+            {{-- ==== Grille inférieure ==== --}}
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            @php
+    $user = auth()->user();
+@endphp
+
+@if(
+    $user->hasRole('chef_de_travaux') ||
+    $user->hasRole('chef_etablissement') ||
+    $user->hasRole('directeur_etude')|| $user->hasRole('superadmin')||
+    $user->hasRole('agent')
+)
+                {{-- === Colonne gauche : Assignations === --}}
+                @if(($classe->modalite === 'PPO' && isset($matieres)) || ($classe->modalite === 'APC' && isset($competences)))
+                <div class="border rounded-lg p-4 bg-white shadow-sm">
+                    <div class="flex justify-between items-center mb-3">
+                    {{-- Bouton d’ouverture du formulaire d’assignation --}}
+<div id="toggleAssignationForm"
+     class="bg-cyan-700 text-white hover:bg-cyan-800 rounded-lg text-sm px-4 py-2  inline-flex items-center gap-2">
+    <i class="fa fa-user-plus"></i>
+    {{ $classe->modalite === 'PPO' ? 'Assigner des matières aux formateurs de la classe' : 'Assigner des compétences aux formateurs de la classe' }}
+</div>
+
+                    </div>
+
+                    <form method="POST" action="{{ route('classe.assign.store', $classe->id) }}" class="mb-4">
+                        @csrf
+                        <div class="grid grid-cols-3 gap-3 items-end">
+@php
+    $user = auth()->user();
+@endphp
+
+@if(
+    $user->hasRole('chef_de_travaux') ||
+    $user->hasRole('chef_etablissement') ||
+    $user->hasRole('directeur_etude'))
+                        <div>
+    <label class="block text-sm font-medium text-gray-700 mb-1">
+        Choisissez un formateur
+    </label>
+    <select name="formateur_id" required
+        class="w-full border-gray-300 focus:ring-first-orange focus:border-first-orange rounded-md p-2 text-sm">
+        <option value="">-- Sélectionner un formateur --</option>
+        @foreach($formateurs as $f)
+            <option value="{{ $f->id }}">{{ $f->prenom }} {{ $f->nom }}</option>
+        @endforeach
+    </select>
+</div>
+@endif
+@php
+    $user = auth()->user();
+@endphp
+
+@if(
+    $user->hasRole('chef_de_travaux') ||
+    $user->hasRole('chef_etablissement') ||
+    $user->hasRole('directeur_etude'))
+<div>
+    <label class="block text-sm font-medium text-gray-700 mb-1">
+        {{ $classe->modalite === 'PPO' ? 'Choisissez une matière' : 'Choisissez une compétence' }}
+    </label>
+
+    <select 
+        name="{{ $classe->modalite === 'PPO' ? 'matiere_id' : 'competence_id' }}" 
+        required
+        class="w-full border-gray-300 focus:ring-first-orange focus:border-first-orange rounded-md p-2 text-sm"
+    >
+        <option value="">
+            -- {{ $classe->modalite === 'PPO' ? 'Sélectionner une matière' : 'Sélectionner une compétence' }} --
+        </option>
+
+        @if($classe->modalite === 'PPO')
+            @foreach($matieres as $m)
+                <option value="{{ $m->id }}">{{ $m->nom }}</option>
+            @endforeach
+        @else
+            @foreach($competences as $c)
+                <option value="{{ $c->id }}">{{ $c->nom }}</option>
+            @endforeach
+        @endif
+    </select>
+</div>
+@endif
+@php
+    $user = auth()->user();
+@endphp
+
+@if(
+    $user->hasRole('chef_de_travaux') ||
+    $user->hasRole('chef_etablissement') ||
+    $user->hasRole('directeur_etude'))
+                            <div>
+                                <button type="submit"
+                                    class="bg-green-600 text-white text-sm px-4 py-2 rounded hover:bg-green-700">
+                                    Assigner
+                                </button>
+                            </div>
+@endif
+                        </div>
+                    </form>
+
+                    <table class="w-full text-sm border">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-3 py-2 text-left">Formateur</th>
+                                <th class="px-3 py-2 text-left">
+                                    {{ $classe->modalite === 'PPO' ? 'Matière' : 'Compétence' }}
+                                </th>
+                                <th class="px-3 py-2 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($assignations as $a)
+                                <tr class="border-b hover:bg-gray-50">
+                                    <td class="px-3 py-2">{{ $a->formateur_prenom }} {{ $a->formateur_nom }}</td>
+                                    <td class="px-3 py-2">
+                                        {{ $classe->modalite === 'PPO' ? $a->matiere_nom : $a->competence_nom }}
+                                    </td>
+                                    <td class="px-3 py-2 text-center">
+                                        <form method="POST"
+                                              action="{{ route('classe.assign.destroy', [
+                                                  $classe->id,
+                                                  $a->formateur_id,
+                                                  $classe->modalite === 'PPO' ? $a->matiere_id : $a->competence_id
+                                              ]) }}">
+                                            @csrf @method('DELETE')
+                                            <button type="submit"
+                                                    class="text-red-600 hover:text-red-800 text-xs font-bold">
+                                                Supprimer
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="3" class="text-center py-2 text-gray-500">
+                                    Aucune assignation enregistrée.
+                                </td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                @endif 
+                @endif
+               
+
+
+                {{-- === Colonne droite : Liste des apprenants complète === --}}
+                <div class="lg:w-full border shadow p-4 rounded bg-gray-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-xl">Liste des apprenants</h3>
+
+                        <form method="GET" action="{{ route('classe.show', $classe->id) }}" class="flex items-center gap-2">
+                            <label for="annee_academique_id" class="text-sm font-medium">Année académique :</label>
+                            <select name="annee_academique_id" id="annee_academique_id" onchange="this.form.submit()"
+                                    class="rounded border-gray-300 text-sm">
+                                @foreach ($anneeAcademiques as $annee)
+                                    <option value="{{ $annee->id }}" {{ request('annee_academique_id') == $annee->id ? 'selected' : '' }}>
+                                        {{ $annee->code }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </form>
+                    </div>
+
+                    <div class="flex items-start gap-6 mb-6">
+                        {{-- Ajouter un apprenant --}}
+@php
+    $user = auth()->user();
+@endphp
+
+@if(
+    $user->hasRole('chef_de_travaux') ||
+    $user->hasRole('chef_etablissement') ||
+    $user->hasRole('directeur_etude'))
+                        <div onclick="window.location='{{ route('apprenant.create', $classe->id) }}'" style="background-color:#006D3A; cursor: pointer;"
+                             class="bg-green-700 text-white hover:bg-green-800 rounded-lg text-sm px-4 py-2 cursor-pointer">
+                            Ajouter un apprenant
+                        </div>
+@endif
+                        {{-- Importer fichier Excel --}}
+@php
+    $user = auth()->user();
+@endphp
+
+@if(
+    $user->hasRole('chef_de_travaux') ||
+    $user->hasRole('chef_etablissement') ||
+    $user->hasRole('directeur_etude'))
+                             <form action="{{ route('apprenant.import', ['classe' => $classe->id]) }}"
+      method="POST" enctype="multipart/form-data"
+      class="bg-white p-4 rounded shadow w-full sm:w-full">
+    @csrf
+
+    <div class="flex flex-col sm:flex-row items-center gap-3 w-full">
+        {{-- Année académique 2025-2026 --}}
+        @php
+            $annee = $anneeAcademiques->firstWhere('code', '2025-2026');
+        @endphp
+
+        @if($annee)
+            <input type="hidden" name="annee_academique_id" value="{{ $annee->id }}">
+            <input type="hidden" value="{{ $annee->code }}" readonly>
+        @else
+            <p class="text-red-500 text-sm">⚠️ Année 2025-2026 introuvable</p>
+        @endif
+
+        {{-- Fichier + Bouton côte à côte sans espace inutile --}}
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+            <label for="file" class="text-sm font-medium whitespace-nowrap">Fichier Excel :</label>
+
+            <input type="file" name="file" id="file" accept=".xlsx, .xls"
+                   class="rounded border-gray-300 text-sm w-full sm:w-64" required>
+
+            <button type="submit"
+                    style="background-color:#006D3A;"
+                    class="text-white hover:bg-green-800 rounded-lg text-sm px-5 py-2.5 whitespace-nowrap">
+                Importer des apprenants
+            </button>
+        </div>
+    </div>
+</form>
+@endif
+                    </div>
+
+                    <hr class="mb-4">
+
+                    {{-- Tableau des apprenants --}}
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-200">
+                            <tr>
+                                <th class="px-2 py-2 text-left">Matricule</th>
+                                <th class="px-2 py-2 text-left">Nom & Prénoms</th>
+                                <th class="px-2 py-2 text-left">Date de naissance</th>
+                                <th class="px-2 py-2 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y">
+                            @forelse ($usersWithEnterprises as $entry)
+                                <tr>
+                                    <td class="px-2 py-2">{{ $entry['user']->apprenant->matricule ?? '-' }}</td>
+                                    <td class="px-2 py-2">
+                                        {{ $entry['user']->apprenant->nom ?? '-' }}
+                                        {{ $entry['user']->apprenant->prenom ?? '' }}
+                                    </td>
+                                    <td class="px-2 py-2 text-center">
+                                        {{ optional($entry['user']->apprenant)->date_naissance ? \Carbon\Carbon::parse($entry['user']->apprenant->date_naissance)->format('d-m-Y') : '-' }}
+                                    </td>
+                                    <td class="px-2 py-2 text-center">
+                                        <a href="{{ route('inscription.show', $entry['user']->id) }}" class="text-green-600 hover:text-green-800">
+                                            <i class="fa fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 font-semibold text-gray-500">
+                                        Aucun apprenant inscrit pour cette classe.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+
+                    {{-- Pagination --}}
+                    <div class="mt-4">
+                        {{ $inscriptions->appends(['annee_academique_id' => request('annee_academique_id')])->links() }}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function exportPdf() {
+            const selectedAnnee = document.getElementById('annee_academique_id').value;
+            if (!selectedAnnee) {
+                alert('Veuillez sélectionner une année académique.');
+                return;
+            }
+            document.getElementById('annee_academique_export').value = selectedAnnee;
+            document.getElementById('exportForm').submit();
+        }
+    </script>
+</x-app-layout>

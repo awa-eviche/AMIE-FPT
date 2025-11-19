@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carte du Sénégal</title>
+
+  <!-- Flowbite (nécessite Tailwind via CDN de Flowbite) -->
+  <link href="https://cdn.jsdelivr.net/npm/flowbite@2.4.1/dist/flowbite.min.css" rel="stylesheet">
+
+  <style>
+    /* Conteneur de la carte */
+    .map-container{ position:relative; display:inline-block; }
+    .center-image{ display:block; margin-left:auto; margin-right:auto; max-width:100%; height:auto; }
+
+    /* Calque pour les pastilles */
+    #badges-container{ position:absolute; inset:0; pointer-events:none; }
+
+    /* Tooltip (liste des établissements au survol) */
+    .tooltip{
+      position:absolute; z-index:1000;
+      background:#0b1b28; color:#fff; padding:12px 14px;
+      border-radius:10px; font-size:14px; line-height:1.35; pointer-events:none;
+      max-width:min(320px, 70vw); box-shadow:0 12px 24px rgba(0,0,0,.25);
+      display:none;
+    }
+    .tooltip h3{margin:0 0 6px; font-size:15px}
+    .tooltip small{opacity:.8}
+    .tooltip .list{max-height:220px; overflow:auto; margin-top:8px}
+    .tooltip .list::-webkit-scrollbar{height:8px;width:8px}
+    .tooltip .list::-webkit-scrollbar-thumb{background:#3b4a57;border-radius:8px}
+
+    /* Pastilles de comptage (auto-largeur) */
+    .region-badge{
+      position:absolute; transform:translate(-50%,-50%);
+      background:#e74c3c; color:#fff;
+      min-width:28px; height:28px; padding:0 8px;
+      border-radius:999px; display:flex; align-items:center; justify-content:center;
+      font-size:13px; font-weight:800; white-space:nowrap;
+      box-shadow:0 4px 12px rgba(231,76,60,.4);
+      pointer-events:none; /* ne bloque pas le clic sur la zone <area> */
+    }
+    .region-badge[data-hot="1"]{ background:#15a362; box-shadow:0 4px 12px rgba(21,163,98,.35) }
+
+    /* Tableau scrollable (modal des départements) */
+    .scrollable-table{ max-height:400px; overflow-y:auto; border:1px solid #e5e7eb; }
+    .scrollable-table table{ width:100%; border-collapse:collapse; }
+    .scrollable-table th, .scrollable-table td{ border:1px solid #e5e7eb; padding:8px; text-align:left; }
+    .scrollable-table th{ background-color:#f9fafb; }
+  </style>
+</head>
+<body class="p-6">
+
+  <div class="map-container mx-auto">
+    <!-- Image + calques pastilles/tooltip -->
+    <img id="carteImage"
+         src="{{ asset('carte.gif') }}"  {{-- Remplace par asset('MapSenegal.png') si tes coords sont pour le PNG --}}
+         alt="Carte du Sénégal"
+         usemap="#carte_senegal"
+         class="center-image" />
+
+    <div id="badges-container"></div>
+    <div id="tooltip" class="tooltip"></div>
+
+    <!-- 1) Le <map> ne doit contenir QUE des <area> -->
+    <map name="carte_senegal">
+      @foreach($departements as $departement)
+        <area
+          alt="{{ $departement->nom_depart }}"
+          title="{{ $departement->nom_depart }}"
+          href="#"
+          coords="{{ $departement->coords }}"
+          shape="poly"
+          data-modal-target="dep-modal-{{ $departement->id }}"
+          data-modal-toggle="dep-modal-{{ $departement->id }}">
+      @endforeach
+    </map>
+  </div>
+
+  <!-- 2) Modals DÉPARTEMENTS (rendus hors du <map>) -->
+  @foreach($departements as $departement)
+    <div id="dep-modal-{{ $departement->id }}"
+         data-modal-backdrop="static" tabindex="-1" aria-hidden="true"
+         class="hidden fixed inset-0 z-50 overflow-y-auto overflow-x-hidden flex items-center justify-center bg-black/50">
+      <div class="relative p-4 w-full max-w-3xl mx-auto">
+        <div class="relative bg-white rounded-lg shadow dark:bg-gray-800">
+          <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-700">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+              {{ $departement->nom_depart }}
+            </h3>
+            <button data-modal-hide="dep-modal-{{ $departement->id }}"
+                    class="text-gray-500 hover:text-gray-700 dark:text-gray-300">✕</button>
+          </div>
+
+          <div class="px-3 py-2 scrollable-table bg-white dark:bg-gray-800">
+            @if($departement->efpts->isEmpty())
+              <p class="text-center text-gray-500 dark:text-gray-300 py-6">Pas d’établissement</p>
+            @else
+              <table class="min-w-full border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr class="bg-gray-100 dark:bg-gray-700">
+                    <th class="px-4 py-2 border dark:border-gray-700 text-gray-900 dark:text-gray-100">Nom</th>
+                    <th class="px-4 py-2 border dark:border-gray-700 text-gray-900 dark:text-gray-100">Téléphone</th>
+                    <th class="px-4 py-2 border dark:border-gray-700 text-gray-900 dark:text-gray-100">Adresse</th>
+                    <th class="px-4 py-2 border dark:border-gray-700 text-gray-900 dark:text-gray-100">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @foreach($departement->efpts as $etablissement)
+                    <tr class="bg-white dark:bg-gray-800">
+                      <td class="px-4 py-2 border dark:border-gray-700 text-gray-800 dark:text-gray-100">{{ $etablissement->nom }}</td>
+                      <td class="px-4 py-2 border dark:border-gray-700 text-gray-800 dark:text-gray-100">{{ $etablissement->tel }}</td>
+                      <td class="px-4 py-2 border dark:border-gray-700 text-gray-800 dark:text-gray-100">{{ $etablissement->adresse }}</td>
+                      <td class="px-4 py-2 border dark:border-gray-700">
+                        <button type="button"
+                                class="open-efp inline-flex items-center px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                                data-open-efp="efp-modal-{{ $etablissement->id }}"
+                                data-close-dep="dep-modal-{{ $departement->id }}">
+                          Voir formations
+                        </button>
+                      </td>
+                    </tr>
+                  @endforeach
+                </tbody>
+              </table>
+            @endif
+          </div>
+
+          <div class="flex items-center p-4 md:p-5 border-t border-gray-200 dark:border-gray-700 rounded-b">
+            <button data-modal-hide="dep-modal-{{ $departement->id }}"
+                    type="button"
+                    class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5">
+              Fermer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  @endforeach
+
+  <!-- 3) Modals ÉTABLISSEMENTS (formations), hors du <map> -->
+  @foreach($departements as $departement)
+    @foreach($departement->efpts as $etablissement)
+      <div id="efp-modal-{{ $etablissement->id }}"
+           data-modal-backdrop="static" tabindex="-1" aria-hidden="true"
+           class="hidden fixed inset-0 z-50 overflow-y-auto overflow-x-hidden flex items-center justify-center bg-black/50">
+        <div class="relative p-4 w-full max-w-3xl mx-auto">
+          <div class="relative bg-white rounded-lg shadow dark:bg-gray-800">
+            <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-700">
+              <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+                {{ $etablissement->nom }}
+              </h3>
+              <button data-modal-hide="efp-modal-{{ $etablissement->id }}"
+                      class="text-gray-500 hover:text-gray-700 dark:text-gray-300">✕</button>
+            </div>
+
+            <div class="px-3 py-2 bg-white dark:bg-gray-800">
+              <table class="w-full border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr class="bg-blue-700 text-white">
+                    <th class="px-4 py-2 border border-blue-800">Filières/Métiers</th>
+                    <th class="px-4 py-2 border border-blue-800">Niveau</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @forelse($etablissement->programms as $programm)
+                    <tr class="bg-white dark:bg-gray-800">
+                      <td class="px-4 py-2 border dark:border-gray-700 text-gray-800 dark:text-gray-100">{{ $programm->nom ?? '-' }}</td>
+                      <td class="px-4 py-2 border dark:border-gray-700 text-gray-800 dark:text-gray-100">{{ $programm->grade->nom ?? '-' }}</td>
+                    </tr>
+                  @empty
+                    <tr>
+                      <td colspan="2" class="px-4 py-6 text-center text-gray-500 dark:text-gray-300">Aucune formation renseignée.</td>
+                    </tr>
+                  @endforelse
+                </tbody>
+              </table>
+            </div>
+
+            <div class="flex items-center p-4 md:p-5 border-t border-gray-200 dark:border-gray-700 rounded-b">
+              <button data-modal-hide="efp-modal-{{ $etablissement->id }}"
+                      type="button"
+                      class="py-2.5 px-5 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700">
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    @endforeach
+  @endforeach
+
+  <!-- Flowbite JS -->
+  <script src="https://cdn.jsdelivr.net/npm/flowbite@2.4.1/dist/flowbite.min.js"></script>
+
+  <script>
+    /* ========= Données JS pour tooltips/pastilles ========= */
+    // Clé = nom du département, Valeur = [liste des noms d'établissements]
+    const establishments = {};
+    @foreach($departements as $d)
+      establishments[@json($d->nom_depart)] = @json($d->efpts->pluck('nom')->values());
+    @endforeach
+
+    /* ========= Références DOM ========= */
+    const mapImage = document.getElementById('carteImage');
+    const badgesContainer = document.getElementById('badges-container');
+    const tooltip = document.getElementById('tooltip');
+    const areas = Array.from(document.querySelectorAll('map[name="carte_senegal"] area'));
+
+    /* ========= Pastilles (compte) ========= */
+    function getPolyCenter(area){
+      const pts = area.coords.split(',').map(Number);
+      let sx=0, sy=0, n=0;
+      for(let i=0;i<pts.length;i+=2){ sx+=pts[i]; sy+=pts[i+1]; n++; }
+      return { x: sx/n, y: sy/n };
+    }
+
+    function createCountBadges(){
+      const w = mapImage.naturalWidth  || mapImage.clientWidth;
+      const h = mapImage.naturalHeight || mapImage.clientHeight;
+      badgesContainer.innerHTML = '';
+
+      areas.forEach(area=>{
+        const key = area.title || area.alt || '';
+        const count = (establishments[key]?.length || 0);
+        if(count>0){
+          const {x,y} = getPolyCenter(area);
+          const badge = document.createElement('div');
+          badge.className = 'region-badge';
+          const label = (count >= 100) ? '99+' : String(count); // évite débordement
+          badge.textContent = label;
+
+          // Position en % => reste correct au redimensionnement / zoom
+          badge.style.left = (x / w * 100) + '%';
+          badge.style.top  = (y / h * 100) + '%';
+
+          if(count >= 10) badge.setAttribute('data-hot','1');
+          badgesContainer.appendChild(badge);
+        }
+      });
+    }
+
+    // Re-créer les pastilles au resize
+    window.addEventListener('resize', createCountBadges);
+
+    /* ========= Tooltip (survol) ========= */
+    function positionTooltip(e){
+      const pad = 16;
+      const rect = mapImage.getBoundingClientRect();
+      const tw = Math.min(320, window.innerWidth*0.7);
+      const x = Math.min(e.pageX + pad, window.scrollX + rect.right - tw - pad);
+      const y = Math.min(e.pageY + pad, window.scrollY + rect.bottom - 180);
+      tooltip.style.left = x + 'px';
+      tooltip.style.top  = y + 'px';
+    }
+    function showTooltip(regionName, e){
+      const list = establishments[regionName] || [];
+      if(list.length === 0) return;
+      const title = `<h3>${regionName}</h3><small>${list.length} établissement(s)</small>`;
+      const items = list.map(n => `• ${n}`).join('<br>');
+      tooltip.innerHTML = `${title}<div class="list">${items}</div>`;
+      tooltip.style.display = 'block';
+      positionTooltip(e);
+    }
+    function hideTooltip(){ tooltip.style.display = 'none'; }
+
+    areas.forEach(area=>{
+      area.addEventListener('mouseover', e => showTooltip(area.title || area.alt, e));
+      area.addEventListener('mousemove', positionTooltip);
+      area.addEventListener('mouseout', hideTooltip);
+    });
+
+    /* ========= Chaînage des modals (Voir formations) ========= */
+    document.addEventListener('click', (e)=>{
+      const btn = e.target.closest('.open-efp');
+      if(!btn) return;
+      e.preventDefault();
+
+      const depId = btn.getAttribute('data-close-dep');
+      const efpId = btn.getAttribute('data-open-efp');
+
+      const dep = document.getElementById(depId);
+      const efp = document.getElementById(efpId);
+
+      if (dep) { dep.classList.add('hidden'); dep.classList.remove('flex'); document.body.style.overflow = ''; }
+      if (efp) { efp.classList.remove('hidden'); efp.classList.add('flex'); document.body.style.overflow = 'hidden'; }
+    });
+
+    /* ========= Init ========= */
+    function init(){
+      if(!mapImage.complete){
+        mapImage.addEventListener('load', createCountBadges, { once:true });
+      }else{
+        createCountBadges();
+      }
+    }
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

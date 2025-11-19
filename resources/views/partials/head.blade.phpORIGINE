@@ -1,0 +1,72 @@
+<?php
+function get_base_url() {
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+    $host = $_SERVER['HTTP_HOST'];
+    $base_url = $protocol . $host;
+
+    return $base_url;
+}
+
+$base_url = get_base_url();
+?>
+
+
+<nav id="header" class="fixed w-full z-30 top-0 text-white p-0">
+        <div class="w-full container mx-auto flex flex-wrap items-center justify-between mt-0 py-2 pl-10 pr-10">
+            <div class="pl-0 flex items-center">
+                <a href="#" class="toggleColour text-black no-underline hover:no-underline font-bold text-2xl lg:text-8xl block" aria-label="Logo PGIEFPT">
+    <img src="{{ asset('frontAssets2/images/logoamifpt.jpg') }}" alt="Logo PGIEFPT" class="w-auto h-12 lg:h-16">
+</a>
+            </div>
+            <div class="block lg:hidden pr-4">
+                <button id="nav-toggle" class="flex items-center p-1 text-pink-800 hover:text-gray-900 focus:outline-none focus:shadow-outline transform transition hover:scale-105 duration-300 ease-in-out">
+                    <svg class="fill-current h-6 w-6" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <title>Espace_Publique</title>
+                        <path d="M0 3h20v2H0V3zm0 6h20v2H0V9zm0 6h20v2H0v-2z" />
+                    </svg>
+                </button>
+            </div>
+            <div class=" shadow-1xl w-full flex-grow lg:flex lg:items-center lg:w-auto hidden mt-2 lg:mt-0 bg-white lg:bg-transparent text-black p-4 lg:p-0 z-20" id="nav-content">
+                <ul class="list-reset lg:flex justify-end flex-1 items-center">
+                    <li class="mr-3">
+                                            <a class="inline-block py-2 px-4 text-black font-bold no-underline" href="<?php echo $base_url; ?>/#accueil"><strong>Accueil</strong></a>
+
+                    </li>
+                    <li class="mr-3">
+                       <a class="inline-block text-black no-underline hover:text-gray-800 hover:text-underline py-2 px-4" href="{{route('front.programmes')}}" style="color: rgb(146, 147, 149);">Programmes</a>
+                    </li>
+
+                    <!--li class="mr-3">
+                          <a class="inline-block text-black no-underline hover:text-gray-800 hover:text-underline py-2 px-4" href="<?php echo $base_url; ?>/#projets" style="color: rgb(146, 147, 149);">Projets</a>
+                    </li-->
+                    <li class="mr-3">
+                        <a class="inline-block text-black no-underline hover:text-gray-800 hover:text-underline py-2 px-4" href="{{route('front.etablissements')}}" style="color: rgb(146, 147, 149);">EFPT</a>
+                    </li>
+                    <!--li class="mr-3">
+                                            <a class="inline-block text-black no-underline hover:text-gray-800 hover:text-underline py-2 px-4" href="<?php echo $base_url; ?>/#faqs" style="color: rgb(146, 147, 149);">FAQ</a>
+
+                    </li-->
+                    <li class="mr-3">
+                        <a class="inline-block text-black no-underline hover:text-gray-800 hover:text-underline py-2 px-4" href="{{route('contact')}}" style="color: rgb(146, 147, 149);">Contact</a>
+                    </li>
+                    <li class="mr-3">
+                        <a class="inline-block text-black no-underline hover:text-gray-800 hover:text-underline py-2 px-4"  href='/login' style="color: rgb(146, 147, 149) ;">Se connecter</a>
+                    </li>
+                </ul>
+
+                            <a href="{{url('/request')}}" class="text-white hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800" style="background-color: rgb(6, 143, 125);">Ouverture Etablissements Prives</a>
+
+
+            </div>
+        </div>
+    </nav>
+ <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const navToggle = document.getElementById('nav-toggle');
+        const navContent = document.getElementById('nav-content');
+
+        navToggle.addEventListener('click', function () {
+            navContent.classList.toggle('hidden');
+        });
+    });
+</script>

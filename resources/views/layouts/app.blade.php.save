@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <title>{{ config('app.name', 'PGI') }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;600;700;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{{ asset('backofficeAssets/build/css/tailwind.css') }}" />
+    @include('layouts.v1.partials.swal._style')
+
+
+    @yield('customCss')
+    <!-- Scripts -->
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <!-- Styles -->
+    @livewireStyles
+    @yield('stylesAdditionnels')
+    <!-- My Custom CSS -->
+    <link href="{{ asset('assets/css/custom.css') }}" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/datepicker.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/alpine-collective/alpine-magic-helpers@0.5.x/dist/component.min.js"></script>
+    {{-- <script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.7.3/dist/alpine.min.js" defer></script> --}}
+</head>
+
+<body>
+    <div x-data="setup()" x-init="$refs.loading.classList.add('hidden');
+    setColors(color);">
+        <div class="flex h-screen antialiased text-gray-900 bg-gray-100 dark:bg-dark dark:text-light">
+            <!-- écran d'acceuil copiright KGM -->
+            <div x-ref="loading" class="fixed inset-0 z-50 flex items-center justify-center text-3xl font-semibold text-white shadow-lg" style="background-color:#068F7D;">
+                AMIE-FPT
+            </div>
+            <!-- Sidebar -->
+            <aside class="flex-shrink-0 hidden w-64 bg-white border-r dark:border-primary-darker dark:bg-darker md:block">
+                <div class="flex flex-col h-full">
+                    @include('layouts.navigation')
+                </div>
+            </aside>
+            <div class="flex-1 h-full overflow-x-hidden overflow-y-auto">
+                <!-- Header -->
+ 		 @include('partials.hea')  
+                <!-- Main content -->
+                <main class="min-h-screen">
+                    <!-- Content header -->
+                    <div class="flex items-center justify-start px-4 py-4 border-b lg:py-6 dark:border-primary-darker">
+                        <h1 class="text-1xl font-semibold">{{$header?? null}}</h1>
+                    </div>
+                    @include('layouts.v1.partials._alert')
+                    {{ $slot }}
+                </main>
+                <!-- Main footer -->
+                <footer class="flex items-center justify-between p-4 bg-white border-t dark:bg-gray-800 dark:border-gray-700">
+                    <div>MFPT CI &copy; 2024</div>
+                </footder>
+            </div>
+
+        </div>
+    </div>
+
+    @include('layouts.v1.partials._script')
+    @include('layouts.v1.partials.swal._script')
+    @stack('myJS')
+
+    <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.bundle.min.js"></script>
+    <script src="{{ asset('backofficeAssets/build/js/script.js') }}"></script> -->
+    <script>
+        const setup = () => {
+            const getTheme = () => {
+                if (window.localStorage.getItem('dark')) {
+                    return JSON.parse(window.localStorage.getItem('dark'))
+                }
+
+                return !!window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+            }
+
+            const setTheme = (value) => {
+                window.localStorage.setItem('dark', value)
+            }
+
+            const getColor = () => {
+                if (window.localStorage.getItem('color')) {
+                    return window.localStorage.getItem('color')
+                }
+                return 'cyan'
+            }
+
+            const setColors = (color) => {
+                const root = document.documentElement
+                root.style.setProperty('--color-primary', `var(--color-${color})`)
+                root.style.setProperty('--color-primary-50', `var(--color-${color}-50)`)
+                root.style.setProperty('--color-primary-100', `var(--color-${color}-100)`)
+                root.style.setProperty('--color-primary-light', `var(--color-${color}-light)`)
+                root.style.setProperty('--color-primary-lighter', `var(--color-${color}-lighter)`)
+                root.style.setProperty('--color-primary-dark', `var(--color-${color}-dark)`)
+                root.style.setProperty('--color-primary-darker', `var(--color-${color}-darker)`)
+                this.selectedColor = color
+                window.localStorage.setItem('color', color)
+                //
+            }
+
+            const updateBarChart = (on) => {
+                const data = {
+                    data: randomData(),
+                    backgroundColor: 'rgb(207, 250, 254)',
+                }
+                if (on) {
+                    barChart.data.datasets.push(data)
+                    barChart.update()
+                } else {
+                    barChart.data.datasets.splice(1)
+                    barChart.update()
+                }
+            }
+
+            const updateDoughnutChart = (on) => {
+                const data = random()
+                const color = 'rgb(207, 250, 254)'
+                if (on) {
+                    doughnutChart.data.labels.unshift('Seb')
+                    doughnutChart.data.datasets[0].data.unshift(data)
+                    doughnutChart.data.datasets[0].backgroundColor.unshift(color)
+                    doughnutChart.update()
+                } else {
+                    doughnutChart.data.labels.splice(0, 1)
+                    doughnutChart.data.datasets[0].data.splice(0, 1)
+                    doughnutChart.data.datasets[0].backgroundColor.splice(0, 1)
+                    doughnutChart.update()
+                }
+            }
+
+            const updateLineChart = () => {
+                lineChart.data.datasets[0].data.reverse()
+                lineChart.update()
+            }
+
+            return {
+                loading: true,
+                isDark: getTheme(),
+                toggleTheme() {
+                    this.isDark = !this.isDark
+                    setTheme(this.isDark)
+                },
+                setLightTheme() {
+                    this.isDark = false
+                    setTheme(this.isDark)
+                },
+                setDarkTheme() {
+                    this.isDark = true
+                    setTheme(this.isDark)
+                },
+                color: getColor(),
+                selectedColor: 'cyan',
+                setColors,
+                toggleSidbarMenu() {
+                    this.isSidebarOpen = !this.isSidebarOpen
+                },
+                isSettingsPanelOpen: false,
+                openSettingsPanel() {
+                    this.isSettingsPanelOpen = true
+                    this.$nextTick(() => {
+                        this.$refs.settingsPanel.focus()
+                    })
+                },
+                isNotificationsPanelOpen: false,
+                openNotificationsPanel() {
+                    this.isNotificationsPanelOpen = true
+                    this.$nextTick(() => {
+                        this.$refs.notificationsPanel.focus()
+                    })
+                },
+                isSearchPanelOpen: false,
+                openSearchPanel() {
+                    this.isSearchPanelOpen = true
+                    this.$nextTick(() => {
+                        this.$refs.searchInput.focus()
+                    })
+                },
+                isMobileSubMenuOpen: false,
+                openMobileSubMenu() {
+                    this.isMobileSubMenuOpen = true
+                    this.$nextTick(() => {
+                        this.$refs.mobileSubMenu.focus()
+                    })
+                },
+                isMobileMainMenuOpen: false,
+                openMobileMainMenu() {
+                    this.isMobileMainMenuOpen = true
+                    this.$nextTick(() => {
+                        this.$refs.mobileMainMenu.focus()
+                    })
+                },
+                updateBarChart,
+                updateDoughnutChart,
+                updateLineChart,
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte du SÃ©nÃ©gal</title>
+    <link href="https://cdn.jsdelivr.net/npm/flowbite@2.4.1/dist/flowbite.min.css" rel="stylesheet">
+    <style>
+        .map {
+            position: relative;
+            display: inline-block;
+        }
+
+        .center-image {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        [data-popover] {
+            position: absolute;
+            z-index: 1000;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+        .scrollable-table {
+    max-height: 400px; /* Ajustez la hauteur selon vos besoins */
+    overflow-y: auto;
+    border: 1px solid #ccc;
+  }
+
+  .scrollable-table table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .scrollable-table th, .scrollable-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+
+  .scrollable-table th {
+    background-color: #f2f2f2;
+  }
+    </style>
+</head>
+
+<body>
+    <div class="map-container">
+        <img src="carte.gif" alt="Carte du SÃ©nÃ©gal" usemap="#carte_senegal" class="center-image" />
+        <map name="carte_senegal">
+            @foreach($departements as $departement)
+            <area target="" alt="{{ $departement->nom_depart }}" title="{{ $departement->nom_depart }}" href="#" coords="{{ $departement->coords }}" shape="poly" data-modal-toggle="static-modal-{{ $departement->id }}">
+            <div id="static-modal-{{ $departement->id }}" data-modal-backdrop="static" tabindex="-1" aria-hidden="true" class="hidden fixed inset-0 z-50 overflow-y-auto overflow-x-hidden flex items-center justify-center bg-black bg-opacity-50">
+                <div class="relative p-4 w-full max-w-2xl mx-auto">
+                    <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
+                        <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
+                            <h3 class="text-xl font-bold text-gray-900 dark:text-white absolute  left-1/2 transform -translate-x-1/2 -translate-y-1/2 top-5" >
+                                {{ $departement->nom_depart }}
+                            </h3>
+                        </div>
+                        <div class="px-3 py-2 scrollable-table">
+                            @if($departement->efpts->isEmpty())
+                            <p class="text-center text-gray-500">Pas d'Ã©tablissement</p>
+                            @else
+                            <table class="min-w-full bg-white border border-gray-200 ">
+                                <thead>
+                                    <tr class="bg-gray-100">
+                                        <th class="px-4 py-2 border">Nom</th>
+                                        <th class="px-4 py-2 border">TÃ©lÃ©phone</th>
+                                        <th class="px-4 py-2 border">Adresse</th>
+                                        <th class="px-4 py-2 border">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($departement->efpts as $etablissement)
+                                    <tr>
+                                        <td class="px-4 py-2 border">{{ $etablissement->nom }}</td>
+                                        <td class="px-4 py-2 border">{{ $etablissement->tel }}</td>
+                                        <td class="px-4 py-2 border">{{ $etablissement->adresse }}</td>
+                                        <td class="px-4 py-2 border">
+                                            <a data-modal-toggle="static-modal-{{ $etablissement->id }}" href="#" class="block text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" type="button">
+                                                Voir formations
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                            @endif
+                        </div>
+                        <div class="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
+                            <button data-modal-hide="static-modal-{{ $departement->id }}" type="button" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Fermer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endforeach
+        </map>
+
+        @foreach($departements as $departement)
+        @foreach($departement->efpts as $etablissement)
+        <div id="static-modal-{{ $etablissement->id }}" data-modal-backdrop="static" tabindex="-1" aria-hidden="true" class="bg-black bg-opacity-25 hidden overflow-y-auto overflow-x-hidden fixed top-0 left-0 z-50 w-full h-full flex items-center justify-center">
+            <div class="fixed inset-0 bg-black opacity-50"></div>
+            <div class="relative p-4 w-full max-w-2xl max-h-full transform translate-x-10">
+                <div class="relative bg-white rounded-lg shadow dark:bg-gray-700">
+                    <div class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white ">
+                            {{ $etablissement->nom }}
+                        </h3>
+                    </div>
+                    <div class="px-3 py-2">
+                        <table class="w-full  border border-gray-200">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="px-4 py-2 border bg-blue-700">FiliÃ¨res/MÃ©tiers</th>
+                                  
+                                    <th class="px-4 py-2 border bg-blue-700">Niveau</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($etablissement->programms as $programm)
+                                <tr>
+                                  
+                                    <td class="px-4 py-2 border">{{ $programm->nom ?? '-' }}</td>
+                                    <td class="px-4 py-2 border">{{ $programm->grade->nom ?? '-' }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
+                        <button data-modal-hide="static-modal-{{ $etablissement->id }}" type="button" class="py-2.5 px-5 ms-3 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">Fermer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endforeach
+        @endforeach
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.4.1/dist/flowbite.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Fonction pour ouvrir le modal
+            function openModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    modal.classList.add('flex');
+                    document.body.style.overflow = 'hidden';
+                }
+            }
+
+            // Fonction pour fermer le modal
+            function closeModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                    document.body.style.overflow = '';
+                }
+            }
+
+            // Gestionnaire pour ouvrir les modals
+            document.querySelectorAll('[data-modal-toggle]').forEach(trigger => {
+                trigger.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const modalId = trigger.getAttribute('data-modal-toggle');
+                    openModal(modalId);
+                });
+            });
+
+            // Gestionnaire pour fermer les modals
+            document.querySelectorAll('[data-modal-hide]').forEach(trigger => {
+                trigger.addEventListener('click', () => {
+                    const modalId = trigger.getAttribute('data-modal-hide');
+                    closeModal(modalId);
+                });
+            });
+
+            // Fermer le modal en cliquant en dehors
+            document.querySelectorAll('[id^="static-modal-"]').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        closeModal(modal.id);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

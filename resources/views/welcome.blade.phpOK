@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+
+<head>
+    @include('layouts.v1.partials._head')
+    <link rel="stylesheet" href="{{asset('assets/libs/splide/css/splide.min.css')}}">
+    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
+</head>
+
+<body class="leading-normal tracking-normal text-white" style="font-family: poppins;overflow-x: hidden;font-size: 14px;">
+    @include('partials.head')
+    <div class=" pt-4 pl-20 pr-70" id="acceuil">
+      <div class="container px-0 mx-auto flex flex-wrap flex-col md:flex-row items-center">
+          <div class="flex flex-col w-full md:w-2/5 justify-center items-start text-center md:text-left">
+               <p class="uppercase tracking-loose w-full"></p>
+             <h1 class="my-4 text-7xl font-bold leading-tight" style="color: black; color:  rgb(0, 0, 0); font-weight: 900PX
+       ;">
+Bienvenue
+
+              </h1>
+
+ <p class="leading-normal text-2xl mb-8 flex " style="line-height: 30px; color: black;">
+              Application de Management Intégré des Etablissements de Formation professionnelle
+                   et technique du Ministere de la Formation professionnelle et tehnique
+             </p>
+     
+           <!--p class="text_img" style="line-height: 25px; color: rgb(6, 3, 0); font-size: 15px;">Application
+                   pour le management intégrée des établissements de formation professionnelle
+                   et technique du MFP </p--><i class="fa fa-etsy" aria-hidden="true"></i>
+               <button class="mx-auto lg:mx-0 hover:underline  text-gray-800 font-bold rounded-full my-6 py-4 px-8 shadow-lg focus:outline-none focus:shadow-outline transform transition hover:scale-105 duration-300 ease-in-out" style="background-color: rgb(6, 143, 125); color: white;">
+                 En savoir plus
+              </button>
+            </div>
+            <div class="blog-right  w-full md:w-3/5 py-6 text-center float-right">
+              <img class="w-full md:w-4/2 z-50" src="{{asset('frontAssets2/images/Group 11030.svg')}}" />
+            </div>
+       </div>
+</div>
+
+
+
+    <!--section class=" border-b py-8" id="propos" style="background-image: url({{asset('frontAssets2/images/Group\ 11033\ \(1\).svg')}}); background-repeat: no-repeat;">
+        <div class="container max-w-5xl mx-auto m-8">
+            <h2 class="w-full my-2 text-5xl font-bold leading-tight text-center text-gray-800">
+                A propos
+            </h2>
+            <div class="w-full mb-2">
+                <div class="h-1 mx-auto gradient w-64 opacity-25 my-0 py-0 rounded-t"></div>
+            </div>
+            <div class="flex flex-wrap flex-col-reverse sm:flex-row">
+                <div class="w-full sm:w-1/2 p-0 mt-6">
+                    <img src="{{asset('frontAssets2/images/vb.jpg')}}" alt>
+                </div>
+                <div class="w-full sm:w-1/2 p-2 mt-6">
+                    <div class="align-middle">
+                        <h3 class="text-3xl text-gray-800 font-bold leading-none mb-3">
+                            <p class="text-gray-600 mb-1" style="line-height: 40px;"> 
+                                Mot</p>
+                            <p class="miinistre;">du ministere</p>
+                        </h3>
+                        <p class="text-gray-600 mb-8 mt-10" style="font-size: 12px;">
+                            “Nous avons un Ministère stratégique et transversal. Si nous aspirons au developpement de notre pays,
+                            tout ce dont nous avons besoin est de mettre le pays au travail. Nous avons besoin de former notre jeunesse de
+                            la façon la plus optimale et la plus intelligente.“
+
+                            <br />
+                            <br />
+                        <p class="text-gray-600 mb-8 mt-10" style="font-size: 12px;"><i>Amadou Moustapha Ndieck SARRE</i></p>
+                        <br />
+                        <br />
+
+                        {{-- <button type="button" class="text-white  hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 " style="background-color: rgb(6, 143, 125) ;">En savoir plus</button>--}}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="container pt-10">
+            <h2 class="w-full my-2 text-5xl font-bold leading-tight text-center text-gray-800">
+                Quelques
+                <p class="sous-titre" style="font-size: 20px; font-style: normal;">services
+                    & <span class="decor" style="text-decoration: underline;">directions</span> </p>
+            </h2>
+                
+            </div>
+
+         
+        </div>
+
+    </section-->
+    <!--section class=" border-b py-8;" id="actualites" style="background-image: url({{asset('frontAssets2/images/Rectangle\ 13.svg')}}); background-repeat: no-repeat;">
+        <div class="container max-w-5xl mx-auto m-0">
+
+            <div class="w-full mb-2">
+                <div class="h-7 mx-auto gradient w-64 opacity-25 my-0 py-0 rounded-t"></div>
+            </div>
+            {{-- <div class="container" style="color: black;">
+                <p class="etablissement" style="font-size: 30px;"> <strong>Les établissements</strong> de </p>
+                <P class="font" style="font-size: 30px; font-style: initial;">formation professionnelle</P>
+            </div>--}}
+
+            <div class="flex flex-wrap flex-col-reverse sm:flex-row">
+                <div class="w-full sm:w-1/2 p-0 ">
+
+                </div>
+                <div class="w-full sm:w-1/2 p-0">
+                    <div class="align-middle">
+
+                        {{-- <p class="text-gray-600 " style="font-size: 12px;">
+                            Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.
+
+                        </p> --}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="w-full my-2 text-5xl font-bold leading-tight text-center text-gray-800 mt-12 mb-12">
+            Actualités
+            <p class="sous-titre" style="font-size: 20px; font-style: normal;">
+                <span class="decor" style="text-decoration: underline;"></span>
+            </p>
+        </h2>
+        <div class="container pt-10 ml-52 mr-13">
+            <div class="card-carousell  grid gap-6 mb-8 md:grid-cols-2 xl:grid-cols-4">
+                <!-- Card -->
+               
+            </div>
+        </div>
+
+    </section-->
+
+    <!--section class=" border-b py-8;" id="faqs">
+        <h2 class="w-full my-2 text-5xl font-bold leading-tight text-center text-gray-800 mt-12 mb-12">
+            Questions
+            <p class="text" style="font-style: normal; font-size: 30px;">fréquentes</p>
+            <p class="sous-titre" style="font-size: 20px; font-style: normal;">
+                <span class="decor" style="text-decoration: underline;"></span>
+            </p>
+
+        </h2>
+
+        <div class="max-w-screen-xl mx-auto px-5 bg-white min-h-sceen">
+            <div class="grid divide-y divide-neutral-200 max-w-4xl mx-auto mt-8">
+                @foreach ($faqs as $faq)
+                <div class="py-5">
+                    <details class="group">
+                        <summary class="flex justify-between items-center font-medium cursor-pointer list-none">
+                            <span class="text-black"> {{ $faq->question }}</span>
+                            <span class="transition group-open:rotate-180">
+                                <svg fill="none" height="24" shape-rendering="geometricPrecision" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" viewBox="0 0 24 24" width="24">
+                                    <path d="M6 9l6 6 6-6"></path>
+                                </svg>
+                            </span>
+                        </summary>
+                        <p class="text-neutral-500 mt-3 group-open:animate-fadeIn">
+                            {{ $faq->reponse }}
+                        </p>
+                    </details>
+                </div>
+                @endforeach
+            </div>
+        </div>
+    </section-->
+    @include('partials.footer')
+
+    <script>
+        var scrollpos = window.scrollY;
+        var header = document.getElementById("header");
+        var navcontent = document.getElementById("nav-content");
+        var navaction = document.getElementById("navAction");
+        var brandname = document.getElementById("brandname");
+        var toToggle = document.querySelectorAll(".toggleColour");
+
+        document.addEventListener("scroll", function() {
+            /*Apply classes for slide in bar*/
+            scrollpos = window.scrollY;
+
+            if (scrollpos > 10) {
+                header.classList.add("bg-white");
+                navaction.classList.remove("bg-white");
+                navaction.classList.add("image");
+                navaction.classList.remove("text-gray-800");
+                navaction.classList.add("text-white");
+                //Use to switch toggleColour colours
+                for (var i = 0; i < toToggle.length; i++) {
+                    toToggle[i].classList.add("text-gray-800");
+                    toToggle[i].classList.remove("text-white");
+                }
+                header.classList.add("shadow");
+                navcontent.classList.remove("bg-gray-100");
+                navcontent.classList.add("bg-white");
+            } else {
+                header.classList.remove("bg-white");
+                navaction.classList.remove("gradient");
+                navaction.classList.add("bg-white");
+                navaction.classList.remove("text-white");
+                navaction.classList.add("text-gray-800");
+                //Use to switch toggleColour colours
+                for (var i = 0; i < toToggle.length; i++) {
+                    toToggle[i].classList.add("text-white");
+                    toToggle[i].classList.remove("text-gray-800");
+                }
+
+                header.classList.remove("shadow");
+                navcontent.classList.remove("bg-white");
+                navcontent.classList.add("bg-gray-100");
+            }
+        });
+    </script>
+    <script>
+        /*Toggle dropdown list*/
+        /*https://gist.github.com/slavapas/593e8e50cf4cc16ac972afcbad4f70c8*/
+
+        var navMenuDiv = document.getElementById("nav-content");
+        var navMenu = document.getElementById("nav-toggle");
+
+        document.onclick = check;
+
+        function check(e) {
+            var target = (e && e.target) || (event && event.srcElement);
+
+            //Nav Menu
+            if (!checkParent(target, navMenuDiv)) {
+                // click NOT on the menu
+                if (checkParent(target, navMenu)) {
+                    // click on the link
+                    if (navMenuDiv.classList.contains("hidden")) {
+                        navMenuDiv.classList.remove("hidden");
+                    } else {
+                        navMenuDiv.classList.add("hidden");
+                    }
+                } else {
+                    // click both outside link and outside menu, hide menu
+                    navMenuDiv.classList.add("hidden");
+                }
+            }
+        }
+
+        function checkParent(t, elm) {
+            while (t.parentNode) {
+                if (t == elm) {
+                    return true;
+                }
+                t = t.parentNode;
+            }
+            return false;
+        }
+        // Initialization for ES Users
+        import {
+            Carousel,
+            initTE,
+        } from "tw-elements";
+
+        initTE({
+            Carousel
+        });
+    </script>
+    @stack('myJS')
+</body>
+
+</html>

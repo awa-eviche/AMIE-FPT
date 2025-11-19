@@ -1,0 +1,49 @@
+<!-- Footer -->
+<footer class="bg-white w-full" style="background-image: url({{asset('frontAssets2/images/Rectangle\ 39\ \(2\).svg')}}); font-weight: 200; background-repeat: no-repeat; background-size: cover;">
+    <div class="container mx-auto px-8">
+        <div class="w-full flex flex-col md:flex-row py-6">
+            <div class="flex-1 mb-6 text-black mr-11">
+                <a class="text-pink-600 no-underline hover:no-underline font-bold text-2xl lg:text-4xl" href="#">
+                    <img src="{{asset('frontAssets2/images/LOGOFOOTERAMIFPT.png')}}" alt="Logo Footer">
+                </a>
+                <p class="anoter" style="color: white; font-size: 10px; margin-top: 40px;"></p>
+
+                <button class="btn" style="padding-top: 35px;">
+                    <input type="search" id="default-search" class="block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-black-500 bg-gray-700 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500" placeholder="Votre adresse mail" required>
+                    <img src alt>
+                </button>
+                <p class="copyright" style="font-size: 9px; color: white; margin-top: 100px;">© 2024 MFPT-CI. Tous droits réservés</p>
+            </div>
+
+            <div class="flex-1">
+                <p class="uppercase text-gray-500 md:mb-6" style="color: white;">Menu</p>
+                <ul class="list-reset mb-6">
+                    <li class="mt-2 inline-block mr-2 md:block md:mr-0">
+                        <a href="#" class="no-underline hover:underline text-gray-800 hover:text-pink-500" style="color: white; font-size: 12px;">Accueil</a>
+                    </li>
+                    <li class="mt-2 inline-block mr-2 md:block md:mr-0">
+                        <a href="#" class="no-underline hover:underline text-gray-800 hover:text-pink-500" style="color: white; font-size: 12px;">Plateformes</a>
+                    </li>
+                    <li class="mt-2 inline-block mr-2 md:block md:mr-0">
+                        <a href="#" class="no-underline hover:underline text-gray-800 hover:text-pink-500" style="color: white; font-size: 12px;">Actualités</a>
+                    </li>
+                    <li class="mt-2 inline-block mr-2 md:block md:mr-0">
+                        <a href="#" class="no-underline hover:underline text-gray-800 hover:text-pink-500" style="color: white; font-size: 12px;">Avis</a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="flex-1">
+                <p class="uppercase text-gray-500 md:mb-6" style="color: white;">Liens utiles</p>
+                <ul class="list-reset mb-6">
+                    <li class="mt-2 inline-block mr-2 md:block md:mr-0">
+                        <a href="#" class="no-underline hover:underline text-gray-800 hover:text-pink-500" style="color: white; font-size: 12px;">Twitter</a>
+                    </li>
+                    <li class="mt-2 inline-block mr-2 md:block md:mr-0">
+                        <a href="#" class="no-underline hover:underline text-gray-800 hover:text-pink-500" style="color: white; font-size: 12px;">Instagram</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</footer>

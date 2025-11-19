@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+
+<head>
+    @include('layouts.v1.partials._head')
+    <link rel="stylesheet" href="{{asset('assets/libs/splide/css/splide.min.css')}}">
+    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500&display=swap" rel="stylesheet">
+</head>
+
+<body class="leading-normal tracking-normal text-gray-800" style="font-family: 'Roboto', sans-serif; overflow-x: hidden; font-size: 16px; background-color: #f8f9fa;">
+    @include('partials.head')
+    
+    <!-- Hero Section -->
+    <div class="pt-12 pb-16 px-4 sm:px-6 lg:px-20 bg-white" id="acceuil">
+        <div class="container mx-auto flex flex-col lg:flex-row items-center">
+            <div class="flex flex-col w-full lg:w-1/2 justify-center items-start lg:pr-10">
+                <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-gray-900 mb-6">
+                    AMIE-FPT
+                </h1>
+                <p class="text-lg md:text-xl leading-relaxed text-gray-700 mb-8">
+                    Application pour le Management Intégré des Établissements de Formation Professionnelle et Technique du Ministère de la Formation Professionnelle et Technique
+                </p>
+                <button class="hover:bg-blue-700 text-white font-semibold rounded-lg my-4 py-3 px-8 shadow-md transition duration-300 ease-in-out transform hover:scale-105" style="background-color: #0d6e5e;">
+                    En savoir plus
+                </button>
+            </div>
+            <div class="w-full lg:w-1/2 mt-10 lg:mt-0">
+                <img class="w-full max-w-2xl mx-auto" src="{{asset('frontAssets2/images/Group 11030.svg')}}" alt="Illustration AMIE-FPT" />
+            </div>
+        </div>
+    </div>
+
+    <!-- About Section (commented but styled) -->
+    <!--
+    <section class="py-16 bg-gray-50" id="propos" style="background-image: url({{asset('frontAssets2/images/Group 11033 (1).svg')}}); background-position: right bottom; background-repeat: no-repeat;">
+        <div class="container mx-auto px-4 max-w-6xl">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">À propos</h2>
+                <div class="w-24 h-1 bg-blue-600 mx-auto"></div>
+            </div>
+            
+            <div class="flex flex-col lg:flex-row items-center">
+                <div class="w-full lg:w-1/2 mb-8 lg:mb-0 lg:pr-8">
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-2xl font-bold text-gray-800 mb-4">
+                            <span class="block text-blue-600">Mot</span>
+                            <span class="block">du Ministre</span>
+                        </h3>
+                        <blockquote class="text-gray-600 italic border-l-4 border-blue-600 pl-4 py-2 my-6">
+                            "Nous avons un Ministère stratégique et transversal. Si nous aspirons au développement de notre pays, tout ce dont nous avons besoin est de mettre le pays au travail. Nous avons besoin de former notre jeunesse de la façon la plus optimale et la plus intelligente."
+                        </blockquote>
+                        <p class="text-gray-700 font-medium">Amadou Moustapha Ndieck SARRE</p>
+                    </div>
+                </div>
+                <div class="w-full lg:w-1/2">
+                    <img src="{{asset('frontAssets2/images/vb.jpg')}}" alt="Ministre" class="rounded-lg shadow-md w-full">
+                </div>
+            </div>
+        </div>
+    </section>
+    -->
+
+    <!-- News Section (commented but styled) -->
+    <!--
+    <section class="py-16 bg-white" id="actualites">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Actualités</h2>
+                <div class="w-24 h-1 bg-blue-600 mx-auto"></div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- News cards would go here -->
+            </div>
+        </div>
+    </section>
+    -->
+
+    <!-- FAQ Section (commented but styled) -->
+    <!--
+    <section class="py-16 bg-gray-50" id="faqs">
+        <div class="container mx-auto px-4 max-w-4xl">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Questions fréquentes</h2>
+                <div class="w-24 h-1 bg-blue-600 mx-auto"></div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-md p-6">
+                @foreach ($faqs as $faq)
+                <div class="py-4 border-b border-gray-200 last:border-0">
+                    <details class="group">
+                        <summary class="flex justify-between items-center cursor-pointer">
+                            <h3 class="text-lg font-medium text-gray-800 group-open:text-blue-600">{{ $faq->question }}</h3>
+                            <span class="ml-4 transition-transform duration-200 group-open:rotate-180">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </span>
+                        </summary>
+                        <p class="mt-3 text-gray-600">{{ $faq->reponse }}</p>
+                    </details>
+                </div>
+                @endforeach
+            </div>
+        </div>
+    </section>
+    -->
+
+    @include('partials.footer')
+
+    <script>
+        // Header scroll effect
+        var scrollpos = window.scrollY;
+        var header = document.getElementById("header");
+        var navcontent = document.getElementById("nav-content");
+        var navaction = document.getElementById("navAction");
+        var brandname = document.getElementById("brandname");
+        var toToggle = document.querySelectorAll(".toggleColour");
+
+        document.addEventListener("scroll", function() {
+            scrollpos = window.scrollY;
+
+            if (scrollpos > 10) {
+                header.classList.add("bg-white", "shadow-md");
+                header.classList.remove("bg-transparent");
+                navaction.classList.remove("bg-white");
+                navaction.classList.add("gradient");
+                navaction.classList.remove("text-gray-800");
+                navaction.classList.add("text-white");
+                
+                toToggle.forEach(function(element) {
+                    element.classList.add("text-gray-800");
+                    element.classList.remove("text-white");
+                });
+                
+                navcontent.classList.remove("bg-gray-100");
+                navcontent.classList.add("bg-white");
+            } else {
+                header.classList.remove("bg-white", "shadow-md");
+                header.classList.add("bg-transparent");
+                navaction.classList.remove("gradient");
+                navaction.classList.add("bg-white");
+                navaction.classList.remove("text-white");
+                navaction.classList.add("text-gray-800");
+                
+                toToggle.forEach(function(element) {
+                    element.classList.add("text-white");
+                    element.classList.remove("text-gray-800");
+                });
+
+                navcontent.classList.remove("bg-white");
+                navcontent.classList.add("bg-gray-100");
+            }
+        });
+
+        // Mobile menu toggle
+        var navMenuDiv = document.getElementById("nav-content");
+        var navMenu = document.getElementById("nav-toggle");
+
+        document.onclick = function(e) {
+            var target = e.target || event.srcElement;
+            
+            if (!checkParent(target, navMenuDiv)) {
+                if (checkParent(target, navMenu)) {
+                    navMenuDiv.classList.toggle("hidden");
+                } else {
+                    navMenuDiv.classList.add("hidden");
+                }
+            }
+        };
+
+        function checkParent(t, elm) {
+            while (t.parentNode) {
+                if (t == elm) return true;
+                t = t.parentNode;
+            }
+            return false;
+        }
+    </script>
+    @stack('myJS')
+</body>
+
+</html>

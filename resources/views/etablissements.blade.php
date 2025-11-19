@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+
+<head>
+    @include('layouts.v1.partials._head')
+    <link rel="stylesheet" href="{{ asset('assets/libs/splide/css/splide.min.css') }}">
+</head>
+
+<body class="leading-normal tracking-normal text-black" style="font-family: poppins;overflow-x: hidden;font-size: 14px;">
+    @include('partials.head')
+
+    <div class="w-full bg-entreprise bg-no-repeat bg-cover bg-top flex flex-col sm:justify-between items-beetween sm:pt-0">
+        <div class="flex flex-wrap">
+            <div class="md:w-3/4 lg:w-4/4 xl:w-3/4 md:py-40 md:px-15 sm:py-10 sm:px-6 w-full">
+                <div class="flex flex-col">
+                    <div class="text-white font-bold text-2xl md:text-4xl pt-10">Liste des établissements</div>
+                    <div class="text-white font-medium md:text-xl pt-10 flex items-center">
+                        <span></span>
+                        
+                        <span class="font-bold"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main>
+        <div class="p-5">
+                <div class="md:container md:mx-auto pt-10">
+                    <h1 class="font-poppins_black text-first-orange text-center text-4xl sm:px-2 lg:px-4 pt-4 pb-2">
+                        Voir la liste
+                    </h1>
+                    <h4 class="font-bold text-first-orange text-center text-md sm:px-2 lg:px-4 pb-2">
+                        des établissements
+                    </h4>
+                    <div class="flex flex-col items-center justify-center">
+                        <p class="text-center text-black w-1/3 text-sm">
+                        </p>
+                        <hr class="border-first-orange border w-1/6 m-5">
+                    </div>
+                    @include('layouts.v1.partials._alert')
+
+                    <div class="container p-2 rounded">
+                        <livewire:Etablissements.front-liste-etablissement/>
+                    </div>
+
+                </div>
+        </div>
+    </main>
+
+
+@include('partials.footer')
+@include('layouts.v1.partials._script')
+<script src="{{asset('assets/libs/splide/js/splide.min.js')}}"></script>
+@stack('myJS')
+</body>
+
+</html>

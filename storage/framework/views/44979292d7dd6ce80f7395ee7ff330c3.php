@@ -1,0 +1,1 @@
+<link href="<?php echo e(asset('assets/libs/sweetalert2/sweetalert2.min.css')); ?>" rel="stylesheet" type="text/css" /><?php /**PATH /var/www/html/pgi/resources/views/layouts/v1/partials/swal/_style.blade.php ENDPATH**/ ?>

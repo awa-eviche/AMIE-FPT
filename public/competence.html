@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>Bulletin de note</title>
+<style>
+    .bold-exo {
+        font-family: ExoBold !important;
+    }
+
+    body {
+        font-family: "ExoRegular" !important;
+    }
+
+    .border-td {
+        border: 1px solid black;
+        padding: .3em;
+        font-size: 12px;
+    }
+
+    .bg-grey {
+        background-color: grey;
+        color: black;
+    }
+
+    .full-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .head {
+        display: block;
+    }
+
+    .centered {
+        text-align: center;
+    }
+
+    .dotted-line {
+        width: 15%;
+        height: 1px;
+        border-bottom: 1px dotted black;
+        margin: 10px auto;
+    }
+
+    .footer {
+        position: absolute;
+        bottom: .2rem;
+        text-align: center;
+    }
+
+    .section-title {
+        margin-top: 20px;
+        font-weight: bold;
+        text-decoration: underline;
+    }
+</style>
+</head>
+
+<body class="tiny-font">
+
+<div class="head">
+    <div class="centered">
+        <strong>MINISTÈRE L'EMPLOI DE LA FORMATION PROFESSIONNELLE ET TECHNIQUE</strong>
+    </div>
+    <div class="dotted-line"></div>
+    <div class="centered">
+        <strong class="bold-exo">[EFPT]</strong><br>
+        <strong>Tél : </strong><strong class="bold-exo">[EFPTTEL]</strong>
+    </div>
+    <div class="dotted-line"></div>
+    <div class="centered">
+        Classe : <strong class="bold-exo">[CLASSE]</strong>
+    </div>
+    <div class="centered">
+        Semestre <strong class="bold-exo">[SEMESTRE]</strong>
+    </div>
+    <div class="dotted-line"></div>
+
+    <div class="border-td bg-grey bold-exo centered">
+        <span>Année Scolaire : </span><strong class="bold-exo">[ANNEESCOLAIRE]</strong>
+    </div>
+
+    <div class="p-small">
+        <strong class="bold-exo">Prénom & Nom :</strong> <span class="bold-exo">[USER]</span><br>
+        <strong class="bold-exo">Date et lieu de naissance :</strong> <span class="bold-exo">[DATENAISSANCE]</span>
+        à <span class="bold-exo">[LIEUNAISSANCE]</span><br>
+        <strong class="bold-exo">Téléphone :</strong> <span class="bold-exo">[TEL]</span><br>
+        
+        <strong class="bold-exo">Matricule :</strong> <span class="bold-exo">[MATRICULE]</span>
+    </div>
+</div>
+<br>
+
+ <table class="full-table" cellspacing="0">
+    <!-- <tr>
+      <td colspan="3" class="section-title">RESSOURCES</td>
+    </tr> -->
+    <tr>
+      <td class="border-td bg-grey text-light bold-exo text-center">Ressource</td>
+      <td class="border-td bg-grey text-light bold-exo text-center">Note /20</td>
+      <td class="border-td bg-grey text-light bold-exo text-center">Appréciation</td>
+    </tr>
+   
+    [BODYRESSOURCE]
+  </table>
+<br>
+
+
+  <table class="full-table" cellspacing="0" style="margin-top: 2rem;">
+  
+    <tr>
+      <td class="border-td bg-grey text-light bold-exo text-center">Compétence</td>
+      <td class="border-td bg-grey text-light bold-exo text-center">Élément</td>
+      <td class="border-td bg-grey text-light bold-exo text-center">Seuil de réussite</td>
+      <td class="border-td bg-grey text-light bold-exo text-center">Note /20</td>
+      <td class="border-td bg-grey text-light bold-exo text-center">Date</td>
+      <td class="border-td bg-grey text-light bold-exo text-center">Appréciation</td>
+    </tr>
+ 
+    [BODYCOMP]
+  </table>
+
+
+<table class="full-table" style="margin-top: 20px;" cellspacing="0">
+    <tr>
+       
+        <td style="width: 50%; vertical-align: top;">
+            <table class="full-table" cellspacing="0">
+                <tr>
+                    <td class="border-td bg-grey bold-exo">Absences</td>
+                    <td class="border-td" align="center">[NB_ABSENCES]</td>
+                </tr>
+             
+                <tr>
+                    <td class="border-td bg-grey bold-exo">Retards</td>
+                    <td class="border-td" align="center">[NB_RETARDS]</td>
+                </tr>
+            </table>
+        </td>
+
+      
+        <td style="width: 50%; vertical-align: top;">
+            <table class="full-table" cellspacing="0">
+                <tr>
+                    <td class="border-td bg-grey bold-exo">Travail satisfaisant</td>
+                    <td class="border-td"></td>
+                </tr>
+                <tr>
+                    <td class="border-td bg-grey bold-exo">Admis en classe supérieure</td>
+                    <td class="border-td"></td>
+                </tr>
+                <tr>
+                    <td class="border-td bg-grey bold-exo">Doit redoubler</td>
+                    <td class="border-td"></td>
+                </tr>
+                <tr>
+                    <td class="border-td bg-grey bold-exo">Passable</td>
+                    <td class="border-td"></td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<!-- Signature -->
+<table class="full-table" style="margin-top: 30px;" cellspacing="0">
+    <tr>
+        <td style="padding: 20px 8px 8px 8px; text-align: left; border: none;" class="bold-exo" colspan="2">
+            Le [DATE]
+        </td>
+        <td style="padding: 20px 8px 8px 8px; text-align: right; border: none;" class="bold-exo" colspan="3">
+            Le Chef d'Établissement
+        </td>
+    </tr>
+</table>
+
+<footer class="footer" align="center">
+    <small></small>
+</footer>
+</body>
+</html>

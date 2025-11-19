@@ -1,0 +1,40 @@
+{
+  "public/assets/images/4d4f231d2370f338c36064676a6e686d.png": {
+    "file": "assets/4d4f231d2370f338c36064676a6e686d-562c6b15.png",
+    "src": "public/assets/images/4d4f231d2370f338c36064676a6e686d.png"
+  },
+  "public/assets/images/a.jpeg": {
+    "file": "assets/a-a062a5a3.jpeg",
+    "src": "public/assets/images/a.jpeg"
+  },
+  "public/assets/images/b.jpeg": {
+    "file": "assets/b-055ad1ce.jpeg",
+    "src": "public/assets/images/b.jpeg"
+  },
+  "public/assets/images/entreprise.png": {
+    "file": "assets/entreprise-5513b5b4.png",
+    "src": "public/assets/images/entreprise.png"
+  },
+  "public/assets/images/f.jpeg": {
+    "file": "assets/f-fd17d91f.jpeg",
+    "src": "public/assets/images/f.jpeg"
+  },
+  "public/fonts/Poppins-Black.ttf": {
+    "file": "assets/Poppins-Black-291e4388.ttf",
+    "src": "public/fonts/Poppins-Black.ttf"
+  },
+  "public/fonts/Poppins-Regular.ttf": {
+    "file": "assets/Poppins-Regular-707fdc5c.ttf",
+    "src": "public/fonts/Poppins-Regular.ttf"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-cc792dde.css",
+    "isEntry": true,
+    "src": "resources/css/app.css"
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-c7807de7.js",
+    "isEntry": true,
+    "src": "resources/js/app.js"
+  }
+}

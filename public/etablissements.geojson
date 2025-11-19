@@ -1,0 +1,1867 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Thiès",
+        "nom": "CEP THIES"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.919042,
+          14.796768
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Thiès",
+        "nom": "CAP ENFEFS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.87953,
+          14.77502
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Thiès",
+        "nom": "CNAFP THIES"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.87934,
+          14.77539
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Thiès",
+        "nom": "CFP THIES"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.9386896,
+          14.7925211
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Thiès",
+        "nom": "LTFXND"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.93508,
+          14.8146
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Thiès",
+        "nom": "CFP LALANE"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.8929,
+          14.85263
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Thiès",
+        "nom": "CFP TIVAOUNE"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.818033,
+          14.955896
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Thiès",
+        "nom": "CFP TAIBA NDIAYE"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.87579,
+          15.034863
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Thiès",
+        "nom": "CFP MONT ROLLAND"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.997696,
+          14.911392
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Thiès",
+        "nom": "CFP KHOMBOLE"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.690271,
+          14.761815
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Thiès",
+        "nom": "CFP THIADIAYE"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.423052,
+          14.253333
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Thiès",
+        "nom": "CFP NDIAGANIO"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.72876,
+          14.54677
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Thiès",
+        "nom": "CFP JOAL FADIOUTH"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.494438,
+          14.85919
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Thiès",
+        "nom": "CFP MBOUR"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.573948,
+          14.244647
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Thiès",
+        "nom": "CFP NGUEKHOKH"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.007971,
+          14.50816
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Thiès",
+        "nom": "CFP FISSEL"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.379,
+          14.321163
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Ziguinchor",
+        "nom": "CFP ZIGUINCHOR"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.273451,
+          12.58667
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Ziguinchor",
+        "nom": "CRFP ZIGUINCHOR"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.26197,
+          12.585371
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Ziguinchor",
+        "nom": "CFP OUSSOUYE"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.54509,
+          12.489258
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Ziguinchor",
+        "nom": "CFP KOUBANAO"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.073452,
+          12.678221
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Ziguinchor",
+        "nom": "CFP SINDIAN"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.18146,
+          12.96573
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Ziguinchor",
+        "nom": "CFP BAILA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.34445,
+          12.89414
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Ziguinchor",
+        "nom": "CFP ABENE"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.726555,
+          12.999087
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Ziguinchor",
+        "nom": "LTAEB"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.217518,
+          12.789826
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Ziguinchor",
+        "nom": "CNFMETP GUERINA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.23796,
+          12.76262
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Ziguinchor",
+        "nom": "CFP BIGNONA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.228,
+          12.81186
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Ziguinchor",
+        "nom": "CFP ALBADAR"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.69844,
+          13.00484
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Ziguinchor",
+        "nom": "CFP FANDA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.141805,
+          12.574488
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Ziguinchor",
+        "nom": "CFP TENDOUCK"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.45556,
+          12.72414
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CFP MEDINA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.4432914,
+          14.6831784
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CFPC Delafosse"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.46038,
+          14.6858
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "LTID"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.45814,
+          14.68611
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "LTCD"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.460241,
+          14.684855
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CFMPL"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.431186,
+          14.69865
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CNQP"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.43209,
+          14.698314
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "ENFEFS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.44183,
+          14.682319
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CSFPIAA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.46325,
+          14.67371
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CEDT G-15"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.45052,
+          14.6987
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CFPJ/YMCA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.4297778,
+          14.7246326
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "ICCM"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.267502,
+          14.4216814
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CNCPI"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.4585598,
+          14.6841518
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CFPT Séné./Japon"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.281044264,
+          14.4432131
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CFP Dakar"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.45713,
+          14.73823
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CFP Ouakam"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.49317,
+          14.72339
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CFP Pikine"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.384516,
+          14.743524
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CFP Thiaroye"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.384516,
+          14.743524
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "LSLL"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.379503,
+          14.7772
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CFP Niague"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.31388,
+          14.7934
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CFP Rufisque"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.272093,
+          14.714637
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CFP Bargny"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.226763,
+          14.695706
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CSFP-BTP"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.169526,
+          14.712338
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CSFP-MEM"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.972045,
+          14.425266
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Dakar",
+        "nom": "CFP Sébikotane"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -17.119701,
+          14.726035
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Saint-Louis",
+        "nom": "CFP DAGANA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.516274,
+          16.506194
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Saint-Louis",
+        "nom": "CDFP/Richard Toll"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.679082,
+          16.454966
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Saint-Louis",
+        "nom": "CFP Aéré Lao"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -14.328763,
+          16.39786
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Saint-Louis",
+        "nom": "CRFP SAINT-LOUIS"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.489693,
+          16.019754
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Saint-Louis",
+        "nom": "LTAP"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.49066,
+          16.01934
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Saint-Louis",
+        "nom": "CFP Saint-Louis"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.489945,
+          16.019853
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Saint-Louis",
+        "nom": "CDFP Podor"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -14.954447,
+          16.645667
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Saint-Louis",
+        "nom": "CFP Podor"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -14.960128,
+          16.660494
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Saint-Louis",
+        "nom": "CFP Mboumba"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -14.01095,
+          16.1898
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Saint-Louis",
+        "nom": "CFP Gae"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.44573,
+          16.56906
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Saint-Louis",
+        "nom": "CRMT de Saint-Louis"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.463062,
+          15.965526
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kaolack",
+        "nom": "CFP Kaolack"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.919042,
+          14.796768
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kaolack",
+        "nom": "LTCEAN"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.07982,
+          14.1575
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kaolack",
+        "nom": "CFP Porokhane"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.820822,
+          13.702851
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kaolack",
+        "nom": "CFP Nioro du Rip"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.45555,
+          13.443444
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kaolack",
+        "nom": "CFP Mbadakhoune"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.0163014,
+          14.2080511
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kaolack",
+        "nom": "CFP Guinguinéo"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.9467,
+          14.272058
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Diourbel",
+        "nom": "CFP Diourbel"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.228864,
+          14.661296
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Diourbel",
+        "nom": "LTAB Diourbel"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.2479852,
+          14.6518131
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Diourbel",
+        "nom": "CFP Bambey"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.458612,
+          14.698856
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Diourbel",
+        "nom": "CFP Ndangalma"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.57109,
+          14.75614
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Diourbel",
+        "nom": "CFP Ndoulo"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.117849,
+          14.731363
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Diourbel",
+        "nom": "CFP Mbacké"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.908668,
+          14.799085
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Diourbel",
+        "nom": "CDFP Mbacké"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.907497,
+          14.794954
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Diourbel",
+        "nom": "CFP Touba"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.8216368,
+          14.8681391
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Diourbel",
+        "nom": "CFP Taif"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.639313,
+          14.790823
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kédougou",
+        "nom": "CFP Kedougou"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -12.5563079,
+          12.557149
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kédougou",
+        "nom": "CFP Salemata"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -12.81994,
+          12.6333633
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kédougou",
+        "nom": "LTIM Mamba Guiraasy"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -12.17467,
+          12.56071
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Sédhiou",
+        "nom": "CFP  Sedhiou"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.565197,
+          12.710201
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Sédhiou",
+        "nom": "CFPI  Sedhiou"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.557871,
+          12.685521
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Sédhiou",
+        "nom": "CFP  Forestier Boukiling"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.68655,
+          13.03896
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Matam",
+        "nom": "CFP MATAM"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          15.789162286211797, 
+          -13.245747709584247
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Matam",
+        "nom": "CFP Ourossogui"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -13.3295,
+          15.6095
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Matam",
+        "nom": "CFP Agnam Civol"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -13.667206,
+          15.9936638
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Matam",
+        "nom": "CFP Waounde"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -12.8599,
+          15.2614
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Matam",
+        "nom": "CFP Sinthiou Bamambe"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -13.1262,
+          15.3791
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Matam",
+        "nom": "CFP Kanel"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -13.1866359,
+          15.490763
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Matam",
+        "nom": "CFP Ranerou"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -13.329672,
+          15.608046
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Tambacounda",
+        "nom": "CFP Tambacouda"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -13.6676813,
+          13.7816608
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Tambacounda",
+        "nom": "CFP  Forameca"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -13.66673,
+          13.78136
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Tambacounda",
+        "nom": "LETFPT"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -13.68825,
+          13.75458
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Tambacounda",
+        "nom": "CFP Goudiry"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -12.7056515,
+          14.1949801
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Tambacounda",
+        "nom": "CFP  KIDIRA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -13.1866359,
+          15.490763
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Tambacounda",
+        "nom": "CFP 1 Bakel"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -12.46027,
+          14.90796
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Tambacounda",
+        "nom": "CFP 2  Bakel"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -12.4584808,
+          14.9229738
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Louga",
+        "nom": "CFP LOUGA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.233732,
+          15.626608
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Louga",
+        "nom": "CEFAM LOUGA"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.224783,
+          15.624756
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Louga",
+        "nom": "CFP LINGUERE"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.116792,
+          15.397649
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Louga",
+        "nom": "CFP KEBEMER"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.441103,
+          15.368642
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Louga",
+        "nom": "CFP DAHRA DJOLOF"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.48835,
+          15.36403
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Louga",
+        "nom": "CFP KOKI"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.9895,
+          15.52789
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Louga",
+        "nom": "CFP NGOURANE"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.292406,
+          15.443214
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Louga",
+        "nom": "CFP THIEPPE"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.53397,
+          15.70525
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Fatick",
+        "nom": "CFP Fatick"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.40211,
+          14.44335
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Fatick",
+        "nom": "LTP Fatick"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.40245,
+          14.349836
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Fatick",
+        "nom": "CFP Niakhar"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.399045,
+          14.483209
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Fatick",
+        "nom": "CFP Toukar"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.41136,
+          14.33969
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Fatick",
+        "nom": "CFP Diofior"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.667532,
+          14.187791
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Fatick",
+        "nom": "CFP Djilor Saloum"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.336004,
+          14.061315
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Fatick",
+        "nom": "CFP Sokone"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.38256,
+          13.829233
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Fatick",
+        "nom": "CFP Foundiougne"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.464428,
+          14.124498
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Fatick",
+        "nom": "CFP Diakhao"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.298632,
+          14.454256
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Fatick",
+        "nom": "CFP Gossas"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.063332,
+          14.485461
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Fatick",
+        "nom": "CFP Dionewar"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.28186,
+          14.52025
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Fatick",
+        "nom": "CFP Faoye"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.576977,
+          14.226501
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Fatick",
+        "nom": "CFP Loul Sessene"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.606309,
+          14.312118
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kaffrine",
+        "nom": "CNFMETP Kaffrine"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.5424721,
+          14.1048283
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kaffrine",
+        "nom": "CFP Kaffrine"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.5503285,
+          14.1037084
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kaffrine",
+        "nom": "CFP Koungheul"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -14.78817,
+          13.98005
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kaffrine",
+        "nom": "CFP Birkelane"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.5641079,
+          14.1035435
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kolda",
+        "nom": "CFP Kolda"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -14.9503931,
+          12.8806991
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kolda",
+        "nom": "CRFP Kolda"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -14.9536666,
+          12.8851932
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kolda",
+        "nom": "CFP Dabo"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -16.24923,
+          12.91945
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kolda",
+        "nom": "CFP Médina yoro foulah"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -14.71504,
+          13.29786
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kolda",
+        "nom": "LETFP"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -14.9032206,
+          12.8714269
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kolda",
+        "nom": "CFP Sare yoba"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -15.0994015,
+          12.7686942
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kolda",
+        "nom": "CFP Kounkane"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -14.079476,
+          13.146928
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kolda",
+        "nom": "CFP Vélingara"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -14.111676,
+          13.146928
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "region": "Kolda",
+        "nom": "CFP Médina gounass"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -13.764605,
+          13.115184
+        ]
+      }
+    }
+  ]
+}

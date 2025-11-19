@@ -1,0 +1,2 @@
+#!/bin/sh
+rsync -av -e "ssh -p 39805" ./ debian@51.38.227.45:/home/debian/kgm_mfpai/src_pf2e/ --exclude-from='.exclude_deploy'  

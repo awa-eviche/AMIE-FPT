@@ -1,0 +1,1 @@
+<link href="<?php echo e(asset('assets/libs/select2/css/select2.min.css')); ?>" rel="stylesheet" type="text/css" /><?php /**PATH /var/www/html/pgi/resources/views/layouts/v1/partials/select2/_style.blade.php ENDPATH**/ ?>

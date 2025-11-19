@@ -1,0 +1,107 @@
+<?php
+setlocale(LC_TIME, 'fr_FR.utf8');
+$dateActuelle = strftime("%d %B %Y %H:%M");
+?>
+
+<header class="relative bg-white shadow-sm">
+    <div class="flex items-center justify-between p-2 md:p-4">
+        <!-- Mobile menu button -->
+        <button @click="isMobileMainMenuOpen = !isMobileMainMenuOpen"
+            class="p-1 md:hidden text-gray-600 hover:text-gray-900 focus:outline-none">
+            <span class="sr-only">Ouvrir le menu</span>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+        </button>
+
+        <!-- Brand & Info -->
+        <div class="flex-1 min-w-0 px-2 md:px-4">
+            @if(Auth()->user()->personnel && Auth()->user()->personnel->etablissement)
+                <div class="text-sm md:text-base font-bold text-gray-800 truncate">
+                    {{Auth()->user()->personnel->etablissement->nom}}
+                </div>
+            @endif
+            
+            <div class="hidden md:block text-xs text-gray-500 truncate">
+                Bienvenue chez AMIE FPT : application pour le management intégré des établissements de la FPT
+            </div>
+            
+            <div class="flex items-center justify-between mt-1">
+                <span class="text-xs md:text-sm text-gray-600">
+                    Bonjour, <span class="font-semibold">{{Auth()->user()->prenom.' '.Auth()->user()->nom}}</span>
+                </span>
+                <span class="text-xs text-gray-500 hidden sm:inline-block ml-2">
+                    {{$dateActuelle}}
+                </span>
+            </div>
+        </div>
+
+        <!-- Desktop Right buttons -->
+        <div class="hidden md:flex items-center space-x-4">
+            <livewire:notification-menu />
+            
+            <!-- User dropdown -->
+            <div class="relative" x-data="{ open: false }">
+                <button @click="open = !open" class="flex items-center focus:outline-none">
+                    <img class="w-8 h-8 rounded-full" src="{{asset('backofficeAssets/build/images/imagepgi.svg')}}" alt="Profil" />
+                </button>
+                
+                <div x-show="open" @click.away="open = false" 
+                     class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50">
+                    <a href="/user/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        Profil
+                    </a>
+                    @if(!auth()->user()->hasRole(config('constants.roles.superadmin')) 
+                    <a href="etablissement-info" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        Mon établissement
+                    </a>
+                    @endif
+                    <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" 
+                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                        Déconnexion
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile menu button (right) -->
+        <button @click="isMobileSubMenuOpen = !isMobileSubMenuOpen" class="md:hidden p-1 text-gray-600 focus:outline-none">
+            <span class="sr-only">Menu utilisateur</span>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Mobile sub menu -->
+    <div x-show="isMobileSubMenuOpen" @click.away="isMobileSubMenuOpen = false" 
+         class="md:hidden absolute right-2 mt-1 w-48 bg-white rounded-md shadow-lg z-50 py-1">
+        <a href="/user/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            Profil
+        </a>
+        <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" 
+           class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+            Déconnexion
+        </a>
+    </div>
+
+    <!-- Mobile main menu -->
+    <div x-show="isMobileMainMenuOpen" @click.away="isMobileMainMenuOpen = false" 
+         class="md:hidden bg-gray-50 border-t">
+        <nav class="px-2 py-3 space-y-1">
+            <a href="{{route('entreprise.index')}}" class="flex items-center px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-md">
+                <i class="fas fa-gauge mr-3 text-gray-500"></i>
+                Tableau de bord
+            </a>
+            <a href="{{route('entreprise.index')}}" class="flex items-center px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-md">
+                <i class="far fa-address-book mr-3 text-gray-500"></i>
+                Entreprises
+            </a>
+            <!-- Autres éléments du menu... -->
+        </nav>
+    </div>
+</header>
+
+<form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">
+    @csrf
+</form>

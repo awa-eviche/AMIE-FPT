@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>Carnet de competence</title>
+<style>
+      
+
+        .bold-exo {
+            font-family: ExoBold!important;
+        }
+
+        body {
+            font-family: "ExoRegular"!important;
+        }
+
+        .border-td {
+            border: 1px solid black;
+            padding: .2em;
+        }
+
+        .bg-grey {
+            background-color: grey;
+            color: black;
+        }
+
+        .full-table {
+            width: 100%;
+        }
+
+        .head {
+            display: block;
+        }
+
+        .logo, .emptySpaceHeader, .details {
+            vertical-align: top;
+            display: inline-block;
+        }
+
+        .logo {
+            width: 45%;
+        }
+
+        .img-logo {
+            border: 1px solid transparent;
+            border-radius: 100%;
+        }
+
+        .details {
+            width: 45%;
+        }
+
+        .emptySpaceHeader {
+            width: 20%;
+        }
+
+        .bill {
+            width: 34%;
+            margin-top: 1.5rem;
+        }
+
+        .bold {
+            font-weight: bold;
+            font-family: ExoBold!important;
+        }
+
+        .p-small {
+            margin-top: .5rem;
+            margin-bottom: .5rem;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: .2rem;
+            text-align: center;
+        }
+
+        .centered {
+            text-align: center;
+        }
+
+        .dotted-line {
+            width: 15%;
+            height: 1px;
+            border-bottom: 1px dotted black;
+            margin: 10px auto;
+        }
+    </style>
+</head>
+
+<body class="tiny-font">
+
+    <!--div class="head">
+       
+        <div class="emptySpaceHeader"></div>
+        <!--div class="bill" align="right">
+            <span class="billDetails bold-exo font-md">[USER]</span>
+        </div-->
+   
+
+    <div class="head">
+        <div class="centered">
+            <strong>MINISTERE DE LA FORMATION PROFESSIONNELLE ET TECHNIQUE</strong>
+        </div>
+        <div class="dotted-line"></div>
+        <div class="centered">
+            <strong class="bold-exo">[EFPT]</strong><br>
+            <strong>TEL : </strong><strong class="bold-exo">[EFPTTEL]</strong>
+        </div>
+        <div class="dotted-line"></div>
+        <div class="centered">
+            Classe : <strong class="bold-exo">[CLASSE]</strong>
+        </div>
+        <div class="dotted-line"></div>
+        <div class="border-td bg-grey bold-exo centered">
+          
+            <div class=" bold-exo centered">
+                <span >Année Scolaire :</span>
+                <strong class="bold-exo">[ANNEESCOLAIRE]</strong>
+            </div>
+        </div>
+        <div class="emptySpaceHeader"></div>
+        <div>
+            <strong class="bold-exo">Prénom & Nom :</strong>
+            <span class="bold-exo">[USER]</span>
+
+            <div>
+                <strong class="bold-exo">Date et Lieu de Naissance  :</strong>
+                <span class="bold-exo">[DATENAISSANCE]</span>
+                à <span class="bold-exo">[LIEUNAISSANCE]</span>
+            </div>
+           
+            <div>
+                <strong class="bold-exo">Téléphone :</strong>
+                <span class="bold-exo">[TEL]</span>
+            </div>
+        </div>
+        <div>
+            <strong class="bold-exo">Email :</strong>
+            <span class="bold-exo">[EMAIL]</span>
+
+            
+        </div>
+        
+
+    </div>
+
+
+   
+
+    <table class="full-table mb-1" style="margin-top: 1rem;" cellspacing="0">
+        <tr >
+            <td class="border-td bg-grey text-light bold-exo">Compétences</td>
+            <td class="border-td bg-grey text-light bold-exo">Eléments de compétence</td>
+            <td class="border-td bg-grey text-light bold-exo">Seuil de réussite</td>
+            <td class="border-td bg-grey text-light bold-exo" align="center">Acquis</td>
+            <td class="border-td bg-grey text-light bold-exo" align="center">ECA</td>
+            <td class="border-td bg-grey text-light bold-exo" align="center">Non Acquis</td>
+            <td class="border-td bg-grey text-light bold-exo">Date Evaluation</td>
+        </tr>
+
+        [BODY]
+        <tr>
+            <td style="padding: 20px 8px 8px 8px; text-align: left; border-bottom: 1px solid transparent;" class="bold-exo" colspan="4">Le [DATE]</td>
+            <td style="padding: 20px 8px 8px 8px; text-align: right; border-bottom: 1px solid transparent;" class="bold-exo" colspan="4">Le Chef d'Etablissement</td>
+        </tr>
+    </table>
+
+    <footer class="footer" align="center">
+        <small></small>
+    </footer>
+</body>
+
+</html>

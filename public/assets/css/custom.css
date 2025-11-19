@@ -1,0 +1,120 @@
+.bg-blue-primary{
+    background-color: #1A4C81;
+}
+.bg-gray{
+    background-color: #e9edf0;
+    color: #1A4C81;
+}
+.text-blue-primary{
+    color: #1A4C81;
+}
+.min-avatar{
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    margin: auto;
+    border: 1px solid gray;
+}
+.bloc-stat{
+    min-height: 365px !important;
+}
+.mb-3{
+    margin-bottom: 3px !important;
+}
+.mb-10{
+    margin-bottom: 10px !important;
+}
+.avatar-min {
+    witdh: 30px;
+    height: 30px;
+    margin: 4px 4px 4px 0px;
+}
+.my-input:disabled, .my-input:read-only{
+    background-color: #e2e6e9;
+    color: black;
+}
+.se_connecter{
+    margin-top: 25px;
+    font-size: 1.2em;
+    font-weight: bolder;
+    color: #1C4E85;
+}
+
+.cadran {
+    position: relative;
+    border-bottom: 4px solid #E4AD06;
+}
+.cadran::before,
+.cadran::after {
+    content: "";
+    position: absolute;
+    bottom: -4px;
+    height: 4px;
+}
+.cadran::before {
+    left: 0;
+    width: 33.33%;
+    background-color: #236F46;
+}
+.cadran::after {
+    left: 66.66%;
+    width: 33.33%;
+    background-color: #ED1B24;
+}
+
+/*.cadran-lg {
+    position: relative;
+    border-bottom: 4px solid #E4AD06;
+}
+.cadran-lg::before,
+.cadran-lg::after {
+    content: "";
+    position: absolute;
+    bottom: -4px;
+    height: 4px;
+}
+.cadran::before {
+    left: 0;
+    width: 33.33%;
+    background-color: #236F46;
+}
+.cadran::after {
+    left: 66.66%;
+    width: 33.33%;
+    background-color: #ED1B24;
+}*/
+
+.trait {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 10px;
+    background-color: #E4AD06;
+    z-index: 9999;
+}
+.trait::before,
+.trait::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    height: 10px;
+}
+.trait::before {
+    left: 0;
+    width: 33.33%;
+    background-color: #236F46;
+}
+.trait::after {
+    left: 66.66%;
+    width: 33.33%;
+    background-color: #ED1B24;
+}
+.photo-container {
+    width: 300px;
+    height: auto;
+}
+.photo-container img {
+    max-width: 100%;
+    max-height: 100%;
+}

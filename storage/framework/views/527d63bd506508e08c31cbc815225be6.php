@@ -1,0 +1,2 @@
+<input <?php echo e($attributes->merge(['type' => 'text', 'class' => 'px-3 py-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md border shadow-sm'])); ?>>
+<?php /**PATH /var/www/html/pgi/resources/views/components/input.blade.php ENDPATH**/ ?>

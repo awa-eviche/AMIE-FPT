@@ -1,0 +1,79 @@
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Ajouter un critère') }}
+        </h2>
+    </x-slot>
+
+    <div class="bg-transparent shadow rounded-sm w-full p-4">
+
+        <!-- Lien retour -->
+        <div class="mt-2 mb-4">
+            <a href="{{ route('critere.index') }}" class="text-blue-500 hover:underline">&larr; Retour à la liste des critères</a>
+        </div>
+
+        <div class="w-full mx-auto">
+            <form class="bg-white pt-6 pb-8 mb-4" action="{{ route('critere.store') }}" method="POST">
+                @csrf
+                <div class="md:container md:mx-auto">
+
+                    <!-- Fil d'Ariane -->
+                    <div class="flex mb-4 text-sm font-bold bg-white px-4 py-3 rounded-sm">
+                        <p>
+                            <a href="/dashboard" class="text-maquette-black">Accueil</a>
+                            <span class="mx-2 text-maquette-gris">/</span>
+                        </p>
+                        <p>
+                            <a href="{{ route('critere.index') }}">Critères</a>
+                            <span class="mx-2 text-maquette-gris">/</span>
+                        </p>
+                        <p class="text-first-orange">Ajouter</p>
+                    </div>
+
+                    <!-- Conteneur formulaire -->
+                    <div class="border border-gray-200 rounded-sm overflow-hidden">
+                        <h3 class="bg-gray-100 p-2 text-sm font-bold text-first-orange">
+                            Formulaire d'ajout
+                        </h3>
+
+                        <div class="p-5 space-y-6">
+
+                            <!-- Composant Livewire pour création dynamique -->
+                            @livewire('param.CreateCritere')
+
+                            <!-- Champ Libellé -->
+                            <div class="grid md:grid-cols-2 md:gap-6">
+                                <div class="mb-4">
+                                    <label for="libelle" class="block text-gray-700 text-sm font-bold mb-2">
+                                        Seuil de R�ussite� <span class="text-red-600">*</span>
+                                    </label>
+                                    <input type="text" 
+                                        value="{{ old('libelle') ?? '' }}" 
+                                        required 
+                                        class="border border-gray-300 p-2 w-full focus:border-first-orange rounded shadow-sm text-sm" 
+                                        id="libelle" 
+                                        name="libelle" >
+                                    @error('libelle')
+                                        <p class="text-red-600 text-xs mt-1">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <!-- Si besoin, autres champs peuvent être ajoutés ici -->
+
+                        </div>
+
+                        <!-- Bouton submit -->
+                        <div class="p-5">
+                            <button type="submit" class="bg-first-orange rounded-sm px-4 py-2 text-white hover:bg-orange-600">
+                                Enregistrer
+                            </button>
+                        </div>
+
+                    </div> <!-- fin conteneur formulaire -->
+
+                </div>
+            </form>
+        </div>
+    </div>
+</x-app-layout>

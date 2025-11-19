@@ -1,0 +1,152 @@
+<?php
+setlocale(LC_TIME, 'fr_FR.utf8');
+$dateActuelle = strftime("%d %B %Y %H:%M");
+?>
+
+<header class="sticky top-0 z-40 bg-white shadow-sm dark:bg-gray-800">
+    <div class="flex items-center justify-between px-4 py-3">
+        <!-- Mobile menu button -->
+        <div class="flex items-center space-x-4">
+            <button @click="isMobileMainMenuOpen = !isMobileMainMenuOpen"
+                class="p-2 text-gray-600 rounded-md md:hidden hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500">
+                <span class="sr-only">Ouvrir le menu</span>
+                <svg class="w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+
+            <!-- Branding -->
+            <div class="flex flex-col min-w-0">
+                @if(Auth()->user()->personnel && Auth()->user()->personnel->etablissement)
+                    <h1 class="text-lg font-bold truncate md:text-xl text-primary-600">
+                        {{ Auth()->user()->personnel->etablissement->nom }}
+                    </h1>
+                @endif
+                
+                <!-- Desktop - User info -->
+                <div class="hidden text-sm md:block">
+                    <span class="text-gray-600">Bonjour, </span>
+                    <span class="font-medium text-primary-500">
+                        {{ Auth()->user()->prenom.' '.Auth()->user()->nom }}
+                    </span>
+                    <span class="ml-2 text-xs text-gray-500">{{ $dateActuelle }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Desktop marquee -->
+        <div class="flex-1 hidden mx-4 md:block">
+            <div class="px-4 py-1 text-sm bg-gray-50 rounded-md">
+                <marquee class="text-gray-600">Bienvenue sur AMIE FPT : Application de Management Intégré des Etablissements de Formation professionnelle et technique</marquee>
+            </div>
+        </div>
+
+        <!-- Desktop navigation -->
+        <div class="flex items-center space-x-3">
+            <!-- Notifications -->
+            <livewire:notification-menu />
+
+            <!-- User menu -->
+            <div class="relative" x-data="{ open: false }">
+                <button @click="open = !open"
+                    class="flex items-center max-w-xs text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                    id="user-menu" aria-haspopup="true">
+                    <span class="sr-only">Profil utilisateur</span>
+                    <img class="w-8 h-8 rounded-full" src="{{ asset('backofficeAssets/build/images/imagepgi.svg') }}" alt="Profil">
+                </button>
+
+                <!-- Dropdown menu -->
+                <div x-show="open" x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="transform opacity-0 scale-95"
+                    x-transition:enter-end="transform opacity-100 scale-100"
+                    x-transition:leave="transition ease-in duration-75"
+                    x-transition:leave-start="transform opacity-100 scale-100"
+                    x-transition:leave-end="transform opacity-0 scale-95"
+                    @click.away="open = false"
+                    class="absolute right-0 w-48 py-1 mt-2 origin-top-right bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                    role="menu" aria-orientation="vertical" aria-labelledby="user-menu">
+                    
+                    <a href="/user/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                        Profil
+                    </a>
+                    
+                    @if(!auth()->user()->hasRole(config('constants.roles.superadmin')) && !auth()->user()->hasRole(config('constants.roles.ia')) && auth()->user()->can('visualiser_etablissement_info'))
+                    <a href="etablissement-info" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                        Mon établissement
+                    </a>
+                    @endif
+                    
+                    <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
+                        Déconnexion
+                    </a>
+                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">
+                        @csrf
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile secondary menu -->
+    <div x-show="isMobileSubMenuOpen" @click.away="isMobileSubMenuOpen = false"
+        class="px-4 py-2 md:hidden bg-gray-50 border-t">
+        <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-600">
+                {{ strftime("%A %d %B %Y") }}
+            </div>
+            <div class="text-sm font-medium text-primary-600">
+                {{ strftime("%H:%M") }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile main menu -->
+    <div x-show="isMobileMainMenuOpen" x-cloak
+        class="md:hidden bg-white border-t border-gray-200">
+        <nav class="px-2 py-3 space-y-1">
+            <a href="{{ route('dashboard') }}" class="flex items-center px-3 py-2 text-base font-medium rounded-md group hover:bg-gray-50">
+                <i class="w-5 h-5 mr-3 text-gray-400 fas fa-gauge"></i>
+                Tableau de bord
+            </a>
+
+            <a href="{{ route('entreprise.index') }}" class="flex items-center px-3 py-2 text-base font-medium rounded-md group hover:bg-gray-50">
+                <i class="w-5 h-5 mr-3 text-gray-400 far fa-address-book"></i>
+                OKEtablissements
+            </a>
+
+            <a href="{{ route('admin.index') }}" class="flex items-center px-3 py-2 text-base font-medium rounded-md group hover:bg-gray-50">
+                <i class="w-5 h-5 mr-3 text-gray-400 fas fa-users-gear"></i>
+                Administration
+            </a>
+
+            <div x-data="{ open: {{ request()->is('parametrage*') ? 'true' : 'false' }} }">
+                <button @click="open = !open" class="flex items-center w-full px-3 py-2 text-base font-medium text-left rounded-md group hover:bg-gray-50">
+                    <i class="w-5 h-5 mr-3 text-gray-400 fas fa-gears"></i>
+                    Paramètre
+                    <i :class="{'fa-caret-down': !open, 'fa-caret-up': open}" class="ml-auto fas"></i>
+                </button>
+
+                <div x-show="open" class="px-2 pt-2 pb-4 space-y-1 bg-gray-50 rounded-md">
+                    <a href="{{ route('workflow.index') }}" class="flex items-center px-3 py-2 pl-8 text-sm font-medium rounded-md group hover:bg-gray-100">
+                        <i class="w-4 h-4 mr-3 text-gray-400 fas fa-recycle"></i>
+                        Workflows
+                    </a>
+                    <a href="{{ route('type_demande.index') }}" class="flex items-center px-3 py-2 pl-8 text-sm font-medium rounded-md group hover:bg-gray-100">
+                        <i class="w-4 h-4 mr-3 text-gray-400 far fa-folder-open"></i>
+                        Type demande
+                    </a>
+                    <a href="{{ route('type_notification.index') }}" class="flex items-center px-3 py-2 pl-8 text-sm font-medium rounded-md group hover:bg-gray-100">
+                        <i class="w-4 h-4 mr-3 text-gray-400 fas fa-database"></i>
+                        Type notification
+                    </a>
+                </div>
+            </div>
+
+            <a href="{{ route('demande.index') }}" class="flex items-center px-3 py-2 text-base font-medium rounded-md group hover:bg-gray-50">
+                <i class="w-5 h-5 mr-3 text-gray-400 far fa-bookmark"></i>
+                Demandes
+            </a>
+        </nav>
+    </div>
+</header>

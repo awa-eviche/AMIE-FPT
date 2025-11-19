@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Autorisation</title>
+    <style>
+      
+
+        .bold-exo {
+            font-family: ExoBold!important;
+        }
+
+        body {
+            font-family: "ExoRegular"!important;
+        }
+
+        .border-td {
+            border: 1px solid black;
+            padding: .2em;
+        }
+
+        .bg-grey {
+            background-color: grey;
+            color: black;
+        }
+
+        .full-table {
+            width: 100%;
+        }
+
+        .head {
+            display: block;
+        }
+
+        .logo, .emptySpaceHeader, .details {
+            vertical-align: top;
+            display: inline-block;
+        }
+
+        .logo {
+            width: 45%;
+        }
+
+        .img-logo {
+            border: 1px solid transparent;
+            border-radius: 100%;
+        }
+
+        .details {
+            width: 45%;
+        }
+
+        .emptySpaceHeader {
+            width: 20%;
+        }
+
+        .bill {
+            width: 34%;
+            margin-top: 1.5rem;
+        }
+
+        .bold {
+            font-weight: bold;
+            font-family: ExoBold!important;
+        }
+
+        .p-small {
+            margin-top: .5rem;
+            margin-bottom: .5rem;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: .2rem;
+            text-align: center;
+        }
+
+        .centered {
+            text-align: center;
+        }
+
+        .dotted-line {
+            width: 15%;
+            height: 1px;
+            border-bottom: 1px dotted black;
+            margin: 10px auto;
+        }
+    </style>
+</head>
+<body class="tiny-font">
+    <div class="head">
+        <div class="centered">
+            <strong>MINISTERE DE LA FORMATION PROFESSIONNELLE ET TECHNIQUE</strong>
+        </div>
+        <div class="dotted-line"></div>
+        <div class="centered">
+            <strong class="bold-exo">[EFPT]</strong><br>
+            <strong>TEL : </strong><strong class="bold-exo">[EFPTTEL]</strong>
+        </div>
+        <div class="dotted-line"></div>
+        <div class="centered">
+            Etablissement : <strong class="bold-exo">[TYPE]</strong>
+        </div>
+        <div class="dotted-line"></div>
+       {{-- <div class="centered">
+            Statut juridique : <strong class="bold-exo">[SJ]</strong>
+        </div> --}}
+        <div class="border-td bg-grey bold-exo centered">
+            <span>[DEMANDE]</span><br>
+            Numéro de demande <strong class="bold-exo">[NUMDEM]</strong>
+            <div class=" bold-exo centered">
+                <span >Année Scolaire :</span>
+                <strong class="bold-exo">[ANNEESCOLAIRE]</strong>
+            </div>
+        </div>
+        <div class="emptySpaceHeader"></div>
+        <div>
+            <strong class="bold-exo">Prénom & Nom :</strong>
+            <span class="bold-exo">[USER]</span>
+
+            <div>
+                <strong class="bold-exo">Date de la demande  :</strong>
+                <span class="bold-exo">[DATEDEMANDE]</span>
+            </div>
+           
+            <div>
+                <strong class="bold-exo">Téléphone :</strong>
+                <span class="bold-exo">[TEL]</span>
+            </div>
+        </div>
+        <div>
+            <strong class="bold-exo">Email :</strong>
+            <span class="bold-exo">[EMAIL]</span>
+
+            
+        </div>
+        
+
+    </div>
+
+    
+    <table class="full-table mb-1" style="margin-top: 1rem;" cellspacing="0">
+        <tr>
+            <td class="border-td bg-grey bold-exo">Matieres</td>
+            <td class="border-td bg-grey bold-exo">Coefficient</td>
+            <td class="border-td bg-grey bold-exo">Note controle continue</td>
+            <td class="border-td bg-grey bold-exo">Note composition</td>
+            <td class="border-td bg-grey bold-exo">Moyenne</td>
+            <td class="border-td bg-grey bold-exo">Appréciation</td>
+        </tr>
+        [BODY]
+       
+            <td colspan="6" class="border-td bg-grey bold-exo">Moyenne Générale : [MOYENNE]</td>
+           
+       
+    </table>
+    <table style="border-collapse: collapse; width: 100%;">
+        <tr>
+            <td style="padding: 8px; text-align: left; border-bottom: 1px solid transparent;" class="bold-exo" colspan="6">Nombre d'absence:</td>
+            <td style="padding: 8px; text-align: left; border-bottom: 1px solid transparent;" class="bold-exo" colspan="6"></td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; text-align: left; border-bottom: 1px solid transparent;" class="bold-exo" colspan="6">Nombre de retard:</td>
+            <td style="padding: 8px; text-align: left; border-bottom: 1px solid transparent;" colspan="6"></td>
+        </tr>
+        <tr>
+            <td style="padding: 8px; text-align: left; border-bottom: 1px solid transparent;" class="bold-exo" colspan="6">Appréciation générale:</td>
+            <td style="padding: 8px; text-align: left; border-bottom: 1px solid transparent;" colspan="6"></td>
+        </tr>
+        <tr>
+            <td style="padding: 20px 8px 8px 8px; text-align: left; border-bottom: 1px solid transparent;" class="bold-exo" colspan="6">Le [DATE]</td>
+            <td style="padding: 20px 8px 8px 8px; text-align: right; border-bottom: 1px solid transparent;" class="bold-exo" colspan="6">Le Chef d'Etablissement</td>
+        </tr>
+    </table>
+    
+    
+    <footer class="footer" align="center">
+        <small></small>
+    </footer>
+</body>
+</html>
