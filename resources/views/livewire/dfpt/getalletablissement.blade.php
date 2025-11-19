@@ -84,6 +84,16 @@
 
             </div>
             <div class="flex items-baseline my-2 w-full">
+            <label for="selectedMetier" class="sr-only">Métiers</label>
+         
+            <select wire:model="selectedMetier" wire:change="$refresh" name="selectedMetier"  class="border border-gray-300 p-3 w-full max-w-xs focus:border-first-orange enlever_shadow rounded px-8 py-0.75 shadow-first-orange text-sm font-bold">
+    <option value="">Choisir un métier --</option>
+    @foreach($metiers as $m)
+        <option value="{{ $m->id }}">{{ $m->nom }}</option>
+    @endforeach
+</select>
+</div>
+            <div class="flex items-baseline my-2 w-full">
                
             </div>
         </div>
@@ -91,7 +101,7 @@
             <div class="flex items-baseline my-2 w-full">
                 <label for="selectedNiveau" class="sr-only">Niveaux</label>
                 <select id="selectedNiveau" wire:model="selectedNiveau" wire:change="$refresh" name="selectedNiveau"  class="border border-gray-300 p-3 w-full max-w-xs focus:border-first-orange enlever_shadow rounded px-8 py-0.75 shadow-first-orange text-sm font-bold">
-                    <option selected>Choisir une Niveaux</option>
+                    <option selected>Choisir un Niveaux</option>
                     @foreach ($niveaux as $niveau)
                     <option value="{{ $niveau->id }}">{{ $niveau->nom  }}</option> 
                     @endforeach

@@ -30,6 +30,9 @@ class Getalletablissement extends Component
     public $ias;
     public $iefs;
     public $selectedFiliere;
+    public $selectedMetier;
+    public $metiers;
+    public $selectedMetierName = "Choisir un métier";
 
     public $selectedNiveau;
     public function resetAll(){
@@ -45,7 +48,19 @@ class Getalletablissement extends Component
         $this->selectedCommune =  "";
         $this->selectedNiveau =  "";
         $this->selectedFiliere="";
+        $this->selectedMetier="";
+        $this->selectedMetierName = "Choisir un métier";
 
+    }
+
+    public function updatedSelectedMetier($value)
+    {
+        if ($value) {
+            $metier = \App\Models\Metier::find($value);
+            $this->selectedMetierName = $metier?->nom ?? "Choisir un métier";
+        } else {
+            $this->selectedMetierName = "Choisir un métier";
+        }
     }
 
     public function render()
@@ -63,6 +78,10 @@ class Getalletablissement extends Component
             if ($this->selectedCommune) {
                 $query->where('etablissements.commune_id', $this->selectedCommune);
             }
+            if ($this->selectedMetier) {
+                $query->where('metiers.id', $this->selectedMetier);
+            }
+            
             if ($this->selectedNiveau) {
                 $query->where('niveau_etudes.id', $this->selectedNiveau);
             }
@@ -99,11 +118,25 @@ class Getalletablissement extends Component
             $query->where('etablissements.is_active', 1);
         });
     
-        $this->count = $allEtablissements->select('etablissements.*')->distinct(['etablissements.id'])->count();
+       // $this->count = $allEtablissements->select('etablissements.*')->distinct(['etablissements.id'])->count();
+       $this->count = $allEtablissements
+    ->distinct('etablissements.id')
+    ->count('etablissements.id');
+
         $communes = $allEtablissements->select('communes.*')->get()->unique('id');
+       // $niveaux = $allEtablissements->select('niveau_etudes.*')->get()->unique('id');
+       if ($this->selectedMetier) {
+        // Afficher tous les niveaux du métier
+        $niveaux = \App\Models\NiveauEtude::where('metier_id', $this->selectedMetier)->get();
+    } else {
+        // Cas normal : afficher tous les niveaux filtrés par les autres critères
         $niveaux = $allEtablissements->select('niveau_etudes.*')->get()->unique('id');
+    }
+    
         $classes = $allEtablissements->select('classes.*')->get();
         $this->filieres = $allEtablissements->select('filieres.*')->get()->unique('id');
+        $this->metiers = $allEtablissements->select('metiers.*')->get()->unique('id');
+
         if ($this->selectedRegion || $this->selectedDepartemant) {
             if ($this->selectedRegion ) {
                 $this->departements = Departement::query()->where('region_id', $this->selectedRegion)->get();
