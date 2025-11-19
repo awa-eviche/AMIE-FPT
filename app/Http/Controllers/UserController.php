@@ -79,10 +79,9 @@ class UserController extends Controller
         $users = [];
         $roleStats = [];
         $allowedRoles = [];
-if ($loggedUser->hasRole('agent')) {
-    return $this->redirectAgentToHisView($request);
-}    
-        // 🔐 Filtrage si chef d’établissement ou assistante
+if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissement')) {
+        return $this->redirectAgentToHisView($request);
+    }      
         if (
             $loggedUser->hasRole('chef_etablissement') ||
             $loggedUser->hasRole('assistante')
