@@ -11,9 +11,14 @@ use App\Models\Region;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
+use Livewire\WithPagination;
+
 
 class Getalletablissement extends Component
 {
+    use WithPagination;
+
+    protected $paginationTheme = 'tailwind';
     public $count;
     public $search;
     public $selectedsexe;
@@ -32,7 +37,8 @@ class Getalletablissement extends Component
     public $selectedFiliere;
     public $selectedMetier;
     public $metiers;
-    public $selectedMetierName = "Choisir un métier";
+    //public $selectedMetierName = "Choisir un métier";
+ 
 
     public $selectedNiveau;
     public function resetAll(){
@@ -53,16 +59,8 @@ class Getalletablissement extends Component
 
     }
 
-    public function updatedSelectedMetier($value)
-    {
-        if ($value) {
-            $metier = \App\Models\Metier::find($value);
-            $this->selectedMetierName = $metier?->nom ?? "Choisir un métier";
-        } else {
-            $this->selectedMetierName = "Choisir un métier";
-        }
-    }
-
+   
+   
     public function render()
     {
         $this->regions = Region::query()->get();
@@ -160,8 +158,10 @@ class Getalletablissement extends Component
             $this->ias = Ia::query()->get();
             $this->iefs = Ief::query()->get();
         }
+        
         $etablissements =   $allEtablissements
-                        ->select('etablissements.*','communes.libelle as nameCommune')->distinct(['etablissements.id'])->paginate(10);
+        ->select('etablissements.*','communes.libelle as nameCommune')->distinct(['etablissements.id'])->paginate(10);
+    
         return view('livewire.dfpt.getalletablissement',compact('etablissements','communes','niveaux','classes'));
     }
 }
