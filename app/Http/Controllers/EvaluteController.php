@@ -77,23 +77,25 @@ if (
             abort(403, "Vous n'êtes pas autorisé à enregistrer une évaluation pour cette classe.");
         } 
   $request->validate([
-            'note' => 'required|numeric|min:0|max:20',
-            'critere' => 'required|exists:criteres,id',
-            'date' => 'nullable|date',
-            'observations' => 'nullable|string|max:255'
-        ]);
-    
-        $evaluation = new Evalute();
-        $evaluation->inscription_id = $inscription->id;
-        $evaluation->critere_id = $request->input('critere');
-        $evaluation->note = $request->input('note'); // ✅ nouvelle ligne
-        $evaluation->date = $request->input('date');
-        $evaluation->observations = $request->input('observations');
-    
-        if ($evaluation->save()) {
-            return redirect()->route('competence.manage.index')
-                ->with('message', 'Évaluation enregistrée avec succès.');
-        }
+    'critere' => 'required|exists:criteres,id',
+    'date' => 'nullable|date',
+    'acquis' => 'nullable|boolean',
+    'nonAcquis' => 'nullable|boolean',
+    'observations' => 'nullable|string|max:255',
+]);
+
+$evaluation = new Evalute();
+$evaluation->inscription_id = $inscription->id;
+$evaluation->critere_id = $request->input('critere');
+$evaluation->acquis = $request->boolean('acquis');
+$evaluation->nonAcquis = $request->boolean('nonAcquis');
+$evaluation->date = $request->input('date');
+
+$evaluation->save();
+
+return redirect()->route('competence.manage.index')
+    ->with('message', 'Évaluation enregistrée avec succès.');
+
     
         return redirect()->back()->withErrors('Une erreur est survenue, veuillez réessayer.');
     }

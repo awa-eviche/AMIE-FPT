@@ -1,5 +1,5 @@
 <div>
-       @if (session('success'))
+       <!--[if BLOCK]><![endif]--><?php if(session('success')): ?>
     <div class="mb-4">
         <div class="flex items-center p-4 mb-4 text-sm text-green-800 border border-green-300 rounded-lg bg-green-50 shadow-sm dark:bg-gray-800 dark:text-green-300 dark:border-green-800" role="alert">
             <svg class="flex-shrink-0 inline w-5 h-5 mr-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
@@ -7,15 +7,17 @@
             </svg>
             <span class="sr-only">Success</span>
             <div>
-                <span class="font-medium">Succès !</span> {{ session('success') }}
+                <span class="font-medium">Succès !</span> <?php echo e(session('success')); ?>
+
             </div>
         </div>
     </div>
-@endif
+<?php endif; ?><!--[if ENDBLOCK]><![endif]-->
     <div class="flex items-center px-4">
         <div class="flex-1">
             <h2 class="font-bold text-maquette-black text-xl py-4">
-                {{ $currentClasse ? $currentClasse->libelle : 'Aucune classe sélectionnée' }}
+                <?php echo e($currentClasse ? $currentClasse->libelle : 'Aucune classe sélectionnée'); ?>
+
             </h2>
         </div>
 
@@ -25,9 +27,9 @@
                 <label for="classe" class="block text-sm font-medium">Classe :</label>
                 <select wire:model="classe" wire:change="$refresh" id="classe" class="rounded border-gray-300 text-sm">
                     <option value="">-- Choisir une classe ftp --</option>
-                    @foreach ($classes as $cl)
-                        <option value="{{ $cl->id }}">{{ $cl->libelle }}</option>
-                    @endforeach
+                    <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $classes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $cl): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <option value="<?php echo e($cl->id); ?>"><?php echo e($cl->libelle); ?></option>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
                 </select>
             </div>
 
@@ -37,45 +39,45 @@
                 <select wire:model="annee_academique_id" wire:change="$refresh" id="annee_academique_id"
                     class="rounded border-gray-300 text-sm">
                     <option value="">-- Toutes les années --</option>
-                    @foreach (\App\Models\AnneeAcademique::all() as $annee)
-                        <option value="{{ $annee->id }}">{{ $annee->code }}</option>
-                    @endforeach
+                    <!--[if BLOCK]><![endif]--><?php $__currentLoopData = \App\Models\AnneeAcademique::all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $annee): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <option value="<?php echo e($annee->id); ?>"><?php echo e($annee->code); ?></option>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
                 </select>
             </div>
         </div>
     </div>
 
-    @if ($currentClasse)
+    <!--[if BLOCK]><![endif]--><?php if($currentClasse): ?>
         <!-- Informations classe -->
         <div class="py-2 px-4 m-2 shadow bg-vert2 border border-black rounded-md">
             <div class="grid sm:grid-cols-3 gap-2 py-2 text-md">
                 <div><span class="text-gray-800">Année Scolaire :</span> <span
-                        class="font-bold">{{ $anneeAcademiqueLabel ?? 'N/A' }}</span></div>
+                        class="font-bold"><?php echo e($anneeAcademiqueLabel ?? 'N/A'); ?></span></div>
                 <div><span class="text-gray-800">Centre de ressources :</span>
-                    <span class="font-bold">{{ $currentClasse->etablissement->nom }}</span>
+                    <span class="font-bold"><?php echo e($currentClasse->etablissement->nom); ?></span>
                 </div>
                 <div><span class="text-gray-800">Filière :</span>
-                    <span class="font-bold">{{ $currentClasse->niveau_etude->metier->filiere->nom }}</span>
+                    <span class="font-bold"><?php echo e($currentClasse->niveau_etude->metier->filiere->nom); ?></span>
                 </div>
                 <div><span class="text-gray-800">Métier :</span>
-                    <span class="font-bold">{{ $currentClasse->niveau_etude->metier->nom }}</span>
+                    <span class="font-bold"><?php echo e($currentClasse->niveau_etude->metier->nom); ?></span>
                 </div>
                 <div><span class="text-gray-800">Niveau d'études :</span>
-                    <span class="font-bold">{{ $currentClasse->niveau_etude->nom }}</span>
+                    <span class="font-bold"><?php echo e($currentClasse->niveau_etude->nom); ?></span>
                 </div>
                 <div><span class="text-gray-800">Nombre apprenants :</span>
-                    <span class="font-bold">{{ $nombreApprenants }}</span>
+                    <span class="font-bold"><?php echo e($nombreApprenants); ?></span>
                 </div>
             </div>
         </div>
 
 
-                @php
+                <?php
     $user = auth()->user();
-@endphp
-         @if ($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude'))
+?>
+         <!--[if BLOCK]><![endif]--><?php if($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude')): ?>
  <div class="flex flex-col sm:flex-row items-center gap-4 px-4 pb-4">
-    <form method="GET" action="{{ route('classe.bulletins.pdf', $currentClasse->id) }}" target="_blank" class="flex items-center gap-2">
+    <form method="GET" action="<?php echo e(route('classe.bulletins.pdf', $currentClasse->id)); ?>" target="_blank" class="flex items-center gap-2">
         <select name="semestre" class="rounded border-gray-300 text-sm">
             <option value="">Tous les semestres</option>
             <option value="1">Premier semestre</option>
@@ -88,7 +90,7 @@
         </button>
     </form>
 </div>
-@endif
+<?php endif; ?><!--[if ENDBLOCK]><![endif]-->
 
 
         
@@ -97,7 +99,7 @@
 
     
                 <div class="sm:w-1/2 p-4 border bg-gray border shadow rounded" style="min-height:50vh">
-                    <h2 class="font-bold text-xl mb-4">Liste des apprenants ({{ sizeof($apprenants) }})</h2>
+                    <h2 class="font-bold text-xl mb-4">Liste des apprenants (<?php echo e(sizeof($apprenants)); ?>)</h2>
                     <hr class="mb-2">
                     <div class="text-sm w-full overflow-x-auto">
                         <table class="w-full border-t mb-3">
@@ -109,73 +111,78 @@
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y">
-                                @forelse ($apprenants as $inscription)
+                                <!--[if BLOCK]><![endif]--><?php $__empty_1 = true; $__currentLoopData = $apprenants; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $inscription): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                                     <tr
-                                        class="text-gray-700 {{ $selectedApprenant == $inscription->id ? 'bg-green-600 text-white' : '' }}">
-                                        <td wire:click="loadCompetences({{ $inscription->id }})"
+                                        class="text-gray-700 <?php echo e($selectedApprenant == $inscription->id ? 'bg-green-600 text-white' : ''); ?>">
+                                        <td wire:click="loadCompetences(<?php echo e($inscription->id); ?>)"
                                             class="px-2 font-bold cursor-pointer">
                                             <i class="fa fa-caret-right"></i>
-                                            {{ $inscription->apprenant->matricule ?? '-' }}
+                                            <?php echo e($inscription->apprenant->matricule ?? '-'); ?>
+
                                         </td>
                                         <td class="px-2">
-                                            {{ $inscription->apprenant->nom . ' ' . ($inscription->apprenant->prenom ?? '-') }}
+                                            <?php echo e($inscription->apprenant->nom . ' ' . ($inscription->apprenant->prenom ?? '-')); ?>
+
                                         </td>
                                         <td class="px-2 text-center">
-                                            <a href="#" wire:click="loadCompetences({{ $inscription->id }})"
+                                            <a href="#" wire:click="loadCompetences(<?php echo e($inscription->id); ?>)"
                                                 class="text-green-700 hover:text-blue-900">
                                                 <i class="fa fa-eye"></i>
                                             </a>
                                         </td>
                                     </tr>
-                                @empty
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                                     <tr>
                                         <td colspan="3" class="px-2 font-bold text-xs text-center">
                                             Aucun apprenant n'est enregistré pour cette classe.
                                         </td>
                                     </tr>
-                                @endforelse
+                                <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                @if ($selectedApprenant)
+                <!--[if BLOCK]><![endif]--><?php if($selectedApprenant): ?>
                     <div class="sm:w-1/2 p-4 border bg-gray-100 rounded border shadow">
                         <h2 class="font-bold text-xl mb-4">
                             Liste des compétences de
-                            {{ $currentApprenant->apprenant->matricule }}
-                            {{ $currentApprenant->apprenant->nom }}
-                            {{ $currentApprenant->apprenant->prenom }}
+                            <?php echo e($currentApprenant->apprenant->matricule); ?>
+
+                            <?php echo e($currentApprenant->apprenant->nom); ?>
+
+                            <?php echo e($currentApprenant->apprenant->prenom); ?>
+
                         </h2>
                         <hr class="mb-2">
                         <div class="flex justify-between items-center mb-3">
                             <select wire:model="filtre" wire:change="$refresh"
                                 class="border border-gray-300 p-2 w-1/2 rounded text-sm">
                                 <option value="">Filtrer par compétence</option>
-                                @foreach ($filtres as $comp)
-                                    <option value="{{ $comp->id }}">{{ $comp->nom }}</option>
-                                @endforeach
+                                <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $filtres; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $comp): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <option value="<?php echo e($comp->id); ?>"><?php echo e($comp->nom); ?></option>
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
                             </select>
                             
-                     @php
+                     <?php
     $user = auth()->user();
-@endphp
+?>
 
-@if ($user->hasRole('formateur'))
-    {{-- 🔹 Bouton pour le formateur : peut évaluer --}}
-    <a href="{{ route('evaluate.create', $currentApprenant->id) }}"
+<!--[if BLOCK]><![endif]--><?php if($user->hasRole('formateur')): ?>
+    
+    <a href="<?php echo e(route('evaluate.create', $currentApprenant->id)); ?>"
        class="text-white bg-blue-600 text-sm rounded-md shadow-md px-4 py-2 hover:bg-blue-700">
         <i class="fa fa-edit"></i>&nbsp;Évaluer
     </a>
 
-@elseif ($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude'))
+<?php elseif($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude')): ?>
 
-    {{-- 🔹 Bouton pour le chef de travaux : ne peut que consulter --}}
-    <a href="{{ route('evaluate.create', $currentApprenant->id) }}"
+    
+    <a href="<?php echo e(route('evaluate.create', $currentApprenant->id)); ?>"
        class="text-white bg-blue-600 text-sm rounded-md shadow-md px-4 py-2 hover:bg-green-700">
         <i class="fa fa-eye"></i>&nbsp;Voir les notes
     </a>
-@endif
+<?php endif; ?><!--[if ENDBLOCK]><![endif]-->
 
                         </div>
 
@@ -188,20 +195,20 @@
                                 <option value="1">Premier semestre</option>
                                 <option value="2">Deuxième semestre</option>
                             </select>                      
-                @php
+                <?php
     $user = auth()->user();
-@endphp
-         @if ($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude'))
-                              <a class="text-white bg-red-800 text-sm rounded-md shadow-md px-4 py-1" target="_blank" href="{{route('competence.generate.pdf',$currentApprenant->id)}}">
+?>
+         <!--[if BLOCK]><![endif]--><?php if($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude')): ?>
+                              <a class="text-white bg-red-800 text-sm rounded-md shadow-md px-4 py-1" target="_blank" href="<?php echo e(route('competence.generate.pdf',$currentApprenant->id)); ?>">
                             <i class="fa fa-file-pdf"></i>&nbsp;Télecharger le Bulletin
                         </a>
-@endif
+<?php endif; ?><!--[if ENDBLOCK]><![endif]-->
                         </div>
-                         @if(
+                         <!--[if BLOCK]><![endif]--><?php if(
     $user->hasRole('chef_de_travaux') ||
     $user->hasRole('chef_etablissement') ||
     $user->hasRole('directeur_etude')
-)
+): ?>
         <button type="button"
     onclick="openAbsenceModal()"
     class="text-white bg-green-600 text-sm rounded-md shadow-md px-4 py-2 hover:bg-green-700">
@@ -215,11 +222,11 @@
             <button onclick="closeAbsenceModal()" class="text-gray-500 hover:text-gray-800 text-xl">&times;</button>
         </div>
   <h4 class="font-bold text-xl mb-4">
-                                Gestion des absences de {{ $currentApprenant->apprenant->prenom }} {{ $currentApprenant->apprenant->nom }} 
+                                Gestion des absences de <?php echo e($currentApprenant->apprenant->prenom); ?> <?php echo e($currentApprenant->apprenant->nom); ?> 
                             </h4>
-        <form method="POST" action="{{ route('absences.store') }}" class="p-6">
-            @csrf
-            <input type="hidden" name="inscription_id" value="{{ $currentApprenant->id ?? '' }}">
+        <form method="POST" action="<?php echo e(route('absences.store')); ?>" class="p-6">
+            <?php echo csrf_field(); ?>
+            <input type="hidden" name="inscription_id" value="<?php echo e($currentApprenant->id ?? ''); ?>">
 
             <div class="mb-3">
                 <label class="block text-sm font-medium text-gray-700">Date</label>
@@ -296,7 +303,8 @@
             <h2 class="text-lg font-bold text-gray-800">
                 Absences et retards — 
                 <span class="text-green-700">
-                    {{ $currentApprenant->apprenant->nom ?? '' }} {{ $currentApprenant->apprenant->prenom ?? '' }}
+                    <?php echo e($currentApprenant->apprenant->nom ?? ''); ?> <?php echo e($currentApprenant->apprenant->prenom ?? ''); ?>
+
                 </span>
             </h2>
             <button onclick="closeAbsencesListModal()"
@@ -305,7 +313,7 @@
 
         <!-- Contenu -->
         <div class="p-5 max-h-[75vh] overflow-y-auto">
-           @if(!empty($absences))
+           <!--[if BLOCK]><![endif]--><?php if(!empty($absences)): ?>
 
                 <div class="overflow-x-auto border rounded-md shadow">
                     <table class="min-w-full text-sm">
@@ -323,40 +331,40 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
-                            @foreach ($absences as $abs)
+                            <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $absences; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $abs): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-3 py-2 border">{{ \Carbon\Carbon::parse($abs->date_absence)->format('d/m/Y') }}</td>
-                                    <td class="px-3 py-2 border text-center">{{ $abs->semestre ?? '-' }}</td>
+                                    <td class="px-3 py-2 border"><?php echo e(\Carbon\Carbon::parse($abs->date_absence)->format('d/m/Y')); ?></td>
+                                    <td class="px-3 py-2 border text-center"><?php echo e($abs->semestre ?? '-'); ?></td>
                                     <td class="px-3 py-2 border text-center">
-                                        @if($abs->type === 'retard')
+                                        <!--[if BLOCK]><![endif]--><?php if($abs->type === 'retard'): ?>
                                             <span class="bg-yellow-200 text-yellow-800 px-2 py-1 rounded text-xs font-semibold">Retard</span>
-                                        @else
+                                        <?php else: ?>
                                             <span class="bg-red-200 text-red-800 px-2 py-1 rounded text-xs font-semibold">Absence</span>
-                                        @endif
+                                        <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
                                     </td>
-                                    <td class="px-3 py-2 border text-center">{{ $abs->heure_debut ?? '-' }}</td>
-                                    <td class="px-3 py-2 border text-center">{{ $abs->heure_fin ?? '-' }}</td>
+                                    <td class="px-3 py-2 border text-center"><?php echo e($abs->heure_debut ?? '-'); ?></td>
+                                    <td class="px-3 py-2 border text-center"><?php echo e($abs->heure_fin ?? '-'); ?></td>
                                     <td class="px-3 py-2 border text-center">
-                                        @if($abs->minutes_retard)
-                                            {{ $abs->minutes_retard }} min
-                                        @elseif($abs->duree)
-                                            {{ $abs->duree }} h
-                                        @else
+                                        <!--[if BLOCK]><![endif]--><?php if($abs->minutes_retard): ?>
+                                            <?php echo e($abs->minutes_retard); ?> min
+                                        <?php elseif($abs->duree): ?>
+                                            <?php echo e($abs->duree); ?> h
+                                        <?php else: ?>
                                             -
-                                        @endif
+                                        <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
                                     </td>
                                     <td class="px-3 py-2 border text-center">
-                                        @if($abs->justifie)
+                                        <!--[if BLOCK]><![endif]--><?php if($abs->justifie): ?>
                                             <span class="bg-green-200 text-green-800 px-2 py-1 rounded text-xs font-semibold">Oui</span>
-                                        @else
+                                        <?php else: ?>
                                             <span class="bg-gray-200 text-gray-600 px-2 py-1 rounded text-xs">Non</span>
-                                        @endif
+                                        <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
                                     </td>
-                                    <td class="px-3 py-2 border">{{ $abs->motif ?? '-' }}</td>
+                                    <td class="px-3 py-2 border"><?php echo e($abs->motif ?? '-'); ?></td>
     <td class="px-3 py-2 border text-center">
     <button 
         class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs shadow"
-        onclick="openEditAbsenceModal({{ $abs->id }}, '{{ $abs->date_absence }}', '{{ $abs->semestre }}', '{{ $abs->type }}', '{{ $abs->heure_debut }}', '{{ $abs->heure_fin }}', '{{ $abs->minutes_retard }}', '{{ $abs->motif }}', {{ $abs->justifie ? 1 : 0 }})">
+        onclick="openEditAbsenceModal(<?php echo e($abs->id); ?>, '<?php echo e($abs->date_absence); ?>', '<?php echo e($abs->semestre); ?>', '<?php echo e($abs->type); ?>', '<?php echo e($abs->heure_debut); ?>', '<?php echo e($abs->heure_fin); ?>', '<?php echo e($abs->minutes_retard); ?>', '<?php echo e($abs->motif); ?>', <?php echo e($abs->justifie ? 1 : 0); ?>)">
         <i class="fa fa-edit"></i> Modifier
     </button>
     
@@ -364,15 +372,15 @@
 
 
                                 </tr>
-                            @endforeach
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
                         </tbody>
                     </table>
                 </div>
-            @else
+            <?php else: ?>
                 <div class="text-center text-gray-600 italic py-6">
                     Aucune absence ou retard enregistré pour cet apprenant.
                 </div>
-            @endif
+            <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
         </div>
 
         <!-- Pied du modal -->
@@ -384,15 +392,15 @@
         </div>
     </div>
 </div>
-@endif
+<?php endif; ?><!--[if ENDBLOCK]><![endif]-->
 
 <div id="editAbsenceModal" class="hidden fixed inset-0 bg-white bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white rounded-lg shadow-lg w-96 p-5">
         <h3 class="text-lg font-bold mb-4 text-gray-700">Modifier l'absence</h3>
 
         <form id="editAbsenceForm" method="POST">
-            @csrf
-            @method('PUT')
+            <?php echo csrf_field(); ?>
+            <?php echo method_field('PUT'); ?>
 
             <input type="hidden" id="absenceId">
 
@@ -468,7 +476,7 @@
 
 
                        
-                        @if ($competences && $competences->count() > 0) 
+                        <!--[if BLOCK]><![endif]--><?php if($competences && $competences->count() > 0): ?> 
     <div class="overflow-x-auto">
         <table class="min-w-full border text-sm">
             <thead class="bg-green-600 text-white uppercase">
@@ -477,8 +485,8 @@
                     <th class="px-4 py-2 border text-center">ÉLÉMENT DE COMPÉTENCE</th>
                     <th class="px-4 py-2 border text-center">Seuil de reussite</th>
 
-                    {{-- ⭕ NOTE supprimée --}}
-                    {{-- ⭕ Ajout de ACQUIS & NON ACQUIS --}}
+                    
+                    
                     <th class="px-4 py-2 border text-center">ACQUIS</th>
                     <th class="px-4 py-2 border text-center">NON ACQUIS</th>
 
@@ -487,79 +495,83 @@
             </thead>
 
             <tbody class="bg-white divide-y">
-                @foreach ($competences as $comp)
+                <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $competences; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $comp): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
 
-                    @php
+                    <?php
                         if ($filtre && $comp->id != $filtre) continue;
                         $totalCriteres = $comp->elementCompetences->sum(fn($el) => $el->criteres->count());
                         $rowspan = max($totalCriteres, 1);
                         $firstRow = true;
-                    @endphp
+                    ?>
 
-                    @foreach ($comp->elementCompetences as $el)
-                        @foreach ($el->criteres as $crit)
+                    <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $comp->elementCompetences; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $el): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $el->criteres; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $crit): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
 
-                            @php
+                            <?php
                                 $eval = $evaluations[$crit->id] ?? null;
                                 $acquis = $eval['acquis'] ?? null;
                                 $nonAcquis = $eval['nonAcquis'] ?? null;
-                            @endphp
+                            ?>
 
                             <tr>
-                                @if ($firstRow)
-                                    <td rowspan="{{ $rowspan }}"
+                                <!--[if BLOCK]><![endif]--><?php if($firstRow): ?>
+                                    <td rowspan="<?php echo e($rowspan); ?>"
                                         class="px-4 py-2 border font-semibold bg-gray-50 align-top">
-                                        {{ $comp->nom }}
+                                        <?php echo e($comp->nom); ?>
+
                                     </td>
-                                    @php $firstRow = false; @endphp
-                                @endif
+                                    <?php $firstRow = false; ?>
+                                <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
 
-                                <td class="px-4 py-2 border">{{ $el->nom }}</td>
-                                <td class="px-4 py-2 border text-center">{{ $crit->libelle }}</td>
+                                <td class="px-4 py-2 border"><?php echo e($el->nom); ?></td>
+                                <td class="px-4 py-2 border text-center"><?php echo e($crit->libelle); ?></td>
 
-                                {{-- 🟢 ACQUIS --}}
-                                <td class="px-4 py-2 border text-center font-bold {{ $acquis ? 'text-green-600' : 'text-gray-500' }}">
-                                    {{ $acquis ? '✔' : '-' }}
+                                
+                                <td class="px-4 py-2 border text-center font-bold <?php echo e($acquis ? 'text-green-600' : 'text-gray-500'); ?>">
+                                    <?php echo e($acquis ? '✔' : '-'); ?>
+
                                 </td>
 
-                                {{-- 🔴 NON ACQUIS --}}
-                                <td class="px-4 py-2 border text-center font-bold {{ $nonAcquis ? 'text-red-600' : 'text-gray-500' }}">
-                                    {{ $nonAcquis ? '✘' : '-' }}
+                                
+                                <td class="px-4 py-2 border text-center font-bold <?php echo e($nonAcquis ? 'text-red-600' : 'text-gray-500'); ?>">
+                                    <?php echo e($nonAcquis ? '✘' : '-'); ?>
+
                                 </td>
 
                                 <td class="px-4 py-2 border text-center">
-                                    {{ $eval['date'] ?? '-' }}
+                                    <?php echo e($eval['date'] ?? '-'); ?>
+
                                 </td>
                             </tr>
 
-                        @endforeach
-                    @endforeach
-                @endforeach
+                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
             </tbody>
         </table>
     </div>
 
-@else
+<?php else: ?>
     <div class="text-center py-4 text-gray-500">
         Aucune compétence assignée ou évaluation disponible.
     </div>
-@endif
+<?php endif; ?><!--[if ENDBLOCK]><![endif]-->
 
                     </div>
-                @else
+                <?php else: ?>
                     <div class="sm:w-1/2 p-4 border bg-gray-100 rounded border shadow text-center">
                         <span class="text-red-600 text-lg">Aucun apprenant sélectionné !</span>
                     </div>
-                @endif
+                <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
             </div>
         </div>
-    @else
+    <?php else: ?>
         <div class="alert bg-orange-100 flex p-4 rounded mt-4 p-10 m-10 justify-center items-center">
             <h3 class="text-2xl text-gray-700">
                 Veuillez sélectionner une classe et une année académique !
             </h3>
         </div>
-    @endif
+    <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
 </div>
 <script>
     function openAbsenceModal() {
@@ -631,3 +643,4 @@
         }
     });
 </script>
+<?php /**PATH C:\wamp64\www\AMIE-FPT\resources\views/livewire/param/classe-switch.blade.php ENDPATH**/ ?>

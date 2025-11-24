@@ -1,33 +1,35 @@
 <div class="py-4">
     <div class="w-full rounded-lg shadow-xs p-0">
 
-        {{-- HEADER --}}
+        
         <div class="flex flex-col sm:flex-row justify-between items-center mb-4">
             <div class="font-bold text-lg text-red-600">
-                @if($apprenant && $apprenant->apprenant)
+                <!--[if BLOCK]><![endif]--><?php if($apprenant && $apprenant->apprenant): ?>
                     Évaluation de :
-                    {{ $apprenant->apprenant->prenom.' '.$apprenant->apprenant->nom }}
-                    [{{ $apprenant->apprenant->matricule ?? '-' }}]
-                @endif
+                    <?php echo e($apprenant->apprenant->prenom.' '.$apprenant->apprenant->nom); ?>
+
+                    [<?php echo e($apprenant->apprenant->matricule ?? '-'); ?>]
+                <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
             </div>
 
-            @if(auth()->user()->hasRole('formateur'))
+            <!--[if BLOCK]><![endif]--><?php if(auth()->user()->hasRole('formateur')): ?>
                 <button type="button"
                         onclick="gatherInfos()"
                         class="bg-first-orange px-4 py-2 text-white hover:bg-orange-600 rounded-md shadow">
                     <i class="fa fa-save"></i>&nbsp; Enregistrer les changements
                 </button>
-            @endif
+            <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
         </div>
 
-        {{-- MESSAGE --}}
-        @if (session()->has('message'))
+        
+        <!--[if BLOCK]><![endif]--><?php if(session()->has('message')): ?>
             <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded mb-2">
-                {{ session('message') }}
-            </div>
-        @endif
+                <?php echo e(session('message')); ?>
 
-        {{-- SELECT SEMESTRE --}}
+            </div>
+        <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+
+        
         <div class="flex items-center justify-end mb-4">
             <label class="block text-sm font-bold text-gray-700 mr-2">Semestre :</label>
             <select wire:model.live="selectedsemestre"
@@ -39,9 +41,9 @@
             </select>
         </div>
 
-        {{-- ********************************************************************* --}}
-        {{-- 🟢 COMPÉTENCES GÉNÉRALES --}}
-        {{-- ********************************************************************* --}}
+        
+        
+        
         <h2 class="font-bold text-lg mb-2">Compétences Générales</h2>
 
         <table class="w-full border mb-6">
@@ -56,71 +58,73 @@
             </thead>
 
             <tbody class="bg-white">
-            @forelse($competencesGenerales as $idx => $comp)
-                @php
+            <!--[if BLOCK]><![endif]--><?php $__empty_1 = true; $__currentLoopData = $competencesGenerales; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $idx => $comp): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
+                <?php
                     $totalRows = $rowspansGenerales[$idx] ?? 1;
                     $rowspanCount = 0;
-                @endphp
+                ?>
 
-                @foreach($comp->elementCompetences as $el)
-                    @foreach($el->ressource()->get() as $rIndex => $res)
-                        @php
+                <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $comp->elementCompetences; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $el): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $el->ressource()->get(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $rIndex => $res): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <?php
                             $findRow = $evaluations[$res->id] ?? null;
-                        @endphp
+                        ?>
 
-                        <tr class="ressourceRow" id="{{ $res->id }}">
+                        <tr class="ressourceRow" id="<?php echo e($res->id); ?>">
 
-                            {{-- Nom compétence --}}
-                            @if($rowspanCount == 0)
-                                <td rowspan="{{ $totalRows }}" class="border px-4 py-2 font-bold align-top">
-                                    {{ $comp->nom }}
+                            
+                            <!--[if BLOCK]><![endif]--><?php if($rowspanCount == 0): ?>
+                                <td rowspan="<?php echo e($totalRows); ?>" class="border px-4 py-2 font-bold align-top">
+                                    <?php echo e($comp->nom); ?>
+
                                 </td>
-                            @endif
+                            <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
 
-                            {{-- Élément --}}
-                            @if($rIndex == 0)
-                                <td rowspan="{{ $el->ressource()->count() }}"
+                            
+                            <!--[if BLOCK]><![endif]--><?php if($rIndex == 0): ?>
+                                <td rowspan="<?php echo e($el->ressource()->count()); ?>"
                                     class="border px-4 py-2 font-semibold align-top">
-                                    {{ $el->nom }}
+                                    <?php echo e($el->nom); ?>
+
                                 </td>
-                            @endif
+                            <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
 
-                            {{-- Ressource --}}
-                            <td class="border px-4 py-2">{{ $res->nom }}</td>
+                            
+                            <td class="border px-4 py-2"><?php echo e($res->nom); ?></td>
 
-                            {{-- Note --}}
+                            
                             <td class="border text-center">
                                 <input type="number" min="0" max="20" step="0.5"
                                        class="noteRessource border border-gray-300 p-1 w-full text-center"
-                                       value="{{ $findRow['note'] ?? '' }}">
+                                       value="<?php echo e($findRow['note'] ?? ''); ?>">
                             </td>
 
-                            {{-- Date --}}
+                            
                             <td class="border text-center">
                                 <input type="date"
                                        class="ressourceDate border border-gray-300 p-1 w-full"
-                                       value="{{ $findRow['date'] ?? '' }}">
+                                       value="<?php echo e($findRow['date'] ?? ''); ?>">
                             </td>
                         </tr>
 
-                        @php
+                        <?php
                             $rowspanCount++;
                             if ($rowspanCount == $totalRows) $rowspanCount = 0;
-                        @endphp
+                        ?>
 
-                    @endforeach
-                @endforeach
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
 
-            @empty
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                 <tr><td colspan="5" class="text-center py-3">Aucune donnée disponible</td></tr>
-            @endforelse
+            <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
             </tbody>
         </table>
 
 
-        {{-- ********************************************************************* --}}
-        {{-- 🟠 COMPÉTENCES PARTICULIÈRES --}}
-        {{-- ********************************************************************* --}}
+        
+        
+        
         <h2 class="font-bold text-lg mb-2">Compétences Particulières</h2>
 
         <table class="w-full border-t mb-3">
@@ -138,76 +142,78 @@
 
             <tbody class="bg-white divide-y">
 
-            @forelse($competences as $cptCompetence => $competence)
+            <!--[if BLOCK]><![endif]--><?php $__empty_1 = true; $__currentLoopData = $competences; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $cptCompetence => $competence): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
 
-                @php $rowspanCount = 0; @endphp
+                <?php $rowspanCount = 0; ?>
 
-                @foreach ($competence->elementCompetences as $elementCompetence)
-                    @foreach ($elementCompetence->criteres as $cpt => $critere)
+                <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $competence->elementCompetences; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $elementCompetence): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $elementCompetence->criteres; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $cpt => $critere): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
 
-                        @php
+                        <?php
                             $findRow = $evaluations[$critere->id] ?? null;
-                        @endphp
+                        ?>
 
-                        <tr class="critereRow" id="{{ $critere->id }}">
+                        <tr class="critereRow" id="<?php echo e($critere->id); ?>">
 
-                            {{-- Compétence --}}
-                            @if($rowspanCount == 0)
-                                <td rowspan="{{ $rowspans[$cptCompetence] }}"
+                            
+                            <!--[if BLOCK]><![endif]--><?php if($rowspanCount == 0): ?>
+                                <td rowspan="<?php echo e($rowspans[$cptCompetence]); ?>"
                                     class="px-4 py-3 border text-center font-bold">
-                                    {{ $competence->nom }}
-                                </td>
-                            @endif
+                                    <?php echo e($competence->nom); ?>
 
-                            {{-- Élément --}}
-                            @if($cpt == 0)
-                                <td rowspan="{{ count($elementCompetence->criteres) }}"
+                                </td>
+                            <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+
+                            
+                            <!--[if BLOCK]><![endif]--><?php if($cpt == 0): ?>
+                                <td rowspan="<?php echo e(count($elementCompetence->criteres)); ?>"
                                     class="px-4 py-3 border text-center font-bold">
-                                    {{ $elementCompetence->nom }}
+                                    <?php echo e($elementCompetence->nom); ?>
+
                                 </td>
-                            @endif
+                            <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
 
-                            {{-- Critère --}}
-                            <td class="px-4 py-3 border">{{ $critere->libelle }}</td>
+                            
+                            <td class="px-4 py-3 border"><?php echo e($critere->libelle); ?></td>
 
-                            {{-- Acquis --}}
+                            
                             <td class="px-4 py-3 border text-center">
                                 <input type="checkbox" class="acquis"
-                                       {{ isset($findRow['acquis']) && $findRow['acquis'] ? 'checked' : '' }}>
+                                       <?php echo e(isset($findRow['acquis']) && $findRow['acquis'] ? 'checked' : ''); ?>>
                             </td>
 
-                            {{-- Non acquis --}}
+                            
                             <td class="px-4 py-3 border text-center">
                                 <input type="checkbox" class="nonAcquis"
-                                       {{ isset($findRow['nonAcquis']) && $findRow['nonAcquis'] ? 'checked' : '' }}>
+                                       <?php echo e(isset($findRow['nonAcquis']) && $findRow['nonAcquis'] ? 'checked' : ''); ?>>
                             </td>
 
-                            {{-- Date --}}
+                            
                             <td class="px-4 py-3 border text-center">
                                 <input type="date"
                                     class="critereDate border border-gray-300 p-1 w-full"
-                                    value="{{ $findRow['date'] ?? '' }}">
+                                    value="<?php echo e($findRow['date'] ?? ''); ?>">
                             </td>
 
                           
 
                         </tr>
 
-                        @php
+                        <?php
                             $rowspanCount++;
                             if ($rowspanCount == $rowspans[$cptCompetence]) $rowspanCount = 0;
-                        @endphp
+                        ?>
 
-                    @endforeach
-                @endforeach
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
 
-            @empty
+            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                 <tr>
                     <td colspan="7" class="text-center py-4 font-bold">
                         Aucune donnée disponible
                     </td>
                 </tr>
-            @endforelse
+            <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
 
             </tbody>
         </table>
@@ -215,12 +221,12 @@
     </div>
 </div>
 
-{{-- ********************************************************************* --}}
-{{-- SCRIPT DE SAUVEGARDE --}}
-{{-- ********************************************************************* --}}
 
-@section('scriptsAdditionnels')
-@include('layouts.v1.partials.swal._script')
+
+
+
+<?php $__env->startSection('scriptsAdditionnels'); ?>
+<?php echo $__env->make('layouts.v1.partials.swal._script', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
 
 <script>
 function gatherInfos() {
@@ -268,4 +274,5 @@ function gatherInfos() {
     });
 }
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php /**PATH C:\wamp64\www\AMIE-FPT\resources\views/livewire/apprenant/competence/evaluation.blade.php ENDPATH**/ ?>

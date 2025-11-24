@@ -13,6 +13,8 @@ class Evalute extends Model
         "critere_id",
         "ressource_id",    
         "semestre",
+        "acquis",
+        "nonAcquis",
      
         "date",
       "note",

@@ -20,14 +20,16 @@ class Evaluation extends Component
         $this->inscription_id = $inscription_id;
     }
 
+    // 🔵 Quand le semestre change → recharger les évaluations
     public function updatedSelectedsemestre($value)
     {
         $this->loadEvaluations($value);
     }
 
+    // 🔵 Chargement manuel des évaluations
     public function loadEvaluations($semestre)
     {
-        if (empty($semestre)) {
+        if (!$semestre) {
             $this->evaluations = [];
             return;
         }
@@ -35,25 +37,20 @@ class Evaluation extends Component
         $this->evaluations = Evalute::where('inscription_id', $this->inscription_id)
             ->where('semestre', $semestre)
             ->get()
-            ->keyBy(function ($item) {
-                return $item->ressource_id ?? $item->critere_id;
-            })
+            ->keyBy(fn($item) => $item->ressource_id ?? $item->critere_id)
             ->toArray();
     }
 
+    // 🔵 Chargement automatique
     #[Computed]
     public function evaluations()
     {
-        if (empty($this->selectedsemestre)) {
-            return [];
-        }
+        if (!$this->selectedsemestre) return [];
 
         return Evalute::where('inscription_id', $this->inscription_id)
             ->where('semestre', $this->selectedsemestre)
             ->get()
-            ->keyBy(function ($item) {
-                return $item->ressource_id ?? $item->critere_id;
-            })
+            ->keyBy(fn($item) => $item->ressource_id ?? $item->critere_id)
             ->toArray();
     }
 
@@ -68,108 +65,122 @@ class Evaluation extends Component
                 'competencesParticulieres' => collect(),
                 'rowspansGenerales' => [],
                 'rowspansParticulieres' => [],
+                'competences' => collect(),
+                'rowspans' => [],
                 'evaluations' => [],
-                'inscription_id' => null,
+                'inscription_id' => null
             ]);
         }
 
-        $user = auth()->user();
         $classe = $apprenant->classe;
+        $user = auth()->user();
 
-        // 🔹 Si formateur → filtrer ses compétences
+        // 🔵 Gestion formateur / chef / admin
         if ($user->hasRole('formateur')) {
+
             $competenceIds = DB::table('classe_formateur_competence')
                 ->where('classe_id', $classe->id)
                 ->where('formateur_id', $user->id)
                 ->pluck('competence_id')
                 ->toArray();
 
-            if (empty($competenceIds)) {
-                $competencesGenerales = collect();
-                $competencesParticulieres = collect();
-            } else {
-                $competencesGenerales = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
-                    ->where('type', 'generale')
-                    ->whereIn('id', $competenceIds)
-                    ->with('elementCompetences.ressource')
-                    ->get();
-
-                $competencesParticulieres = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
-                    ->where('type', 'particuliere')
-                    ->whereIn('id', $competenceIds)
-                    ->with('elementCompetences.criteres')
-                    ->get();
-            }
-        } else {
-            // 🔸 Autres rôles (chef, directeur, admin)
-            $competencesGenerales = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
-                ->where('type', 'generale')
+            $competencesGenerales = Competence::where('type', 'generale')
+                ->where('niveau_etude_id', $classe->niveau_etude_id)
+                ->whereIn('id', $competenceIds)
                 ->with('elementCompetences.ressource')
                 ->get();
 
-            $competencesParticulieres = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
-                ->where('type', 'particuliere')
+            $competencesParticulieres = Competence::where('type', 'particuliere')
+                ->where('niveau_etude_id', $classe->niveau_etude_id)
+                ->whereIn('id', $competenceIds)
+                ->with('elementCompetences.criteres')
+                ->get();
+
+        } else {
+
+            $competencesGenerales = Competence::where('type', 'generale')
+                ->where('niveau_etude_id', $classe->niveau_etude_id)
+                ->with('elementCompetences.ressource')
+                ->get();
+
+            $competencesParticulieres = Competence::where('type', 'particuliere')
+                ->where('niveau_etude_id', $classe->niveau_etude_id)
                 ->with('elementCompetences.criteres')
                 ->get();
         }
 
-        // 🔹 Rowspans dynamiques
-        $rowspansGenerales = [];
-        foreach ($competencesGenerales as $k => $comp) {
-            $rowspansGenerales[$k] = $comp->elementCompetences->sum(fn($e) => $e->ressource()->count());
+        // 🔵 Fusion pour ta table particulière
+        $competences = $competencesParticulieres;
+
+        // 🔵 Rowspans particulier
+        $rowspans = [];
+        foreach ($competences as $k => $c) {
+            $rowspans[$k] = $c->elementCompetences->sum(fn($e) => $e->criteres->count());
         }
 
-        $rowspansParticulieres = [];
-        foreach ($competencesParticulieres as $k => $comp) {
-            $rowspansParticulieres[$k] = $comp->elementCompetences->sum(fn($e) => $e->criteres->count());
+        // 🔵 Rowspans général
+        $rowspansGenerales = [];
+        foreach ($competencesGenerales as $k => $c) {
+            $rowspansGenerales[$k] = $c->elementCompetences->sum(fn($e) => $e->ressource()->count());
         }
 
         return view('livewire.apprenant.competence.evaluation', [
-            'apprenant'                => $apprenant,
-            'competencesGenerales'     => $competencesGenerales,
+            'apprenant' => $apprenant,
+            'competencesGenerales' => $competencesGenerales,
             'competencesParticulieres' => $competencesParticulieres,
-            'rowspansGenerales'        => $rowspansGenerales,
-            'rowspansParticulieres'    => $rowspansParticulieres,
-            'evaluations'              => $this->evaluations,
-            'inscription_id'           => $this->inscription_id,
+
+            // 🔥 AJOUTS QUI MANQUAIENT
+            'competences' => $competences,
+            'rowspans' => $rowspans,
+
+            // Général
+            'rowspansGenerales' => $rowspansGenerales,
+            'rowspansParticulieres' => $rowspans,
+
+            'evaluations' => $this->evaluations,
+            'inscription_id' => $this->inscription_id,
         ]);
     }
 
+    // 🔵 Sauvegarde des données
     #[On('saveDatas')]
     public function saveDatas($datas, $semestre)
     {
-        if (empty($semestre)) {
+        if (!$semestre) {
             session()->flash('error', 'Sélectionnez un semestre avant d’enregistrer.');
             return;
         }
 
-        $rows = json_decode($datas, true) ?? [];
+        $rows = json_decode($datas, true);
 
         foreach ($rows as $row) {
-            if (empty($row['id'])) continue;
-            if ($row['note'] === '' || $row['note'] === null) continue;
 
-            $isRessource = isset($row['type']) && $row['type'] === 'ressource';
-
-            $attributes = [
-                'inscription_id' => $this->inscription_id,
-                'semestre'       => $semestre,
-            ];
-
-            if ($isRessource) {
-                $attributes['ressource_id'] = $row['id'];
-            } else {
-                $attributes['critere_id'] = $row['id'];
+            if ($row['type'] === 'ressource') {
+                Evalute::updateOrCreate(
+                    [
+                        'inscription_id' => $this->inscription_id,
+                        'ressource_id' => $row['id'],
+                        'semestre' => $semestre,
+                    ],
+                    [
+                        'note' => $row['note'] ?? null,
+                        'date' => $row['date'] ?? null
+                    ]
+                );
             }
 
-            Evalute::updateOrCreate(
-                $attributes,
-                [
-                    'note'         => $row['note'],
-                    'date'         => $row['date'] ?? null,
-                    'observations' => $row['observations'] ?? null,
-                ]
-            );
+            if ($row['type'] === 'critere') {
+                Evalute::updateOrCreate(
+                    [
+                        'inscription_id' => $this->inscription_id,
+                        'critere_id' => $row['id'],
+                        'semestre' => $semestre,
+                    ],
+                    [
+                        'date' => $row['date'] ?? null
+                    ]
+                );
+            }
         }
 
         session()->flash('message', 'Évaluations enregistrées avec succès.');
