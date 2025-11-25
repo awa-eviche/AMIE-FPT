@@ -683,7 +683,7 @@ if (isset($__slots)) unset($__slots);
       <!-- Active users chart -->
       <div class="col-span-2 bg-white rounded-md dark:bg-darker" x-data="{ isOn: false }">
         <!-- Card header -->
-        <div class="container">
+        <!--div class="container">
           <?php
 $__split = function ($name, $params = []) {
     return [$name, $params];
@@ -700,7 +700,7 @@ unset($__params);
 unset($__split);
 if (isset($__slots)) unset($__slots);
 ?>
-        </div>
+        </div-->
         <!-- Chart -->
 
         
