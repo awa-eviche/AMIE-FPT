@@ -8,7 +8,7 @@
                 class="border border-gray-300 p-3 w-full max-w-xs focus:border-first-orange enlever_shadow rounded px-8 py-0.75 shadow-first-orange text-sm font-bold">
                 <option value="">Sélectionnez une année academique</option>
                 @foreach($annees as $academiques)
-                <option value="{{ $academiques->id }}">{{ $academiques->annee1 }}-{{ $academiques->annee2 }}</option>
+                <!--option value="{{ $academiques->id }}">{{ $academiques->annee1 }}-{{ $academiques->annee2 }}</option-->
                 @endforeach
 
             </select>

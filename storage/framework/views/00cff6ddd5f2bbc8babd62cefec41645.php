@@ -8,7 +8,7 @@
                 class="border border-gray-300 p-3 w-full max-w-xs focus:border-first-orange enlever_shadow rounded px-8 py-0.75 shadow-first-orange text-sm font-bold">
                 <option value="">Sélectionnez une année academique</option>
                 <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $annees; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $academiques): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                <option value="<?php echo e($academiques->id); ?>"><?php echo e($academiques->annee1); ?>-<?php echo e($academiques->annee2); ?></option>
+                <!--option value="<?php echo e($academiques->id); ?>"><?php echo e($academiques->annee1); ?>-<?php echo e($academiques->annee2); ?></option-->
                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
 
             </select>

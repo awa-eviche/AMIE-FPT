@@ -604,9 +604,9 @@
       <!-- Active users chart -->
       <div class="col-span-2 bg-white rounded-md dark:bg-darker" x-data="{ isOn: false }">
         <!-- Card header -->
-        <div class="container">
+        <!--div class="container">
           @livewire('dfpt.getallindiacteurs')
-        </div>
+        </div-->
         <!-- Chart -->
 
         {{-- <div class="relative p-4 h-72 border mb-4">
