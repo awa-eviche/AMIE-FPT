@@ -41,9 +41,7 @@
             </select>
         </div>
 
-        
-        
-        
+       
         <h2 class="font-bold text-lg mb-2">Compétences Générales</h2>
 
         <table class="w-full border mb-6">
@@ -122,9 +120,7 @@
         </table>
 
 
-        
-        
-        
+    
         <h2 class="font-bold text-lg mb-2">Compétences Particulières</h2>
 
         <table class="w-full border-t mb-3">
@@ -220,8 +216,6 @@
 
     </div>
 </div>
-
-
 
 
 

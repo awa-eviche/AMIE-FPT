@@ -15,7 +15,6 @@ class Evalute extends Model
         "semestre",
         "acquis",
         "nonAcquis",
-     
         "date",
       "note",
       

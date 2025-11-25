@@ -810,7 +810,18 @@ $nonAcquis = $evaluation?->nonAcquis
 
     $nbAbsences = $absencesSemestre->where('type', 'absence')->where('justifie', false)->count();
     $nbRetards = $absencesSemestre->where('type', 'retard')->count();
+      $logoPath = public_path('assets/images/titleHead.png');
+  
     $template = file_get_contents('competence.html');
+ $logoPath = public_path('assets/images/titleHead.png');
+    $logoBase64 = '';
+
+    if (file_exists($logoPath)) {
+        $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+    }
+
+    $template = str_replace('[LOGO]', $logoBase64, $template);
+  
     $template = str_replace('[BODYRESSOURCE]', $htmlRessources, $template);
     $template = str_replace('[BODYCOMP]', $htmlCompetences, $template);
     $template = str_replace('[NB_ABSENCES]', $nbAbsences, $template);
@@ -833,14 +844,10 @@ $nonAcquis = $evaluation?->nonAcquis
         '[ANNEESCOLAIRE]' => $inscription->anneeAcademique->code ?? '',
         '[EFPT]' => $inscription->classe->etablissement->nom,
         '[EFPTTEL]' => $inscription->classe->etablissement->telephone,
+        '[EFPTMAIL]' => $inscription->classe->etablissement->email,
     ];
 
     $template = str_replace(array_keys($replace), array_values($replace), $template);
-
-    /* =============================================================
-       PDF
-    ============================================================== */
-
     $dompdf = new Dompdf();
     $dompdf->getOptions()->set('isRemoteEnabled', true);
     $dompdf->loadHtml($template);
@@ -1010,7 +1017,8 @@ public function generateClassePdf(string $classe_id)
         $nbRetards = $absencesSemestre->where('type', 'retard')->count();
 
         $template = file_get_contents('competence.html');
-
+         $logoPath = public_path('assets/images/titleHead.png');
+    $template = str_replace('[LOGO]', $logoPath, $template); 
         $template = str_replace('[BODYRESSOURCE]', $htmlRessources, $template);
         $template = str_replace('[BODYCOMP]', $htmlCompetences, $template);
         $template = str_replace('[NB_ABSENCES]', $nbAbsences, $template);
