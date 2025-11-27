@@ -1,0 +1,2 @@
+<link rel="stylesheet" href="<?php echo e(asset('assets/libs/richtexteditor/rte_theme_default.css')); ?>" />
+<?php /**PATH /var/www/html/amie-fpt/resources/views/layouts/v1/partials/richEditor/_style.blade.php ENDPATH**/ ?>

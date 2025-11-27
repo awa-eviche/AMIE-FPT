@@ -1,0 +1,1 @@
+<?php /**PATH /var/www/html/amie-fpt/resources/views/partials/actualite.blade.php ENDPATH**/ ?>

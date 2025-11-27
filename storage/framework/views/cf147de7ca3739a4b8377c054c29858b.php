@@ -1,0 +1,5 @@
+<a <?php echo e($attributes->merge(['class' => 'bg-blue-500 text-white px-3 py-2 rounded-md inline-block'])); ?>>
+    <?php echo e($slot); ?>
+
+</a>
+<?php /**PATH /var/www/html/amie-fpt/resources/views/components/button-link.blade.php ENDPATH**/ ?>

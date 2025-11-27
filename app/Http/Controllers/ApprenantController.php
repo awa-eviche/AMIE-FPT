@@ -241,7 +241,54 @@ public function destroy($id)
                      ->withMessage('L\'apprenant a été supprimé avec succès.');
 }
 
+
 public function genererMatricule($request)
+{
+    $annee = date('Y');
+    $annee2 = substr($annee, -2); // "25" pour 2025
+
+    // Correction : on récupère bien la valeur du sexe
+    $sexeInput = strtolower($request->sexe);
+
+    $sexe = match ($sexeInput) {
+        'm', 'masculin', 'homme' => '1',
+        'f', 'feminin', 'féminin', 'femme' => '2',
+        default => throw new \Exception("Genre invalide : " . $request->sexe),
+    };
+
+    $prefix = $annee2 . $sexe;
+
+    // Dernier matricule
+    $last = Apprenant::where('matricule', 'LIKE', $prefix . '%')
+        ->orderByDesc('matricule')
+        ->first();
+
+    if ($last) {
+        $ordreStr = substr($last->matricule, 3, 6);
+        $ordre = str_pad(((int) $ordreStr) + 1, 6, '0', STR_PAD_LEFT);
+    } else {
+        $ordre = '000001';
+    }
+
+    $matriculeBase = $prefix . $ordre;
+
+    // Calcul de la lettre checksum
+    $pairs = $impairs = 0;
+    foreach (str_split($matriculeBase) as $i => $digit) {
+        $digit = (int) $digit;
+        if ($i % 2 == 0) $pairs += $digit;
+        else $impairs += $digit;
+    }
+
+    $checksumIndex = abs($pairs - $impairs) % 26;
+    $lettre = range('A', 'Z')[$checksumIndex];
+
+    return $matriculeBase . $lettre;
+}
+
+
+
+public function genererMatriculeavant insertion($request)
 {
     $annee = date('Y');
     $annee2 = substr($annee, -2); // Ex: "25" pour 2025

@@ -1,0 +1,2 @@
+<textarea <?php echo e($attributes->merge(['type' => 'text', 'class' => 'px-3 py-1 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md border shadow-sm'])); ?>><?php echo e($slot); ?></textarea>
+<?php /**PATH /var/www/html/amie-fpt/resources/views/components/textarea.blade.php ENDPATH**/ ?>

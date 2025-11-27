@@ -1,2 +1,0 @@
-<script src="<?php echo e(asset('assets/libs/sweetalert2/sweetalert2.min.js')); ?>"></script>
-<script src="<?php echo e(asset('assets/js/swal/apix-bswal.js')); ?>"></script><?php /**PATH /var/www/html/pgi/resources/views/layouts/v1/partials/swal/_script.blade.php ENDPATH**/ ?>

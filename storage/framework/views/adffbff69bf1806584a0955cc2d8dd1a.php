@@ -1,0 +1,1 @@
+<?php /**PATH /var/www/html/amie-fpt/resources/views/filiereetablissement/edit.blade.php ENDPATH**/ ?>
