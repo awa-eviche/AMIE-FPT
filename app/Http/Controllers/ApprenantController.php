@@ -288,7 +288,7 @@ public function genererMatricule($request)
 
 
 
-public function genererMatriculeavant insertion($request)
+public function genererMatriculeavantinsertion($request)
 {
     $annee = date('Y');
     $annee2 = substr($annee, -2); // Ex: "25" pour 2025

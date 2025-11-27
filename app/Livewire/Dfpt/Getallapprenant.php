@@ -126,7 +126,9 @@ class Getallapprenant extends Component
 
         // Clone pour le count et le regroupement par année
         $cloneQuery = clone $apprenantsQuery;
-        $this->count = $cloneQuery->count();
+       // $this->count = $cloneQuery->count();
+ $this->count = $cloneQuery->distinct('apprenants.id')->count('apprenants.id');
+
 
         $this->apprenantsParAnnee = $cloneQuery->get()
             ->groupBy('anneeCode')

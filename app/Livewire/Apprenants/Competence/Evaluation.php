@@ -143,46 +143,70 @@ class Evaluation extends Component
     }
 
     // 🔵 Sauvegarde des données
-    #[On('saveDatas')]
-    public function saveDatas($datas, $semestre)
-    {
-        if (!$semestre) {
-            session()->flash('error', 'Sélectionnez un semestre avant d’enregistrer.');
-            return;
-        }
-
-        $rows = json_decode($datas, true);
-
-        foreach ($rows as $row) {
-
-            if ($row['type'] === 'ressource') {
-                Evalute::updateOrCreate(
-                    [
-                        'inscription_id' => $this->inscription_id,
-                        'ressource_id' => $row['id'],
-                        'semestre' => $semestre,
-                    ],
-                    [
-                        'note' => $row['note'] ?? null,
-                        'date' => $row['date'] ?? null
-                    ]
-                );
-            }
-
-            if ($row['type'] === 'critere') {
-                Evalute::updateOrCreate(
-                    [
-                        'inscription_id' => $this->inscription_id,
-                        'critere_id' => $row['id'],
-                        'semestre' => $semestre,
-                    ],
-                    [
-                        'date' => $row['date'] ?? null
-                    ]
-                );
-            }
-        }
-
-        session()->flash('message', 'Évaluations enregistrées avec succès.');
+      #[On('saveDatas')]
+public function saveDatas($datas, $semestre)
+{
+    if (empty($semestre)) {
+        session()->flash('error', 'Sélectionnez un semestre avant d’enregistrer.');
+        return;
     }
+
+    $rows = json_decode($datas, true) ?? [];
+
+    foreach ($rows as $row) {
+
+        if (empty($row['id'])) continue;
+
+
+        if ($row['type'] === 'critere') {
+
+          
+            if (
+                empty($row['acquis']) &&
+                empty($row['nonAcquis']) &&
+                empty($row['date'])
+            ) {
+                continue;
+            }
+
+            Evalute::updateOrCreate(
+                [
+                    'inscription_id' => $this->inscription_id,
+                    'critere_id'     => $row['id'],
+                    'semestre'       => $semestre,
+                ],
+                [
+                    'acquis'        => isset($row['acquis']) ? (bool)$row['acquis'] : false,
+                    'nonAcquis'     => isset($row['nonAcquis']) ? (bool)$row['nonAcquis'] : false,
+                    'date'          => $row['date'] ?? null,
+                ]
+            );
+
+            continue;
+        }
+
+       
+        if ($row['type'] === 'ressource') {
+
+            if (!isset($row['note']) || $row['note'] === '') {
+                continue;
+            }
+
+            Evalute::updateOrCreate(
+                [
+                    'inscription_id' => $this->inscription_id,
+                    'ressource_id'   => $row['id'],
+                    'semestre'       => $semestre,
+                ],
+                [
+                    'note' => $row['note'],
+                    'date' => $row['date'] ?? null,
+                ]
+            );
+        }
+    }
+
+    session()->flash('message', 'Évaluations enregistrées avec succès.');
+}
+
 }
