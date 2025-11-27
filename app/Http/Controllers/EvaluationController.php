@@ -347,7 +347,8 @@ public function generatePDF($id)
     // 🔸 Injection des absences et retards
     $template = str_replace('[NB_ABSENCES]', $nbAbsences, $template);
     $template = str_replace('[NB_RETARDS]', $nbRetards, $template);
-
+     
+  
     // --- Date en français ---
     setlocale(LC_TIME, 'fr_FR.UTF-8', 'fr_FR', 'fr');
     $date = strftime('%e %B %Y');
