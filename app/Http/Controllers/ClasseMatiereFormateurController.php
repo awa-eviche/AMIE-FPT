@@ -17,7 +17,7 @@ class ClasseMatiereFormateurController extends Controller
     {
         $classe = Classe::findOrFail($classe_id);
 
-        // 🔹 Vérifie si la classe utilise PPO ou APC
+      
         if ($classe->modalite === 'PPO') {
             $request->validate([
                 'formateur_id' => 'required|integer',
@@ -63,10 +63,7 @@ class ClasseMatiereFormateurController extends Controller
             return back()->withErrors(['modalite' => "Modalité non reconnue pour cette classe."]);
         }
 
-        // 🔹 Vérifie la duplication
         
-
-        // 🔹 Insère dans la table correspondante
         DB::table($table)->insert($fields);
 
         return back()->with('success', 'Affectation enregistrée avec succès.');

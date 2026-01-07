@@ -496,7 +496,7 @@
     
     <!--[if BLOCK]><![endif]--><?php if($evaluation): ?>
         
-        <!--[if BLOCK]><![endif]--><?php if($user->hasRole('superadmin') || $user->hasRole('chef_de_travaux') || $user->hasRole('directeur_etude') || $user->hasRole('chef_etablissement')): ?>
+        <!--[if BLOCK]><![endif]--><?php if($user->hasRole('superadmin') || $user->hasRole('chef_de_travaux') || $user->hasRole('directeur_etude') || $user->hasRole('chef_etablissement') || $isFormateurAssigné): ?>
 
             <!-- Bouton Modifier -->
             <a href="#" data-modal-target="default-modal-edit<?php echo e($matiere->id); ?>" data-modal-toggle="default-modal-edit<?php echo e($matiere->id); ?>">
@@ -527,10 +527,9 @@
 
                                 <div class="flex flex-wrap w-full justify-evenly mb-4">
                                     <div class="flex-grow mr-2">
-                                        <label for="note_cc" class="block text-sm font-bold text-gray-700">Note Contrôle Continu :</label>
-                                        <input type="text" name="note_cc" id="note_cc"
-                                               class="form-input rounded-md shadow-sm mt-1 block w-full"
-                                               value="<?php echo e($evaluation->note_cc); ?>" />
+                                       <label for="note_cc" class="block text-sm font-bold text-gray-700">Note Contrôle Continu :</label>
+                                        <input type="text"  value="<?php echo e(number_format($evaluation->note_cc, 2)); ?>"  readonly class="form-input  rounded-md shadow-sm mt-1 block w-full" />
+
                                     </div>
 
                                     <div class="flex-grow mr-2">
@@ -538,9 +537,14 @@
                                         <input type="text" name="note_composition" id="note_composition"
                                                class="form-input rounded-md shadow-sm mt-1 block w-full"
                                                value="<?php echo e($evaluation->note_composition); ?>" />
+                                                        <div class="flex-grow mr-4 mt-2">
+                                            <a  href="#"  wire:click.prevent="openDevoirsModal(<?php echo e($matiere->id); ?>, <?php echo e($inscriptionId); ?>, <?php echo e($selectedsemestre ?? 1); ?>)"  class="text-sm text-blue-600 underline">
+                                                ➕ Ajouter / gérer les devoirs
+                                            </a>
+                                                        </div>
                                     </div>
                                 </div>
-
+ 
                                 <div class="flex justify-end">
                                     <button type="submit"
                                             class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
@@ -624,7 +628,7 @@
             </div>
             &nbsp;&nbsp;&nbsp;
 
-            <!-- Bouton Supprimer -->
+          
             <?php echo Form::open([
                 'method' => 'DELETE',
                 'class' => 'delete-form',
@@ -645,7 +649,7 @@
 
     
     <?php else: ?>
-        
+       
         <!--[if BLOCK]><![endif]--><?php if($isFormateurAssigné): ?>
             <a href="#" data-modal-target="default-modal<?php echo e($matiere->id); ?>" data-modal-toggle="default-modal<?php echo e($matiere->id); ?>">
                 <i class="fa fa-plus-circle text-green-600"></i>
@@ -673,16 +677,45 @@
                                 <input type="hidden" name="matiere_id" value="<?php echo e($matiere->id); ?>">
                                 <input type="hidden" name="semestre" value="<?php echo e($selectedsemestre); ?>">
 
-                                <div class="flex flex-wrap w-full justify-evenly">
-                                    <div class="flex-grow mb-4 mr-2">
-                                        <label for="note_cc" class="block text-sm font-bold text-gray-700">Note Contrôle Continu :</label>
-                                        <input type="text" name="note_cc" id="note_cc" class="form-input rounded-md shadow-sm mt-1 block w-full" />
-                                    </div>
+       <div class="w-full">
 
-                                    <div class="flex-grow mb-4 mr-2">
-                                        <label for="note_composition" class="block text-sm font-bold text-gray-700">Note Composition :</label>
-                                        <input type="text" name="note_composition" id="note_composition" class="form-input rounded-md shadow-sm mt-1 block w-full" />
-                                    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">  
+        <div>
+            <label class="block text-sm font-bold text-gray-700">
+                Moyenne Contrôle Continu
+            </label>
+<!-- <input
+    type="text"wire:model.live="moyenneCC"
+    wire:model.live="moyenneCC"
+    readonly
+    class="form-input bg-gray-100 cursor-not-allowed rounded-md shadow-sm mt-1 w-full"
+/> -->
+<input  type="text" wire:model.live="moyenneCC.<?php echo e($matiere->id); ?>" readonly class="form-input rounded-md bg-gray-100 shadow-sm mt-1 w-full text-gray-700 bg-gray-100 cursor-not-allowed"/>
+
+        </div>    
+        <div>
+            <label for="note_composition" class="block text-sm font-bold text-gray-700">
+                Note Composition
+            </label>
+            <input
+                type="text"
+                name="note_composition"
+                id="note_composition"
+                class="form-input rounded-md shadow-sm mt-1 w-full"/>
+        </div>
+
+    </div>
+ <div class="flex justify-end items-center gap-4 mt-4">
+  <a
+        href="#"
+        wire:click.prevent="openDevoirsModal(<?php echo e($matiere->id); ?>, <?php echo e($inscriptionId); ?>, <?php echo e($selectedsemestre ?? 1); ?>)"
+        class="text-sm text-blue-600 underline">
+        ➕ Ajouter / gérer les devoirs
+    </a>
+</div>
+
+</div>
+
                                 </div>
 
                                 <div class="flex justify-end">
@@ -727,6 +760,42 @@
             <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
         </div>
     </div>
+    <!--[if BLOCK]><![endif]--><?php if($showDevoirsModal): ?>
+    <div class="fixed inset-0 bg-white bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white w-1/2 rounded-lg shadow-lg p-6">
+
+            <button
+                class="float-right text-red-600"
+                wire:click="closeDevoirsModal">
+                ✕
+            </button>
+
+            <?php
+$__split = function ($name, $params = []) {
+    return [$name, $params];
+};
+[$__name, $__params] = $__split('devoirs.devoirs-modal',
+                [
+                    'inscriptionId' => $devoirsInscriptionId,
+                    'matiereId' => $devoirsMatiereId,
+                    'semestre' => $devoirsSemestre,
+                ]);
+
+$__html = app('livewire')->mount($__name, $__params, 'devoirs-'.$devoirsInscriptionId.'-'.$devoirsMatiereId, $__slots ?? [], get_defined_vars());
+
+echo $__html;
+
+unset($__html);
+unset($__name);
+unset($__params);
+unset($__split);
+if (isset($__slots)) unset($__slots);
+?>
+
+        </div>
+    </div>
+<?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+
 </div>
 <script>
     function openAbsenceModal() {
@@ -796,6 +865,25 @@
         if (event.target === modal) {
             closeEditAbsenceModal();
         }
+    });
+</script>
+
+<script>
+    document.addEventListener('livewire:init', () => {
+        Livewire.on('back-to-evaluation', (data) => {
+            const matiereId = data.matiereId;
+            const modalId = 'default-modal' + matiereId;
+
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        });
+    });
+</script>
+<script>
+    Livewire.on('moyenneCCUpdated', moyenne => {
+        console.log('Nouvelle moyenne CC :', moyenne);
     });
 </script>
 <?php /**PATH C:\wamp64\www\AMIE-FPT\resources\views/livewire/inscription/liste-inscription.blade.php ENDPATH**/ ?>

@@ -254,7 +254,7 @@
                     </tr>
                 @endif
 
-            {{-- ====================== MODALITÉ APC ====================== --}}
+       
             @elseif($classe->modalite === 'APC')
 
                 {{-- Compétence générale --}}
@@ -265,10 +265,10 @@
                                 {{-- Formateur fusionné --}}
                                 @if($index === 0)
                                     <td class="px-3 py-2 border align-top" rowspan="{{ $rowspan }}">
-                                        {{ $a->formateur_prenom }} {{ $a->formateur_nom }}
+                                        {{ $a->formateur_prenom }} {{ $a->formateur_nom ?? '-'}}
                                     </td>
                                     <td class="px-3 py-2 border align-top font-semibold text-gray-800" rowspan="{{ $rowspan }}">
-                                        {{ $a->competence_nom }}
+                                        {{ $a->competence_nom ?? '-' }}
                                         <div class="text-xs text-gray-500">(Compétence générale)</div>
                                     </td>
                                 @endif
@@ -368,7 +368,7 @@
         <form method="POST" action="{{ route('ressources.store') }}">
             @csrf
             <input type="hidden" name="element_competence_id" id="elementId">
-             <input type=�"hidden" name="classe_id" value="{{ $classe->id }}" >
+             <input type=�"hidden" name="classe_id" value="{{ $classe->id }}" >
             <label class="block text-sm font-medium text-gray-700 mb-1">
                 Nom de la ressource :
             </label>

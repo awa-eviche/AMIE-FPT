@@ -95,16 +95,7 @@ class ApprenantController extends Controller
             $apprenant->matricule = $this->genererMatricule($request);
             $apprenant->save();
     
-            // Création de l'inscription
-          //  $inscription = Inscription::create([
-              //  'apprenant_id' => $apprenant->id,
-              //  'classe_id' => $request->classe_id,
-              //  'annee_academique_id' => $request->annee_academique_id,
-               // 'dateInscription' => Carbon::now()->format('Y-m-d'),
-              //  'createdAt' => Carbon::now(),
-           // ]);
-    
-// Récupération du currentClasse et annee_academique_id
+        
 $classeId = session('currentClasse');
 $anneeAcademiqueId = $request->annee_academique_id;
 
@@ -125,7 +116,8 @@ $inscription = Inscription::create([
     'classe_id' => $classeId,
     'annee_academique_id' => $anneeAcademiqueId,
     'dateInscription' => Carbon::now()->format('Y-m-d'),
-    'createdAt' => Carbon::now(),
+    // 'createdAt' => Carbon::now(),
+     'created_at' => Carbon::now(),
 ]);
 
 
@@ -143,7 +135,8 @@ $inscription = Inscription::create([
     
             return redirect()->route('classe.show', $request->classe_id)
                 ->withMessage("L'inscription a été faite avec succès.");
-        } catch (\Exception $e) {
+        } 
+        catch (\Exception $e) {
             Log::error($e);
             return back()->withInput()->withErrors(['error' => "Une erreur est survenue lors de l'inscription."]);
         }
@@ -311,49 +304,49 @@ public function import(Request $request, $classeId)
         return back()->withErrors(['file' => $e->getMessage()]);
     }
 }
-public function genererMatricule($request)
-{
-    $annee = date('Y');
-    $annee2 = substr($annee, -2); // "25" pour 2025
+// public function genererMatricule($request)
+// {
+//     $annee = date('Y');
+//     $annee2 = substr($annee, -2); // "25" pour 2025
 
-    // Correction : on récupère bien la valeur du sexe
-    $sexeInput = strtolower($request->sexe);
+//     // Correction : on récupère bien la valeur du sexe
+//     $sexeInput = strtolower($request->sexe);
 
-    $sexe = match ($sexeInput) {
-        'm', 'masculin', 'homme' => '1',
-        'f', 'feminin', 'féminin', 'femme' => '2',
-        default => throw new \Exception("Genre invalide : " . $request->sexe),
-    };
+//     $sexe = match ($sexeInput) {
+//         'm', 'masculin', 'homme' => '1',
+//         'f', 'feminin', 'féminin', 'femme' => '2',
+//         default => throw new \Exception("Genre invalide : " . $request->sexe),
+//     };
 
-    $prefix = $annee2 . $sexe;
+//     $prefix = $annee2 . $sexe;
 
-    // Dernier matricule
-    $last = Apprenant::where('matricule', 'LIKE', $prefix . '%')
-        ->orderByDesc('matricule')
-        ->first();
+//     // Dernier matricule
+//     $last = Apprenant::where('matricule', 'LIKE', $prefix . '%')
+//         ->orderByDesc('matricule')
+//         ->first();
 
-    if ($last) {
-        $ordreStr = substr($last->matricule, 3, 6);
-        $ordre = str_pad(((int) $ordreStr) + 1, 6, '0', STR_PAD_LEFT);
-    } else {
-        $ordre = '000001';
-    }
+//     if ($last) {
+//         $ordreStr = substr($last->matricule, 3, 6);
+//         $ordre = str_pad(((int) $ordreStr) + 1, 6, '0', STR_PAD_LEFT);
+//     } else {
+//         $ordre = '000001';
+//     }
 
-    $matriculeBase = $prefix . $ordre;
+//     $matriculeBase = $prefix . $ordre;
 
-    // Calcul de la lettre checksum
-    $pairs = $impairs = 0;
-    foreach (str_split($matriculeBase) as $i => $digit) {
-        $digit = (int) $digit;
-        if ($i % 2 == 0) $pairs += $digit;
-        else $impairs += $digit;
-    }
+//     // Calcul de la lettre checksum
+//     $pairs = $impairs = 0;
+//     foreach (str_split($matriculeBase) as $i => $digit) {
+//         $digit = (int) $digit;
+//         if ($i % 2 == 0) $pairs += $digit;
+//         else $impairs += $digit;
+//     }
 
-    $checksumIndex = abs($pairs - $impairs) % 26;
-    $lettre = range('A', 'Z')[$checksumIndex];
+//     $checksumIndex = abs($pairs - $impairs) % 26;
+//     $lettre = range('A', 'Z')[$checksumIndex];
 
-    return $matriculeBase . $lettre;
-}
+//     return $matriculeBase . $lettre;
+// }
 
 
 }

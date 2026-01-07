@@ -198,10 +198,7 @@
 @endif
                         </div>
                          @if(
-    $user->hasRole('chef_de_travaux') ||
-    $user->hasRole('chef_etablissement') ||
-    $user->hasRole('directeur_etude')
-)
+    $user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude')||$user->hasRole('surveillant'))
         <button type="button"
     onclick="openAbsenceModal()"
     class="text-white bg-green-600 text-sm rounded-md shadow-md px-4 py-2 hover:bg-green-700">

@@ -19,6 +19,7 @@ use App\Models\Classe;
 use Barryvdh\DomPDF\Facade\Pdf;
 use ZipArchive;
 use Illuminate\Support\Facades\File;
+use App\Models\Devoir;
 
 
 //use Barryvdh\DomPDF\Facade\Pdf; // si tu utilises barryvdh/laravel-dompdf
@@ -39,13 +40,14 @@ class EvaluationController extends Controller
         return view('inscription.index');
     }
 
-    public function create($inscriptionId, $matiereId)
-    {
-        $inscription = Inscription::findOrFail($inscriptionId);
-        $matiere = Matiere::findOrFail($matiereId);
+    // public function create($inscriptionId, $matiereId)
+    // {
+    //     $inscription = Inscription::findOrFail($inscriptionId);
+    //     $matiere = Matiere::findOrFail($matiereId);
 
-        return view('evaluation.evaluationcreate', compact('inscription', 'matiere'));
-    }
+    //     return view('evaluation.evaluationcreate', compact('inscription', 'matiere'));
+    // }
+    
 
 
     public function show($inscriptionId)
@@ -64,11 +66,13 @@ class EvaluationController extends Controller
     
     public function store(Request $request)
     {
+        $semestre = Session::get('selectedsemestre', $request->semestre);
+
         $request->validate([
             'inscription_id' => 'required|string|exists:inscriptions,id',
             'matiere_id'     => 'required|string|exists:matieres,id',
             'semestre'       => 'required|in:1,2',
-            'note_cc'        => 'required|numeric|max:20',
+           // 'note_cc'        => 'required|numeric|max:20',
             'note_composition' => 'required|numeric|max:20',
             // On ne valide pas "appreciation", car elle sera générée automatiquement
         ]);
@@ -88,7 +92,7 @@ class EvaluationController extends Controller
         abort(403, 'Vous n’êtes pas autorisé à évaluer les apprenants de cette classe.');
     }
     
-        // Vérification s'il existe déjà une évaluation pour cet apprenant, matière et semestre
+       
         $existingEvaluation = Evaluation::where('inscription_id', $request->inscription_id)
             ->where('matiere_id', $request->matiere_id)
             ->where('semestre', $request->semestre)
@@ -100,38 +104,59 @@ class EvaluationController extends Controller
         }
     
         try {
-            // Calcul automatique de la moyenne et de l’appréciation
-            $moyenne = $this->calculerMoyenne($request->note_cc, $request->note_composition);
+
+            // ✅ 1. Calcul automatique de la moyenne CC depuis les devoirs
+            $moyenneCC = Devoir::where([
+                'inscription_id' => $request->inscription_id,
+                'matiere_id'     => $request->matiere_id,
+                'semestre'       => $request->semestre,
+            ])->avg('note');
+        
+            $moyenneCC = round($moyenneCC ?? 0, 2);
+        
+            // ✅ 2. Calcul de la moyenne finale
+            $moyenne = $this->calculerMoyenne($moyenneCC, $request->note_composition);
+        
+            // ✅ 3. Appréciation automatique
             $appreciation = $this->noteAppreciation($moyenne);
-    
+        
+            // ✅ 4. Enregistrement de l’évaluation
             $evaluation = Evaluation::create([
                 'inscription_id'   => $request->inscription_id,
                 'matiere_id'       => $request->matiere_id,
-                'semestre'         => Session::get('selectedsemestre', $request->semestre),
-                'note_cc'          => $request->note_cc,
+               // 'semestre'         => Session::get('selectedsemestre', $request->semestre),
+               'semestre'         => $semestre,
+                'note_cc'          => $moyenneCC, // 🔥 AUTO
                 'note_composition' => $request->note_composition,
-                'appreciation'     => $appreciation, // Automatique ici
+                'appreciation'     => $appreciation,
             ]);
-    
-            // Historique de modification
+        
+            // Historique
             HistoryNote::create([
                 'evaluation_id' => $evaluation->id,
                 'user_id'       => auth()->user()->id,
             ]);
-    
-            // Log de l’action
+        
+            // Log
             $this->logUserRepository->store([
                 'action'      => UserAction::AddEvaluation,
                 'model'       => Model::Evaluation,
                 'new_object'  => json_encode($evaluation),
             ]);
-    
+        
             return redirect()->route('inscription.index')
                 ->with('success', 'Évaluation enregistrée avec succès.');
+        
         } catch (\Exception $e) {
             return redirect()->back()
-                ->withErrors('Une erreur s\'est produite lors de l\'enregistrement de l\'évaluation.');
+                ->withErrors('Une erreur s\'est produite lors de l\'enregistrement.');
         }
+        dd(
+            $semestre,
+            Devoir::where('semestre', $semestre)->count(),
+            Devoir::where('inscription_id', $request->inscription_id)->count()
+        );
+        
     }
     
 
@@ -156,45 +181,74 @@ class EvaluationController extends Controller
     public function update(Request $request, $evaluationId)
     {
         $evaluation = Evaluation::findOrFail($evaluationId);
-
-$inscription = $evaluation->inscription;
+    
+        $inscription = $evaluation->inscription;
         $classe = $inscription?->classe;
         $user = auth()->user();
         $personnel = $user->personnel;
     
-           // ✅ Vérification d’accès : seuls certains rôles peuvent modifier
-    if (!(
-        $user->hasRole('superadmin') ||
-        $user->hasRole('chef_de_travaux') ||
- $user->hasRole('directeur_etude') ||
-        $user->hasRole('chef_etablissement')
-    )) {
-        abort(403, 'Vous n’êtes pas autorisé à modifier les évaluations de cette classe.');
-    }
+        // ✅ Autorisation : rôles + formateur assigné
+        $isFormateurAssigne = $classe
+            ? $classe->formateurs()
+                ->where('personnel_etablissement_id', $personnel?->id)
+                ->exists()
+            : false;
     
+        if (!(
+            $user->hasRole('superadmin') ||
+            $user->hasRole('chef_de_travaux') ||
+            $user->hasRole('directeur_etude') ||
+            $user->hasRole('chef_etablissement') ||
+            $isFormateurAssigne
+        )) {
+            abort(403, 'Vous n’êtes pas autorisé à modifier cette évaluation.');
+        }
+    
+        // ✅ Validation : PLUS DE note_cc
         $request->validate([
+            'note_composition' => 'required|numeric|min:0|max:20',
+            'semestre' => 'required|in:1,2',
             'matiere_id' => 'required',
-            'semestre' => 'required',
-            'note_cc' => 'required|numeric|max:20',
-            'note_composition' => 'required|numeric|max:20',
         ]);
-
-        $request->merge(['appreciation' => $this->noteAppreciation($this->calculerMoyenne($request->note_cc, $request->note_composition))]);
-
+    
+        // ✅ Recalcul automatique du CC depuis les devoirs
+        $moyenneCC = Devoir::where([
+            'inscription_id' => $evaluation->inscription_id,
+            'matiere_id'     => $evaluation->matiere_id,
+            'semestre'       => $evaluation->semestre,
+        ])->avg('note');
+    
+        $moyenneCC = round($moyenneCC ?? 0, 2);
+    
+        // ✅ Moyenne finale
+        $moyenne = $this->calculerMoyenne($moyenneCC, $request->note_composition);
+    
+        // ✅ Appréciation
+        $appreciation = $this->noteAppreciation($moyenne);
+    
+        // ✅ Historique (trace propre)
         HistoryNote::create([
             'evaluation_id' => $evaluation->id,
-            'user_id' => auth()->user()->id,
-            'old_note_cc' => $evaluation->note_cc != $request['note_cc'] ? $evaluation->note_cc : null,
-            'old_note_composition' => $evaluation->note_composition != $request['note_composition'] ? $evaluation->note_composition : null,
+            'user_id' => $user->id,
+            'old_note_cc' => $evaluation->note_cc != $moyenneCC ? $evaluation->note_cc : null,
+            'old_note_composition' =>
+                $evaluation->note_composition != $request->note_composition
+                    ? $evaluation->note_composition
+                    : null,
         ]);
-
-        $evaluation->update($request->all());
-
-
-
-        return redirect()->route('inscription.index')->withMessage('Évaluation mise à jour avec succès.');
+    
+        // ✅ Mise à jour finale
+        $evaluation->update([
+            'note_cc' => $moyenneCC, // 🔥 AUTO
+            'note_composition' => $request->note_composition,
+            'appreciation' => $appreciation,
+        ]);
+    
+        return redirect()
+            ->route('inscription.index')
+            ->with('success', 'Évaluation mise à jour avec succès.');
     }
-
+    
 
     public function destroy($evaluationId)
     {

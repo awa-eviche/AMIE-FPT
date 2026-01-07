@@ -205,6 +205,8 @@ class ClasseController extends Controller
         )
         ->get();
 
+
+
  
     foreach ($assignations as $a) {
         if ($a->competence_type === 'generale') {

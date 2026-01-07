@@ -487,7 +487,7 @@
     {{-- === Si la matière a déjà une évaluation === --}}
     @if ($evaluation)
         {{-- 👑 Modification & Historique réservés aux chefs et superadmin --}}
-        @if ($user->hasRole('superadmin') || $user->hasRole('chef_de_travaux') || $user->hasRole('directeur_etude') || $user->hasRole('chef_etablissement'))
+        @if ($user->hasRole('superadmin') || $user->hasRole('chef_de_travaux') || $user->hasRole('directeur_etude') || $user->hasRole('chef_etablissement') || $isFormateurAssigné)
 
             <!-- Bouton Modifier -->
             <a href="#" data-modal-target="default-modal-edit{{ $matiere->id }}" data-modal-toggle="default-modal-edit{{ $matiere->id }}">
@@ -517,10 +517,9 @@
 
                                 <div class="flex flex-wrap w-full justify-evenly mb-4">
                                     <div class="flex-grow mr-2">
-                                        <label for="note_cc" class="block text-sm font-bold text-gray-700">Note Contrôle Continu :</label>
-                                        <input type="text" name="note_cc" id="note_cc"
-                                               class="form-input rounded-md shadow-sm mt-1 block w-full"
-                                               value="{{ $evaluation->note_cc }}" />
+                                       <label for="note_cc" class="block text-sm font-bold text-gray-700">Note Contrôle Continu :</label>
+                                        <input type="text"  value="{{ number_format($evaluation->note_cc, 2) }}"  readonly class="form-input  rounded-md shadow-sm mt-1 block w-full" />
+
                                     </div>
 
                                     <div class="flex-grow mr-2">
@@ -528,9 +527,14 @@
                                         <input type="text" name="note_composition" id="note_composition"
                                                class="form-input rounded-md shadow-sm mt-1 block w-full"
                                                value="{{ $evaluation->note_composition }}" />
+                                                        <div class="flex-grow mr-4 mt-2">
+                                            <a  href="#"  wire:click.prevent="openDevoirsModal({{ $matiere->id }}, {{ $inscriptionId }}, {{ $selectedsemestre ?? 1 }})"  class="text-sm text-blue-600 underline">
+                                                ➕ Ajouter / gérer les devoirs
+                                            </a>
+                                                        </div>
                                     </div>
                                 </div>
-
+ 
                                 <div class="flex justify-end">
                                     <button type="submit"
                                             class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
@@ -611,7 +615,7 @@
             </div>
             &nbsp;&nbsp;&nbsp;
 
-            <!-- Bouton Supprimer -->
+          
             {!! Form::open([
                 'method' => 'DELETE',
                 'class' => 'delete-form',
@@ -627,9 +631,9 @@
             <span class="text-gray-400 text-xs italic">Non autorisé</span>
         @endif
 
-    {{-- === Si la matière n’a pas encore de note === --}}
+    
     @else
-        {{-- 👨‍🏫 Ajout réservé uniquement au formateur assigné --}}
+       
         @if ($isFormateurAssigné)
             <a href="#" data-modal-target="default-modal{{ $matiere->id }}" data-modal-toggle="default-modal{{ $matiere->id }}">
                 <i class="fa fa-plus-circle text-green-600"></i>
@@ -656,16 +660,45 @@
                                 <input type="hidden" name="matiere_id" value="{{ $matiere->id }}">
                                 <input type="hidden" name="semestre" value="{{ $selectedsemestre }}">
 
-                                <div class="flex flex-wrap w-full justify-evenly">
-                                    <div class="flex-grow mb-4 mr-2">
-                                        <label for="note_cc" class="block text-sm font-bold text-gray-700">Note Contrôle Continu :</label>
-                                        <input type="text" name="note_cc" id="note_cc" class="form-input rounded-md shadow-sm mt-1 block w-full" />
-                                    </div>
+       <div class="w-full">
 
-                                    <div class="flex-grow mb-4 mr-2">
-                                        <label for="note_composition" class="block text-sm font-bold text-gray-700">Note Composition :</label>
-                                        <input type="text" name="note_composition" id="note_composition" class="form-input rounded-md shadow-sm mt-1 block w-full" />
-                                    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">  
+        <div>
+            <label class="block text-sm font-bold text-gray-700">
+                Moyenne Contrôle Continu
+            </label>
+<!-- <input
+    type="text"wire:model.live="moyenneCC"
+    wire:model.live="moyenneCC"
+    readonly
+    class="form-input bg-gray-100 cursor-not-allowed rounded-md shadow-sm mt-1 w-full"
+/> -->
+<input  type="text" wire:model.live="moyenneCC.{{ $matiere->id }}" readonly class="form-input rounded-md bg-gray-100 shadow-sm mt-1 w-full text-gray-700 bg-gray-100 cursor-not-allowed"/>
+
+        </div>    
+        <div>
+            <label for="note_composition" class="block text-sm font-bold text-gray-700">
+                Note Composition
+            </label>
+            <input
+                type="text"
+                name="note_composition"
+                id="note_composition"
+                class="form-input rounded-md shadow-sm mt-1 w-full"/>
+        </div>
+
+    </div>
+ <div class="flex justify-end items-center gap-4 mt-4">
+  <a
+        href="#"
+        wire:click.prevent="openDevoirsModal({{ $matiere->id }}, {{ $inscriptionId }}, {{ $selectedsemestre ?? 1 }})"
+        class="text-sm text-blue-600 underline">
+        ➕ Ajouter / gérer les devoirs
+    </a>
+</div>
+
+</div>
+
                                 </div>
 
                                 <div class="flex justify-end">
@@ -710,6 +743,30 @@
             @endif
         </div>
     </div>
+    @if($showDevoirsModal)
+    <div class="fixed inset-0 bg-white bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white w-1/2 rounded-lg shadow-lg p-6">
+
+            <button
+                class="float-right text-red-600"
+                wire:click="closeDevoirsModal">
+                ✕
+            </button>
+
+            @livewire(
+                'devoirs.devoirs-modal',
+                [
+                    'inscriptionId' => $devoirsInscriptionId,
+                    'matiereId' => $devoirsMatiereId,
+                    'semestre' => $devoirsSemestre,
+                ],
+                key('devoirs-'.$devoirsInscriptionId.'-'.$devoirsMatiereId)
+            )
+
+        </div>
+    </div>
+@endif
+
 </div>
 <script>
     function openAbsenceModal() {
@@ -779,5 +836,24 @@
         if (event.target === modal) {
             closeEditAbsenceModal();
         }
+    });
+</script>
+
+<script>
+    document.addEventListener('livewire:init', () => {
+        Livewire.on('back-to-evaluation', (data) => {
+            const matiereId = data.matiereId;
+            const modalId = 'default-modal' + matiereId;
+
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        });
+    });
+</script>
+<script>
+    Livewire.on('moyenneCCUpdated', moyenne => {
+        console.log('Nouvelle moyenne CC :', moyenne);
     });
 </script>
