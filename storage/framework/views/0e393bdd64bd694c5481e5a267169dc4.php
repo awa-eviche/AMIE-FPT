@@ -667,6 +667,51 @@
     </div>
 <?php endif; ?>
 
+
+ <?php if(auth()->user()->hasRole('superadmin')): ?>
+            <div x-data="{ open: <?php echo e(request()->is('finance*') ? 'true' : 'false'); ?> }">
+    <p type="button" class="element_sidebar relative <?php echo e(request()->is('finance*') ? 'element_sidebar_acitf' : ''); ?>" @click="open = !open">
+  <span class="text-left">
+    <i class="menu-icon fa-solid fa-file-invoice-dollar"></i>
+</span>
+
+
+        <span class="mx-4 text-base font-normal">Gestion des finances</span>
+        <i x-bind:class="{'fa-caret-down': !open, 'fa-caret-up' : open}" class="fa-solid absolute right-0 mr-3"></i>
+    </p>
+
+    <div class="bg-gray-100 border-x border-2-maquette-gris rounded shadow-inner relative -top-2 overflow-hidden transition-all max-h-0 duration-700"
+         x-ref="financeContainer"
+         x-bind:style="open ? 'max-height: ' + $refs.financeContainer.scrollHeight + 'px' : 'border:none'">
+        <a class="element_sidebar <?php echo e(request()->is('finance') ? 'sous_menu_sidebar_actif' : ''); ?>" href="">
+            <span class="text-left">
+                <i class="menu-icon fa-solid fa-list"></i>
+            </span>
+            <span class="mx-4 text-base font-normal">Inscription</span>
+        </a>
+
+
+<?php if($user->hasRole('superadmin')): ?>
+    <a class="element_sidebar <?php echo e(request()->is('') ? 'element_sidebar_acitf' : ''); ?>"
+       href="">
+        <span class="text-left">
+            <i class="menu-icon fa-solid fa-arrow-up-right-dots"></i>
+        </span>
+        <span class="mx-4 text-base font-normal">
+           Prestations
+        </span>
+    </a>
+<?php endif; ?>
+
+
+    </div>
+</div>
+
+            <?php endif; ?>
+
+
+
+
 <!-- FIN DES NOUVEAUX MODULES - UNIQUEMENT POUR LES ADMINISTRATEURS -->
 
 

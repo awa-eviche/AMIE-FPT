@@ -68,9 +68,9 @@
             <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
         </tbody>
     </table>
-    <button wire:click="close"
+    <!-- <button wire:click="close"
         class="px-4 py-2 bg-gray-500 text-white rounded">
     Terminer
-</button>
+</button> -->
 
 </div><?php /**PATH C:\wamp64\www\AMIE-FPT\resources\views/livewire/devoirs/devoirs-modal.blade.php ENDPATH**/ ?>

@@ -34,7 +34,6 @@
         </div>
     </div>
 
-    {{-- LISTE --}}
     <table class="w-full text-sm border">
         <tbody>
             @forelse($devoirs as $devoir)
@@ -65,9 +64,9 @@
             @endforelse
         </tbody>
     </table>
-    <button wire:click="close"
+    <!-- <button wire:click="close"
         class="px-4 py-2 bg-gray-500 text-white rounded">
     Terminer
-</button>
+</button> -->
 
 </div>
