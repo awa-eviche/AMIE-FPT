@@ -34,6 +34,15 @@ class ListeInscription extends Component
     public $anneeAcademiques;
     public $anneeAcademiqueLabel;
 
+    public $showDevoirsModal = false;
+public $devoirsMatiereId;
+public $devoirsInscriptionId;
+public $devoirsSemestre;
+
+protected $listeners = ['moyenneCCUpdated' => 'refreshMoyenneCC'];
+
+public $moyenneCC = [];
+
     public function mount()
     {
         $user = auth()->user();
@@ -174,6 +183,32 @@ class ListeInscription extends Component
             : null;
     }
 
+    public function openDevoirsModal($matiereId, $inscriptionId, $semestre = null)
+    {
+        
+        $this->devoirsSemestre = $semestre ?? $this->selectedsemestre ?? 1;
+    
+        $this->devoirsMatiereId = $matiereId;
+        $this->devoirsInscriptionId = $inscriptionId;
+    
+        $this->showDevoirsModal = true;
+    }
+    
+    public function closeDevoirsModal()
+    {
+        $this->showDevoirsModal = false;
+    }
+ public function refreshMoyenneCC($payload)
+{
+    $evaluation = Evaluation::where([
+        'inscription_id' => $payload['inscriptionId'],
+        'matiere_id' => $payload['matiereId'],
+        'semestre' => $payload['semestre'],
+    ])->first();
+
+    $this->moyenneCC[$payload['matiereId']] = $evaluation?->note_cc ?? null;
+}
+
     public function render()
     {
         $inscriptionId = null;
@@ -194,12 +229,11 @@ class ListeInscription extends Component
                 }
 
                 $evalu = $qry->get();
-                //$matieres = Matiere::where('niveau_etude_id', optional($inscription->classe)->niveau_etude->id)->get();
                 $user = auth()->user();
                 $classeId = optional($inscription->classe)->id;
                 
                 if ($user->hasRole('formateur')) {
-                    // 🧑‍🏫 Le formateur ne voit que les matières qui lui sont assignées dans la classe
+                   
                     $matieres = \Illuminate\Support\Facades\DB::table('classe_formateur_matiere')
                         ->join('matieres', 'classe_formateur_matiere.matiere_id', '=', 'matieres.id')
                         ->where('classe_formateur_matiere.classe_id', $classeId)
@@ -207,7 +241,6 @@ class ListeInscription extends Component
                         ->select('matieres.id', 'matieres.nom', 'matieres.coef')
                         ->get();
                 } else {
-                    // 👑 Chef d’établissement, chef de travaux, superadmin → toutes les matières
                     $matieres = Matiere::where('niveau_etude_id', optional($inscription->classe)->niveau_etude->id)
                         ->select('id', 'nom', 'coef')
                         ->get();

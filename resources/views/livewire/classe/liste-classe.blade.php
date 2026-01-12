@@ -25,7 +25,7 @@
     $user = auth()->user();
 @endphp
 
-@if($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement'))
+@if($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') )
             <a href="{{route('classe.create')}}" class="px-3 rounded-md py-3 flex text-white text-xs font-bold text-center bg-orange-400 items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
                     <g id="ic-receipt-24px 1" clip-path="url(#clip0_705_6988)">

@@ -10,6 +10,7 @@
                 <th scope="col" class="px-6 py-3 text-center">Prénom</th>
                 <th scope="col" class="px-6 py-3 text-center">Courrier</th>
                 <th scope="col" class="px-6 py-3 text-center">Téléphone</th>
+                <th scope="col" class="px-6 py-3 text-center">Interne</th>
                 
                 <th scope="col" class="px-6 py-3 text-center">Profil</th>
                 <th scope="col" class="px-6 py-3 text-center">Actions</th>
@@ -51,6 +52,12 @@
                     <?php echo e($user->telephone); ?>
 
                 </td>
+                <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-gray-500 text-center">
+                    <?php echo e($user->interne ? "Oui" : "Non"); ?>
+
+                </td>
+                <?php echo e(optional($user->personnel)->interne ? "Oui" : "Non"); ?>
+
                 
                 <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-gray-500 text-center">
                     <?php $__currentLoopData = $user->roles; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $role): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
