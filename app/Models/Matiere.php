@@ -54,4 +54,8 @@ public function getCoefAttribute($value)
         return $this->belongsTo(Metier::class);
     }
 
+    public function devoirs()
+{
+    return $this->hasMany(Devoir::class);
+}
 }

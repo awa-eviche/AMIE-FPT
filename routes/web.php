@@ -126,8 +126,6 @@ Route::get('/classe/{classe}/bulletins/pdf', [InscriptionController::class, 'gen
     Route::resource('inscription', InscriptionController::class);
     Route::post('/apprenants/import/{classe}', [App\Http\Controllers\ApprenantController::class, 'import'])->name('apprenant.import');
 
-
-    // Route pour les evaluations;
     Route::resource('evaluation', EvaluationController::class);
     Route::get('/evaluation/{inscriptionId}/{matiereId}', [EvaluationController::class, 'create'])->name('evaluation.create');
     Route::post('/evaluation/{inscriptionId}', [EvaluationController::class, 'store'])->name('evaluation.store');
@@ -139,8 +137,6 @@ Route::get('/classe/{classe}/bulletins/pdf', [InscriptionController::class, 'gen
  Route::get('/classe/{classe}/admis', [ReinscriptionController::class, 'getAdmis'])->name('classe.admis');
     Route::post('/reinscription', [\App\Http\Controllers\ReinscriptionController::class, 'store'])->name('reinscription.store');
     Route::get('/classe/admis/selection', [ReinscriptionController::class, 'selectClasse'])->name('classe.admis.selector');
-
-
     Route::resource('filiereetablissement', FiliereEtablissementController::class);
     Route::resource('niveauetudeetablissement', NiveauEtudeEtablissementController::class);
     Route::get('/niveauetudeetablissement/{id}/view', [NiveauEtudeEtablissementController::class, 'detailProgrammeFormation'])->name('program.view');

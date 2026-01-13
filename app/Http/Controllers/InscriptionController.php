@@ -42,10 +42,8 @@ class InscriptionController extends Controller
             }
             $classesIds = Classe::where('etablissement_id', $etablissementId)->pluck('id');
         } else {
-            // Récupérer les IDs des classes de toutes les classes
             $classesIds = Classe::all()->pluck('id');
         }
-        // Récupérer les IDs des apprenants associés à ces classes
         $apprenantsIds = Inscription::whereIn('classe_id', $classesIds)->pluck('apprenant_id');
 
         $classe = session()->has('currentClasse') ? session()->get('currentClasse') : '';
@@ -53,7 +51,6 @@ class InscriptionController extends Controller
         $classes = [$currentClasse];
         $matieres = $classe ? Matiere::where('niveau_etude_id', $currentClasse->niveau_etude->id)->get() : [];
 
-        // Récupérer les apprenants associés à ces IDs
         $apprenants = Apprenant::whereIn('id', $apprenantsIds)->get();
 
         return view('inscription.index', compact('apprenants', 'matieres'));
@@ -64,7 +61,6 @@ class InscriptionController extends Controller
     {
         $annee_academiques = AnneeAcademique::all();
 
-        // Récupérer le nom de l'utilisateur
         $userName = auth()->user()->nom;
 
         if (auth()->user()->personnel && auth()->user()->personnel->etablissement_id) {
@@ -72,21 +68,15 @@ class InscriptionController extends Controller
            
             $etablissementId = auth()->user()->personnel->etablissement_id;
 
-            // Vérifiez si l'établissement est valide
             if (!$etablissementId) {
                 return abort(403, "L'établissement de l'utilisateur actuel n'est pas valide.");
             }
-            // Récupérer les classes associées à l'établissement actuel
             $classes = Classe::where('etablissement_id', $etablissementId)->get();
 
-            // Récupérer les apprenants associés à l'établissement actuel
             $apprenants = Apprenant::where('etablissement_id', $etablissementId)->get();
         } else {
-            // Récupérer toutes les classes 
             $classes = Classe::all();
             $classesIds = Classe::all()->pluck('id');
-
-            // Récupérer les apprenants associés à l'établissement actuel
             $apprenantsIds = Inscription::whereIn('classe_id', $classesIds)->pluck('apprenant_id');
             $apprenants = Apprenant::whereIn('apprenant_id', $apprenantsIds)->get();
         }
@@ -373,298 +363,298 @@ class InscriptionController extends Controller
 
     }
 
-public function generateCompetencePdfAncien(string $id)
-{
-    $semestre = session()->get('selectedsemestre1');
+// public function generateCompetencePdfAncien(string $id)
+// {
+//     $semestre = session()->get('selectedsemestre1');
 
-    $inscription = Inscription::with(
-        'apprenant',
-        'classe.niveau_etude',
-        'classe.annee_academique',
-        'classe.etablissement'
-    )->findOrFail($id);
+//     $inscription = Inscription::with(
+//         'apprenant',
+//         'classe.niveau_etude',
+//         'classe.annee_academique',
+//         'classe.etablissement'
+//     )->findOrFail($id);
 
-    // Charger toutes les évaluations avec relations
-    $evaluations = Evalute::with('critere.elementCompetence.competence')
-        ->where('inscription_id', $inscription->id)
-        ->when($semestre, fn($query) => $query->where('semestre', $semestre))
-        ->get()
-        ->keyBy('critere_id');
+//     // Charger toutes les évaluations avec relations
+//     $evaluations = Evalute::with('critere.elementCompetence.competence')
+//         ->where('inscription_id', $inscription->id)
+//         ->when($semestre, fn($query) => $query->where('semestre', $semestre))
+//         ->get()
+//         ->keyBy('critere_id');
 
-    $competencesGenerales = Competence::where('niveau_etude_id', $inscription->classe->niveau_etude_id)
-        ->where('type', 'generale')
-        ->with('elementCompetences.criteres')
-        ->get();
+//     $competencesGenerales = Competence::where('niveau_etude_id', $inscription->classe->niveau_etude_id)
+//         ->where('type', 'generale')
+//         ->with('elementCompetences.criteres')
+//         ->get();
 
-    $competencesParticulieres = Competence::where('niveau_etude_id', $inscription->classe->niveau_etude_id)
-        ->where('type', 'particuliere')
-        ->with('elementCompetences.criteres')
-        ->get();
+//     $competencesParticulieres = Competence::where('niveau_etude_id', $inscription->classe->niveau_etude_id)
+//         ->where('type', 'particuliere')
+//         ->with('elementCompetences.criteres')
+//         ->get();
 
-    // Génération du tableau
-    $generateTable = function($competencesType, $evaluations) {
-        $html = '';
+//     // Génération du tableau
+//     $generateTable = function($competencesType, $evaluations) {
+//         $html = '';
 
-        foreach ($competencesType as $competence) {
-            // Premier critère unique par compétence
-            $critere = $competence->elementCompetences
-                                  ->flatMap->criteres
-                                  ->unique('id')
-                                  ->first();
+//         foreach ($competencesType as $competence) {
+//             // Premier critère unique par compétence
+//             $critere = $competence->elementCompetences
+//                                   ->flatMap->criteres
+//                                   ->unique('id')
+//                                   ->first();
 
-            if ($critere) {
-                $evaluation = $evaluations[$critere->id] ?? null;
+//             if ($critere) {
+//                 $evaluation = $evaluations[$critere->id] ?? null;
 
-                $note = $evaluation?->note ?? null;
-                $date = $evaluation?->date ? date('d-m-Y', strtotime($evaluation->date)) : '-';
+//                 $note = $evaluation?->note ?? null;
+//                 $date = $evaluation?->date ? date('d-m-Y', strtotime($evaluation->date)) : '-';
 
-                // 👉 Attribution automatique des observations
-                $obs = '-';
-                if ($note !== null) {
-                    if ($note >= 0 && $note <= 10) {
-                        $obs = 'Passable';
-                    } elseif ($note >= 12 && $note <= 13) {
-                        $obs = 'Assez bien';
-                    } elseif ($note >= 14 && $note <= 16) {
-                        $obs = 'Bien';
-                    } elseif ($note >= 17 && $note <= 18) {
-                        $obs = 'Très bien';
-                    }
-                }
+//                 // 👉 Attribution automatique des observations
+//                 $obs = '-';
+//                 if ($note !== null) {
+//                     if ($note >= 0 && $note <= 10) {
+//                         $obs = 'Passable';
+//                     } elseif ($note >= 12 && $note <= 13) {
+//                         $obs = 'Assez bien';
+//                     } elseif ($note >= 14 && $note <= 16) {
+//                         $obs = 'Bien';
+//                     } elseif ($note >= 17 && $note <= 18) {
+//                         $obs = 'Très bien';
+//                     }
+//                 }
 
-                $html .= '<tr>';
-                $html .= '<td class="border-td">'.htmlspecialchars($competence->nom).'</td>';
-                $html .= '<td class="border-td">'.htmlspecialchars($critere->libelle).'</td>';
-                $html .= '<td class="border-td" align="center">'.($note ?? '-').'</td>';
-                $html .= '<td class="border-td" align="center">'.$date.'</td>';
-                $html .= '<td class="border-td">'.htmlspecialchars($obs).'</td>';
-                $html .= '</tr>';
-            }
-        }
+//                 $html .= '<tr>';
+//                 $html .= '<td class="border-td">'.htmlspecialchars($competence->nom).'</td>';
+//                 $html .= '<td class="border-td">'.htmlspecialchars($critere->libelle).'</td>';
+//                 $html .= '<td class="border-td" align="center">'.($note ?? '-').'</td>';
+//                 $html .= '<td class="border-td" align="center">'.$date.'</td>';
+//                 $html .= '<td class="border-td">'.htmlspecialchars($obs).'</td>';
+//                 $html .= '</tr>';
+//             }
+//         }
 
-        return $html;
-    };
+//         return $html;
+//     };
 
-    $tableGenerale = '
-    <tr>
-        <td colspan="6" class="bold-exo" 
-            style="background-color:#e0e0e0; text-align:center;">
-            Compétences Générales
-        </td>
-    </tr>'
-    . $generateTable($competencesGenerales, $evaluations);
+//     $tableGenerale = '
+//     <tr>
+//         <td colspan="6" class="bold-exo" 
+//             style="background-color:#e0e0e0; text-align:center;">
+//             Compétences Générales
+//         </td>
+//     </tr>'
+//     . $generateTable($competencesGenerales, $evaluations);
 
-    $tableParticulier = '
-    <tr>
-        <td colspan="6" class="bold-exo" 
-            style="background-color:#e0e0e0; text-align:center;">
-            Compétences Particulières
-        </td>
-    </tr>'
-    . $generateTable($competencesParticulieres, $evaluations);
+//     $tableParticulier = '
+//     <tr>
+//         <td colspan="6" class="bold-exo" 
+//             style="background-color:#e0e0e0; text-align:center;">
+//             Compétences Particulières
+//         </td>
+//     </tr>'
+//     . $generateTable($competencesParticulieres, $evaluations);
 
-    // Injection dans le template
-    $template = file_get_contents('competence.html');
-    $template = str_replace('[BODY]', $tableGenerale . $tableParticulier, $template);
+//     // Injection dans le template
+//     $template = file_get_contents('competence.html');
+//     $template = str_replace('[BODY]', $tableGenerale . $tableParticulier, $template);
 
-    setlocale(LC_TIME, 'fr_FR.UTF-8');
-    $date = strftime('%e %B %Y');
-    $template = str_replace('[DATE]', $date, $template);
-    $template = str_replace('[USER]', $inscription->apprenant->nom . ' ' . $inscription->apprenant->prenom, $template);
-    $template = str_replace('[DATENAISSANCE]', $inscription->apprenant->date_naissance, $template);
-    $template = str_replace('[LIEUNAISSANCE]', $inscription->apprenant->lieu_naissance, $template);
-    $template = str_replace('[TEL]', $inscription->apprenant->telephone, $template);
-    $template = str_replace('[EMAIL]', $inscription->apprenant->email, $template);
-    $template = str_replace('[SEMESTRE]', $semestre ? ($semestre == 1 ? '1' : '2') : 'Tous les semestres', $template);
-    $template = str_replace('[MATRICULE]', $inscription->apprenant->matricule, $template);
-    $template = str_replace('[CLASSE]', $inscription->classe->libelle ?? '', $template);
-    $template = str_replace('[ANNEE]', $inscription->classe->niveau_etude->nom ?? '', $template);
-    $template = str_replace('[ANNEESCOLAIRE]', $inscription->classe->annee_academique->code ?? '', $template);
-    $template = str_replace('[EFPT]', $inscription->classe->etablissement->nom ?? '', $template);
-    $template = str_replace('[EFPTTEL]', $inscription->classe->etablissement->telephone ?? '', $template);
+//     setlocale(LC_TIME, 'fr_FR.UTF-8');
+//     $date = strftime('%e %B %Y');
+//     $template = str_replace('[DATE]', $date, $template);
+//     $template = str_replace('[USER]', $inscription->apprenant->nom . ' ' . $inscription->apprenant->prenom, $template);
+//     $template = str_replace('[DATENAISSANCE]', $inscription->apprenant->date_naissance, $template);
+//     $template = str_replace('[LIEUNAISSANCE]', $inscription->apprenant->lieu_naissance, $template);
+//     $template = str_replace('[TEL]', $inscription->apprenant->telephone, $template);
+//     $template = str_replace('[EMAIL]', $inscription->apprenant->email, $template);
+//     $template = str_replace('[SEMESTRE]', $semestre ? ($semestre == 1 ? '1' : '2') : 'Tous les semestres', $template);
+//     $template = str_replace('[MATRICULE]', $inscription->apprenant->matricule, $template);
+//     $template = str_replace('[CLASSE]', $inscription->classe->libelle ?? '', $template);
+//     $template = str_replace('[ANNEE]', $inscription->classe->niveau_etude->nom ?? '', $template);
+//     $template = str_replace('[ANNEESCOLAIRE]', $inscription->classe->annee_academique->code ?? '', $template);
+//     $template = str_replace('[EFPT]', $inscription->classe->etablissement->nom ?? '', $template);
+//     $template = str_replace('[EFPTTEL]', $inscription->classe->etablissement->telephone ?? '', $template);
 
-    $dompdf = new Dompdf();
-    $dompdf->getOptions()->set('isRemoteEnabled', true);
-    $dompdf->loadHTML($template);
-    $dompdf->setPaper('A4', 'portrait');
-    $dompdf->render();
+//     $dompdf = new Dompdf();
+//     $dompdf->getOptions()->set('isRemoteEnabled', true);
+//     $dompdf->loadHTML($template);
+//     $dompdf->setPaper('A4', 'portrait');
+//     $dompdf->render();
 
-    return response($dompdf->output(), 200)
-        ->header('Content-Type', 'application/pdf')
-        ->header('Content-Disposition', 'inline; filename="Carnet_de_Competence.pdf"');
-}
+//     return response($dompdf->output(), 200)
+//         ->header('Content-Type', 'application/pdf')
+//         ->header('Content-Disposition', 'inline; filename="Carnet_de_Competence.pdf"');
+// }
 
 
-public function generateClassePdfAncien(string $classeId)
-{
-    $semestre = request('semestre'); 
+// public function generateClassePdfAncien(string $classeId)
+// {
+//     $semestre = request('semestre'); 
 
-    $classe = Classe::with(['etablissement', 'niveau_etude', 'annee_academique'])
-        ->findOrFail($classeId);
+//     $classe = Classe::with(['etablissement', 'niveau_etude', 'annee_academique'])
+//         ->findOrFail($classeId);
 
   
-    $inscriptions = Inscription::with('apprenant')
-        ->where('classe_id', $classe->id)
-        ->get();
+//     $inscriptions = Inscription::with('apprenant')
+//         ->where('classe_id', $classe->id)
+//         ->get();
 
-    $competencesGenerales = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
-        ->where('type', 'generale')
-        ->with(['elementCompetences.criteres'])
-        ->orderBy('id')
-        ->get();
+//     $competencesGenerales = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
+//         ->where('type', 'generale')
+//         ->with(['elementCompetences.criteres'])
+//         ->orderBy('id')
+//         ->get();
 
-    $competencesParticulieres = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
-        ->where('type', 'particuliere')
-        ->with(['elementCompetences.criteres'])
-        ->orderBy('id')
-        ->get();
+//     $competencesParticulieres = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
+//         ->where('type', 'particuliere')
+//         ->with(['elementCompetences.criteres'])
+//         ->orderBy('id')
+//         ->get();
 
-    $htmlGlobal = '';
-    $total = $inscriptions->count();
-    $index = 0;
+//     $htmlGlobal = '';
+//     $total = $inscriptions->count();
+//     $index = 0;
 
-    foreach ($inscriptions as $inscription) {
-        $index++;
-        $templatePath = resource_path('views/pdf/competence.html');
-        $template = is_file($templatePath) ? file_get_contents($templatePath) : file_get_contents('competence.html');
- $evaluations = \App\Models\Evalute::with('critere.elementCompetence.competence')
-            ->where('inscription_id', $inscription->id)
-            ->when($semestre, fn($q) => $q->where('semestre', $semestre))
-            ->get()
-            ->keyBy('critere_id'); 
-        $generateTable = function ($titreSection, $competences, $evaluations) {
-            $html = '
-            <tr>
-                <td colspan="6" class="bold-exo" style="background-color:#e0e0e0; text-align:center;">'
-                . htmlspecialchars($titreSection) .
-                '</td>
-            </tr>';
+//     foreach ($inscriptions as $inscription) {
+//         $index++;
+//         $templatePath = resource_path('views/pdf/competence.html');
+//         $template = is_file($templatePath) ? file_get_contents($templatePath) : file_get_contents('competence.html');
+//  $evaluations = \App\Models\Evalute::with('critere.elementCompetence.competence')
+//             ->where('inscription_id', $inscription->id)
+//             ->when($semestre, fn($q) => $q->where('semestre', $semestre))
+//             ->get()
+//             ->keyBy('critere_id'); 
+//         $generateTable = function ($titreSection, $competences, $evaluations) {
+//             $html = '
+//             <tr>
+//                 <td colspan="6" class="bold-exo" style="background-color:#e0e0e0; text-align:center;">'
+//                 . htmlspecialchars($titreSection) .
+//                 '</td>
+//             </tr>';
 
-            foreach ($competences as $competence) {
-                $ecList = $competence->elementCompetences ?? collect();
-                $ecCount = $ecList->count();
+//             foreach ($competences as $competence) {
+//                 $ecList = $competence->elementCompetences ?? collect();
+//                 $ecCount = $ecList->count();
 
-                if ($ecCount === 0) {
-                    $html .= '
-                    <tr>
-                        <td class="border-td">'.htmlspecialchars(($competence->code ?? '').' '.($competence->nom ?? $competence->libelle ?? '')).'</td>
-                        <td class="border-td" colspan="5" style="text-align:center;">Aucun élément de compétence</td>
-                    </tr>';
-                    continue;
-                }
-                $firstEc = true;
-                foreach ($ecList as $ec) {
-                    $criteres = $ec->criteres ?? collect();
-                    $notes = [];
-                    $latestDate = null;
+//                 if ($ecCount === 0) {
+//                     $html .= '
+//                     <tr>
+//                         <td class="border-td">'.htmlspecialchars(($competence->code ?? '').' '.($competence->nom ?? $competence->libelle ?? '')).'</td>
+//                         <td class="border-td" colspan="5" style="text-align:center;">Aucun élément de compétence</td>
+//                     </tr>';
+//                     continue;
+//                 }
+//                 $firstEc = true;
+//                 foreach ($ecList as $ec) {
+//                     $criteres = $ec->criteres ?? collect();
+//                     $notes = [];
+//                     $latestDate = null;
 
-                    foreach ($criteres as $critere) {
-                        if (isset($evaluations[$critere->id])) {
-                            $ev = $evaluations[$critere->id];
+//                     foreach ($criteres as $critere) {
+//                         if (isset($evaluations[$critere->id])) {
+//                             $ev = $evaluations[$critere->id];
 
-                            if ($ev->note !== null) {
-                                $notes[] = $ev->note;
-                            }
+//                             if ($ev->note !== null) {
+//                                 $notes[] = $ev->note;
+//                             }
 
-                            if (!empty($ev->date)) {
-                                $d = strtotime($ev->date);
-                                if ($latestDate === null || $d > $latestDate) {
-                                    $latestDate = $d;
-                                }
-                            }
-                        }
-                    }
-
-                   
-                    $noteAgg = '-';
-                    if (count($notes) > 0) {
-                        $noteAgg = round(array_sum($notes) / count($notes), 2);
-                    }
+//                             if (!empty($ev->date)) {
+//                                 $d = strtotime($ev->date);
+//                                 if ($latestDate === null || $d > $latestDate) {
+//                                     $latestDate = $d;
+//                                 }
+//                             }
+//                         }
+//                     }
 
                    
-                    $obs = '-';
-                    if ($noteAgg !== '-' && is_numeric($noteAgg)) {
-                        if ($noteAgg < 10)        $obs = 'Passable';
-                        elseif ($noteAgg < 12)    $obs = 'Assez bien';
-                        elseif ($noteAgg < 15)    $obs = 'Bien';
-                        else                      $obs = 'Très bien';
-                    }
+//                     $noteAgg = '-';
+//                     if (count($notes) > 0) {
+//                         $noteAgg = round(array_sum($notes) / count($notes), 2);
+//                     }
 
-                    $dateStr = $latestDate ? date('d/m/Y', $latestDate) : '-';
+                   
+//                     $obs = '-';
+//                     if ($noteAgg !== '-' && is_numeric($noteAgg)) {
+//                         if ($noteAgg < 10)        $obs = 'Passable';
+//                         elseif ($noteAgg < 12)    $obs = 'Assez bien';
+//                         elseif ($noteAgg < 15)    $obs = 'Bien';
+//                         else                      $obs = 'Très bien';
+//                     }
 
-                    $seuil = $ec->seuil ?? '70%';
+//                     $dateStr = $latestDate ? date('d/m/Y', $latestDate) : '-';
 
-                    $html .= '<tr>';
+//                     $seuil = $ec->seuil ?? '70%';
+
+//                     $html .= '<tr>';
 
                     
-                    if ($firstEc) {
-                        $html .= '
-                        <td class="border-td" rowspan="'.intval($ecCount).'">'
-                        . htmlspecialchars(($competence->code ?? '').' '.($competence->nom ?? $competence->libelle ?? '')) .
-                        '</td>';
-                        $firstEc = false;
-                    }
+//                     if ($firstEc) {
+//                         $html .= '
+//                         <td class="border-td" rowspan="'.intval($ecCount).'">'
+//                         . htmlspecialchars(($competence->code ?? '').' '.($competence->nom ?? $competence->libelle ?? '')) .
+//                         '</td>';
+//                         $firstEc = false;
+//                     }
 
                  
-                    $html .= '
-                        <td class="border-td">'
-                        . htmlspecialchars(trim(($ec->code ?? '').' '.(($ec->nom ?? $ec->libelle ?? '')))) .
-                        '</td>';
+//                     $html .= '
+//                         <td class="border-td">'
+//                         . htmlspecialchars(trim(($ec->code ?? '').' '.(($ec->nom ?? $ec->libelle ?? '')))) .
+//                         '</td>';
 
                   
-                    $html .= '
-                        <td class="border-td" align="left">'.$seuil.'</td>
-                        <td class="border-td" align="center">'.$noteAgg.'</td>
-                        <td class="border-td" align="center">'.$dateStr.'</td>
-                        <td class="border-td">'.htmlspecialchars($obs).'</td>
-                    </tr>';
-                }
-            }
+//                     $html .= '
+//                         <td class="border-td" align="left">'.$seuil.'</td>
+//                         <td class="border-td" align="center">'.$noteAgg.'</td>
+//                         <td class="border-td" align="center">'.$dateStr.'</td>
+//                         <td class="border-td">'.htmlspecialchars($obs).'</td>
+//                     </tr>';
+//                 }
+//             }
 
-            return $html;
-        };
+//             return $html;
+//         };
 
        
-        $body = $generateTable('Compétences Générales', $competencesGenerales, $evaluations)
-              . $generateTable('Compétences Particulières', $competencesParticulieres, $evaluations);
+//         $body = $generateTable('Compétences Générales', $competencesGenerales, $evaluations)
+//               . $generateTable('Compétences Particulières', $competencesParticulieres, $evaluations);
 
      
-        $template = str_replace('[BODY]', $body, $template);
+//         $template = str_replace('[BODY]', $body, $template);
 
        
-        try {
-            $dateNow = \Carbon\Carbon::now()->locale('fr')->isoFormat('D MMMM YYYY');
-        } catch (\Throwable $e) {
-            setlocale(LC_TIME, 'fr_FR.UTF-8');
-            $dateNow = strftime('%e %B %Y');
-        }
+//         try {
+//             $dateNow = \Carbon\Carbon::now()->locale('fr')->isoFormat('D MMMM YYYY');
+//         } catch (\Throwable $e) {
+//             setlocale(LC_TIME, 'fr_FR.UTF-8');
+//             $dateNow = strftime('%e %B %Y');
+//         }
 
-        $template = str_replace('[DATE]', $dateNow, $template);
-        $template = str_replace('[USER]', trim(($inscription->apprenant->nom ?? '').' '.($inscription->apprenant->prenom ?? '')), $template);
-        $template = str_replace('[DATENAISSANCE]', $inscription->apprenant->date_naissance ?? '-', $template);
-        $template = str_replace('[LIEUNAISSANCE]', $inscription->apprenant->lieu_naissance ?? '-', $template);
-        $template = str_replace('[TEL]', $inscription->apprenant->telephone ?? '-', $template);
-        $template = str_replace('[EMAIL]', $inscription->apprenant->email ?? '-', $template);
-        $template = str_replace('[SEMESTRE]', $semestre ? "Semestre $semestre" : "Tous les semestres", $template);
-        $template = str_replace('[MATRICULE]', $inscription->apprenant->matricule ?? '-', $template);
-        $template = str_replace('[CLASSE]', $classe->libelle ?? '-', $template);
-        $template = str_replace('[ANNEE]', $classe->niveau_etude->nom ?? '-', $template);
-        $template = str_replace('[ANNEESCOLAIRE]', $inscription->anneeAcademique->code ?? '', $template);
-        $template = str_replace('[EFPT]', $classe->etablissement->nom ?? '-', $template);
-        $template = str_replace('[EFPTTEL]', $classe->etablissement->telephone ?? '-', $template);
+//         $template = str_replace('[DATE]', $dateNow, $template);
+//         $template = str_replace('[USER]', trim(($inscription->apprenant->nom ?? '').' '.($inscription->apprenant->prenom ?? '')), $template);
+//         $template = str_replace('[DATENAISSANCE]', $inscription->apprenant->date_naissance ?? '-', $template);
+//         $template = str_replace('[LIEUNAISSANCE]', $inscription->apprenant->lieu_naissance ?? '-', $template);
+//         $template = str_replace('[TEL]', $inscription->apprenant->telephone ?? '-', $template);
+//         $template = str_replace('[EMAIL]', $inscription->apprenant->email ?? '-', $template);
+//         $template = str_replace('[SEMESTRE]', $semestre ? "Semestre $semestre" : "Tous les semestres", $template);
+//         $template = str_replace('[MATRICULE]', $inscription->apprenant->matricule ?? '-', $template);
+//         $template = str_replace('[CLASSE]', $classe->libelle ?? '-', $template);
+//         $template = str_replace('[ANNEE]', $classe->niveau_etude->nom ?? '-', $template);
+//         $template = str_replace('[ANNEESCOLAIRE]', $inscription->anneeAcademique->code ?? '', $template);
+//         $template = str_replace('[EFPT]', $classe->etablissement->nom ?? '-', $template);
+//         $template = str_replace('[EFPTTEL]', $classe->etablissement->telephone ?? '-', $template);
 
         
-        $htmlGlobal .= $template;
+//         $htmlGlobal .= $template;
 
-        if ($index < $total) {
-            $htmlGlobal .= '<div style="page-break-after: always;"></div>';
-        }
-    }
+//         if ($index < $total) {
+//             $htmlGlobal .= '<div style="page-break-after: always;"></div>';
+//         }
+//     }
 
     
-    $pdf = Pdf::loadHTML($htmlGlobal)->setPaper('a4', 'portrait');
-    return $pdf->stream('Bulletins_Classe_'.$classe->libelle.'.pdf');
-}
+//     $pdf = Pdf::loadHTML($htmlGlobal)->setPaper('a4', 'portrait');
+//     return $pdf->stream('Bulletins_Classe_'.$classe->libelle.'.pdf');
+// }
 
 
 public function generateCompetencePdf(string $id)
@@ -679,38 +669,36 @@ public function generateCompetencePdf(string $id)
         'classe.etablissement'
     ])->findOrFail($id);
 
-    // Récupérer les évaluations de l'apprenant
-    $evaluations = Evalute::with(['critere.elementCompetence.competence', 'ressource.elementCompetence.competence'])
-        ->where('inscription_id', $inscription->id)
-        ->when($semestre, fn($q) => $q->where('semestre', $semestre))
-        ->get();
+    // Récupérer les évaluations
+    $evaluations = Evalute::with([
+        'critere.elementCompetence.competence',
+        'ressource.elementCompetence.competence'
+    ])
+    ->where('inscription_id', $inscription->id)
+    ->when($semestre, fn($q) => $q->where('semestre', $semestre))
+    ->get();
 
-    // Séparation selon le type
+    // Indexation
     $evalRessources = $evaluations->whereNotNull('ressource_id')->keyBy('ressource_id');
     $evalCriteres   = $evaluations->whereNotNull('critere_id')->keyBy('critere_id');
 
-    // Charger les compétences avec relations
+
+
     $competencesGenerales = Competence::where('niveau_etude_id', $inscription->classe->niveau_etude_id)
         ->where('type', 'generale')
         ->with('elementCompetences.ressource')
         ->get();
 
-    $competencesParticulieres = Competence::where('niveau_etude_id', $inscription->classe->niveau_etude_id)
-        ->where('type', 'particuliere')
-        ->with('elementCompetences.criteres')
-        ->get();
-
     $htmlRessources = '';
+
     foreach ($competencesGenerales as $competence) {
         foreach ($competence->elementCompetences as $element) {
-            $ressources = $element->ressource()->get(); // 🔸 Sécurisé : on appelle la relation
+            foreach ($element->ressource()->get() as $res) {
 
-            foreach ($ressources as $res) {
                 $evaluation = $evalRessources[$res->id] ?? null;
                 $note = $evaluation?->note ?? '-';
-                $date = $evaluation?->date ? date('d/m/Y', strtotime($evaluation->date)) : '-';
 
-                // Appréciation
+                
                 $obs = '-';
                 if (is_numeric($note)) {
                     if ($note < 10) $obs = 'Insuffisant';
@@ -723,8 +711,8 @@ public function generateCompetencePdf(string $id)
                 $htmlRessources .= "
                 <tr>
                     <td class='border-td'>".htmlspecialchars($res->nom)."</td>
-                    <td class='border-td' align='center'>".($note ?? '-')."</td>
-                    <td class='border-td'>".htmlspecialchars($obs)."</td>
+                    <td class='border-td' align='center'>$note</td>
+                    <td class='border-td'>$obs</td>
                 </tr>";
             }
         }
@@ -738,39 +726,73 @@ public function generateCompetencePdf(string $id)
     }
 
 
+
+
+    $competencesParticulieres = Competence::where('niveau_etude_id', $inscription->classe->niveau_etude_id)
+        ->where('type', 'particuliere')
+        ->with('elementCompetences.criteres')
+        ->get();
+
     $htmlCompetences = '';
 
     foreach ($competencesParticulieres as $competence) {
-        $firstRow = true; 
-        foreach ($competence->elementCompetences as $element) {
-            foreach ($element->criteres as $critere) {
-                $evaluation = $evalCriteres[$critere->id] ?? null;
-                $note = $evaluation?->note ?? '-';
-                $date = $evaluation?->date ? date('d/m/Y', strtotime($evaluation->date)) : '-';
 
-                $obs = '-';
-                if (is_numeric($note)) {
-                    if ($note < 10) $obs = 'Insuffisant';
-                    elseif ($note < 12) $obs = 'Passable';
-                    elseif ($note < 14) $obs = 'Assez bien';
-                    elseif ($note < 16) $obs = 'Bien';
-                    else $obs = 'Très bien';
-                }
+        $firstRow = true;
+        $printedElement = [];
+
+        foreach ($competence->elementCompetences as $element) {
+
+            foreach ($element->criteres as $critere) {
+
+                $evaluation = $evalCriteres[$critere->id] ?? null;
+             $acquis = $evaluation?->acquis 
+    ? '<span style="font-size:22px; font-weight:bold;">×</span>' 
+    : '';
+
+$nonAcquis = $evaluation?->nonAcquis 
+    ? '<span style="font-size:22px; font-weight:bold;">×</span>' 
+    : '';
+
 
                 
-                $htmlCompetences .= '<tr>';
+                if ($evaluation?->acquis) {
+                    $obs = "Réussi";
+                } elseif ($evaluation?->nonAcquis) {
+                    $obs = "Non réussi";
+                } else {
+                    $obs = "-";
+                }
+
+                $htmlCompetences .= "<tr>";
+
+                
                 if ($firstRow) {
                     $rowCount = $competence->elementCompetences->sum(fn($el) => $el->criteres->count());
-                    $htmlCompetences .= '<td rowspan="'.$rowCount.'" class="border-td bold-exo">'.htmlspecialchars($competence->nom).'</td>';
+
+                    $htmlCompetences .= '
+                        <td rowspan="'.$rowCount.'" class="border-td bold-exo">'.
+                        htmlspecialchars($competence->nom).'</td>';
+
                     $firstRow = false;
                 }
 
+                
+                $rowElement = $element->criteres->count();
+                if (!isset($printedElement[$element->id])) {
+
+                    $htmlCompetences .= '
+                        <td rowspan="'.$rowElement.'" class="border-td">'.
+                        htmlspecialchars($element->nom).'</td>';
+
+                    $printedElement[$element->id] = true;
+                }
+
+                
                 $htmlCompetences .= "
-                    <td class='border-td'>".htmlspecialchars($element->nom)."</td>
-                    <td class='border-td' align='center'>".htmlspecialchars($critere->libelle)."</td>
-                    <td class='border-td' align='center'>".($note ?? '-')."</td>
-                    <td class='border-td' align='center'>{$date}</td>
-                    <td class='border-td'>".htmlspecialchars($obs)."</td>
+                    <td class='border-td'>".htmlspecialchars($critere->libelle)."</td>
+                    <td class='border-td' align='center'>{$acquis}</td>
+                    <td class='border-td' align='center'>{$nonAcquis}</td>
+                    <td class='border-td'>".$obs."</td>
                 </tr>";
             }
         }
@@ -782,39 +804,47 @@ public function generateCompetencePdf(string $id)
             <td colspan='6' class='border-td' align='center'>Aucune compétence particulière</td>
         </tr>";
     }
-
- $absencesSemestre = Absence::where('inscription_id', $inscription->id)
-        ->where('semestre', $semestre)
+    $absencesSemestre = Absence::where('inscription_id', $inscription->id)
+        ->when($semestre, fn($q) => $q->where('semestre', $semestre))
         ->get();
 
-    $nbAbsences = $absencesSemestre
-        ->where('type', 'absence')
-        ->where('justifie', false)
-        ->count();
-
+    $nbAbsences = $absencesSemestre->where('type', 'absence')->where('justifie', false)->count();
     $nbRetards = $absencesSemestre->where('type', 'retard')->count();
+      $logoPath = public_path('assets/images/titleHead.png');
+  
     $template = file_get_contents('competence.html');
+ $logoPath = public_path('assets/images/titleHead.png');
+    $logoBase64 = '';
+
+    if (file_exists($logoPath)) {
+        $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+    }
+
+    $template = str_replace('[LOGO]', $logoBase64, $template);
+  
     $template = str_replace('[BODYRESSOURCE]', $htmlRessources, $template);
-     $template = str_replace('[NB_ABSENCES]', $nbAbsences, $template);
-    $template = str_replace('[NB_RETARDS]', $nbRetards, $template);
     $template = str_replace('[BODYCOMP]', $htmlCompetences, $template);
+    $template = str_replace('[NB_ABSENCES]', $nbAbsences, $template);
+    $template = str_replace('[NB_RETARDS]', $nbRetards, $template);
+
     setlocale(LC_TIME, 'fr_FR.UTF-8');
-    $date = strftime('%e %B %Y');
+    $dateNow = strftime('%e %B %Y');
 
     $replace = [
-        '[DATE]' => $date,
-        '[USER]' => $inscription->apprenant->nom . ' ' . $inscription->apprenant->prenom,
+        '[DATE]' => $dateNow,
+        '[USER]' => $inscription->apprenant->nom.' '.$inscription->apprenant->prenom,
         '[DATENAISSANCE]' => $inscription->apprenant->date_naissance,
         '[LIEUNAISSANCE]' => $inscription->apprenant->lieu_naissance,
         '[TEL]' => $inscription->apprenant->telephone,
         '[EMAIL]' => $inscription->apprenant->email,
-        '[SEMESTRE]' => $semestre ? ($semestre == 1 ? '1' : '2') : 'Tous les semestres',
+        '[SEMESTRE]' => $semestre ?: 'Tous',
         '[MATRICULE]' => $inscription->apprenant->matricule,
-        '[CLASSE]' => $inscription->classe->libelle ?? '',
-        '[ANNEE]' => $inscription->classe->niveau_etude->nom ?? '',
-        '[ANNEESCOLAIRE]' => $inscription->classe->annee_academique->code ?? '',
-        '[EFPT]' => $inscription->classe->etablissement->nom ?? '',
-        '[EFPTTEL]' => $inscription->classe->etablissement->telephone ?? ''
+        '[CLASSE]' => $inscription->classe->libelle,
+        '[ANNEE]' => $inscription->classe->niveau_etude->nom,
+        '[ANNEESCOLAIRE]' => $inscription->anneeAcademique->code ?? '',
+        '[EFPT]' => $inscription->classe->etablissement->nom,
+        '[EFPTTEL]' => $inscription->classe->etablissement->telephone,
+        '[EFPTMAIL]' => $inscription->classe->etablissement->email,
     ];
 
     $template = str_replace(array_keys($replace), array_values($replace), $template);
@@ -839,11 +869,9 @@ public function generateClassePdf(string $classe_id)
 {
     $semestre = session()->get('selectedsemestre1');
 
-   
     $classe = Classe::with(['niveau_etude', 'annee_academique', 'etablissement', 'inscriptions.apprenant'])
         ->findOrFail($classe_id);
 
- 
     $competencesGenerales = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
         ->where('type', 'generale')
         ->with('elementCompetences.ressource')
@@ -854,32 +882,33 @@ public function generateClassePdf(string $classe_id)
         ->with('elementCompetences.criteres')
         ->get();
 
-    
-    $bulletins = '';
+    $bulletins = "";
 
     foreach ($classe->inscriptions as $inscription) {
-          $evaluations = Evalute::with(['critere.elementCompetence.competence', 'ressource.elementCompetence.competence'])
+
+        $evaluations = Evalute::with(['critere.elementCompetence.competence', 'ressource.elementCompetence.competence'])
             ->where('inscription_id', $inscription->id)
             ->when($semestre, fn($q) => $q->where('semestre', $semestre))
             ->get();
 
-      
-        $evalRessources = $evaluations->whereNotNull('ressource_id');
-        $evalCriteres   = $evaluations->whereNotNull('critere_id');
+        $evalRessources = $evaluations->whereNotNull('ressource_id')->keyBy('ressource_id');
+        $evalCriteres   = $evaluations->whereNotNull('critere_id')->keyBy('critere_id');
 
-    
+
+        /* ================================================================
+            🔵 RESSOURCES — NOTE + APPRECIATION
+        ================================================================ */
         $htmlRessources = '';
+
         foreach ($competencesGenerales as $competence) {
             foreach ($competence->elementCompetences as $element) {
-                $ressources = $element->ressource()->get();
 
-                foreach ($ressources as $res) {
-                  
-                    $evaluation = $evalRessources->firstWhere('ressource_id', $res->id);
+                foreach ($element->ressource()->get() as $res) {
 
+                    $evaluation = $evalRessources[$res->id] ?? null;
                     $note = $evaluation?->note ?? '-';
-                    $date = $evaluation?->date ? date('d/m/Y', strtotime($evaluation->date)) : '-';
 
+                    // Appréciation automatique
                     $obs = '-';
                     if (is_numeric($note)) {
                         if ($note < 10) $obs = 'Insuffisant';
@@ -892,8 +921,8 @@ public function generateClassePdf(string $classe_id)
                     $htmlRessources .= "
                     <tr>
                         <td class='border-td'>".htmlspecialchars($res->nom)."</td>
-                        <td class='border-td' align='center'>".($note ?? '-')."</td>
-                        <td class='border-td'>".htmlspecialchars($obs)."</td>
+                        <td class='border-td' align='center'>{$note}</td>
+                        <td class='border-td'>{$obs}</td>
                     </tr>";
                 }
             }
@@ -906,39 +935,67 @@ public function generateClassePdf(string $classe_id)
             </tr>";
         }
 
-      
+
+        /* ================================================================
+            🔶 APC — ACQUIS / NON ACQUIS + OBS AUTOMATIQUE
+        ================================================================ */
         $htmlCompetences = '';
 
         foreach ($competencesParticulieres as $competence) {
-            $firstRow = true;
-            foreach ($competence->elementCompetences as $element) {
-                foreach ($element->criteres as $critere) {
-                    $evaluation = $evalCriteres->firstWhere('critere_id', $critere->id);
-                    $note = $evaluation?->note ?? '-';
-                    $date = $evaluation?->date ? date('d/m/Y', strtotime($evaluation->date)) : '-';
 
-                    $obs = '-';
-                    if (is_numeric($note)) {
-                        if ($note < 10) $obs = 'Insuffisant';
-                        elseif ($note < 12) $obs = 'Passable';
-                        elseif ($note < 14) $obs = 'Assez bien';
-                        elseif ($note < 16) $obs = 'Bien';
-                        else $obs = 'Très bien';
+            $firstRow = true;
+            $printedElement = [];
+
+            foreach ($competence->elementCompetences as $element) {
+
+                foreach ($element->criteres as $critere) {
+
+                    $evaluation = $evalCriteres[$critere->id] ?? null;
+
+                    // X agrandi
+                    $x = '<span style="font-size:22px; font-weight:bold;">×</span>';
+
+                    $acquis = $evaluation?->acquis ? $x : '';
+                    $nonAcquis = $evaluation?->nonAcquis ? $x : '';
+
+                    // OBSERVATION AUTOMATIQUE
+                    if ($evaluation?->acquis) {
+                        $obs = "Réussi";
+                    } elseif ($evaluation?->nonAcquis) {
+                        $obs = "Non réussi";
+                    } else {
+                        $obs = "-";
                     }
 
-                    $htmlCompetences .= '<tr>';
+                    $htmlCompetences .= "<tr>";
+
+                    // COMPETENCE (fusion)
                     if ($firstRow) {
                         $rowCount = $competence->elementCompetences->sum(fn($el) => $el->criteres->count());
-                        $htmlCompetences .= '<td rowspan="'.$rowCount.'" class="border-td bold-exo">'.htmlspecialchars($competence->nom).'</td>';
+
+                        $htmlCompetences .= "
+                            <td rowspan='{$rowCount}' class='border-td bold-exo'>
+                                ".htmlspecialchars($competence->nom)."
+                            </td>";
                         $firstRow = false;
                     }
 
+                    // ELEMENT (fusion)
+                    $rowElement = $element->criteres->count();
+                    if (!isset($printedElement[$element->id])) {
+                        $htmlCompetences .= "
+                            <td rowspan='{$rowElement}' class='border-td'>
+                                ".htmlspecialchars($element->nom)."
+                            </td>";
+                        $printedElement[$element->id] = true;
+                    }
+
+                    // CRITERE
                     $htmlCompetences .= "
-                        <td class='border-td'>".htmlspecialchars($element->nom)."</td>
-                        <td class='border-td' align='center'>".htmlspecialchars($critere->libelle)."</td>
-                        <td class='border-td' align='center'>".($note ?? '-')."</td>
-                        <td class='border-td' align='center'>{$date}</td>
-                        <td class='border-td'>".htmlspecialchars($obs)."</td>
+                        <td class='border-td'>".htmlspecialchars($critere->libelle)."</td>
+                        <td class='border-td' align='center'>{$acquis}</td>
+                        <td class='border-td' align='center'>{$nonAcquis}</td>
+                        <td class='border-td'>{$obs}</td>
                     </tr>";
                 }
             }
@@ -947,55 +1004,67 @@ public function generateClassePdf(string $classe_id)
         if (trim($htmlCompetences) === '') {
             $htmlCompetences = "
             <tr>
-                <td colspan='6' class='border-td' align='center'>Aucune compétence particulière</td>
+                <td colspan='6' class='border-td' align='center'>Aucune compétence APC</td>
             </tr>";
         }
 
+        
         $absencesSemestre = Absence::where('inscription_id', $inscription->id)
-            ->where('semestre', $semestre)
+            ->when($semestre, fn($q) => $q->where('semestre', $semestre))
             ->get();
 
-        $nbAbsences = $absencesSemestre
-            ->where('type', 'absence')
-            ->where('justifie', false)
-            ->count();
-
+        $nbAbsences = $absencesSemestre->where('type', 'absence')->where('justifie', false)->count();
         $nbRetards = $absencesSemestre->where('type', 'retard')->count();
-        $template = file_get_contents('competence.html');
+ $logoPath = public_path('assets/images/titleHead.png');
+  
+    $template = file_get_contents('competence.html');
+ $logoPath = public_path('assets/images/titleHead.png');
+    $logoBase64 = '';
+
+    if (file_exists($logoPath)) {
+        $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
+    }
+
+    $template = str_replace('[LOGO]', $logoBase64, $template);
         $template = str_replace('[BODYRESSOURCE]', $htmlRessources, $template);
         $template = str_replace('[BODYCOMP]', $htmlCompetences, $template);
         $template = str_replace('[NB_ABSENCES]', $nbAbsences, $template);
         $template = str_replace('[NB_RETARDS]', $nbRetards, $template);
+
         setlocale(LC_TIME, 'fr_FR.UTF-8');
-        $date = strftime('%e %B %Y');
+        $dateNow = strftime('%e %B %Y');
         $replace = [
-            '[DATE]' => $date,
-            '[USER]' => $inscription->apprenant->nom . ' ' . $inscription->apprenant->prenom,
+            '[DATE]' => $dateNow,
+            '[USER]' => $inscription->apprenant->nom.' '.$inscription->apprenant->prenom,
             '[DATENAISSANCE]' => $inscription->apprenant->date_naissance,
             '[LIEUNAISSANCE]' => $inscription->apprenant->lieu_naissance,
             '[TEL]' => $inscription->apprenant->telephone,
-            '[EMAIL]' => $inscription->apprenant->email,
-            '[SEMESTRE]' => $semestre ? ($semestre == 1 ? '1' : '2') : 'Tous les semestres',
+            '[SEMESTRE]' => $semestre ?: 'Tous',
             '[MATRICULE]' => $inscription->apprenant->matricule,
-            '[CLASSE]' => $classe->libelle ?? '',
-            '[ANNEE]' => $classe->niveau_etude->nom ?? '',
-            '[ANNEESCOLAIRE]' => $classe->annee_academique->code ?? '',
-            '[EFPT]' => $classe->etablissement->nom ?? '',
-            '[EFPTTEL]' => $classe->etablissement->telephone ?? ''
+            '[CLASSE]' => $classe->libelle,
+            '[ANNEE]' => $classe->niveau_etude->nom,
+            '[ANNEESCOLAIRE]' => $inscription->anneeAcademique->code ?? '',
+            '[EFPT]' => $classe->etablissement->nom,
+            '[EFPTTEL]' => $classe->etablissement->telephone,
+               '[EFPTMAIL]' => $inscription->classe->etablissement->email,
         ];
 
         $page = str_replace(array_keys($replace), array_values($replace), $template);
         $bulletins .= $page . '<div style="page-break-after: always;"></div>';
     }
+
+
     $dompdf = new Dompdf();
     $dompdf->getOptions()->set('isRemoteEnabled', true);
     $dompdf->loadHtml($bulletins);
     $dompdf->setPaper('A4', 'portrait');
     $dompdf->render();
+
     return response($dompdf->output(), 200)
         ->header('Content-Type', 'application/pdf')
         ->header('Content-Disposition', 'inline; filename="Carnets_Classe_'.$classe->libelle.'.pdf"');
 }
+
 
 
 

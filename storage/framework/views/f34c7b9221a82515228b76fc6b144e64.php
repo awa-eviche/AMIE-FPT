@@ -1,2 +1,0 @@
-<script src="<?php echo e(asset('assets/libs/parsleyjs/parsley.min.js')); ?>"></script>
-<script src="<?php echo e(asset('assets/libs/parsleyjs/i18n/fr.js')); ?>"></script><?php /**PATH /var/www/html/pgi/resources/views/layouts/v1/partials/parsley/_script.blade.php ENDPATH**/ ?>

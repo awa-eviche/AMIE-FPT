@@ -56,8 +56,6 @@ class RessourceController extends Controller
     if ($exists) {
         return back()->with('error', 'Cette ressource existe déjà dans cette classe.');
     }
-
-    
     $ressource->update([
         'nom' => ucfirst(trim($request->nom)),
     ]);

@@ -61,4 +61,9 @@ public function absences()
 {
     return $this->hasMany(\App\Models\Absence::class);
 }
+
+public function devoirs()
+{
+    return $this->hasMany(Devoir::class);
+}
 }

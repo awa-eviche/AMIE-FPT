@@ -1,1 +1,0 @@
-<script src="<?php echo e(asset('assets/libs/select2/js/select2.min.js')); ?>"></script><?php /**PATH C:\env_dev\projets\AmieFPT\AMIE-FPT\resources\views/layouts/v1/partials/select2/_script.blade.php ENDPATH**/ ?>

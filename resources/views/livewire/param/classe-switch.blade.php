@@ -139,7 +139,6 @@
                     </div>
                 </div>
 
-                <!-- Détails des compétences -->
                 @if ($selectedApprenant)
                     <div class="sm:w-1/2 p-4 border bg-gray-100 rounded border shadow">
                         <h2 class="font-bold text-xl mb-4">
@@ -149,8 +148,6 @@
                             {{ $currentApprenant->apprenant->prenom }}
                         </h2>
                         <hr class="mb-2">
-
-                        <!-- Filtres -->
                         <div class="flex justify-between items-center mb-3">
                             <select wire:model="filtre" wire:change="$refresh"
                                 class="border border-gray-300 p-2 w-1/2 rounded text-sm">
@@ -159,12 +156,6 @@
                                     <option value="{{ $comp->id }}">{{ $comp->nom }}</option>
                                 @endforeach
                             </select>
-
-   
-
-
-
-
                             
                      @php
     $user = auth()->user();
@@ -196,14 +187,7 @@
                                 <option value="">Tous les semestres</option>
                                 <option value="1">Premier semestre</option>
                                 <option value="2">Deuxième semestre</option>
-                            </select>
-
-
-
-
-
-
-                            
+                            </select>                      
                 @php
     $user = auth()->user();
 @endphp
@@ -214,10 +198,7 @@
 @endif
                         </div>
                          @if(
-    $user->hasRole('chef_de_travaux') ||
-    $user->hasRole('chef_etablissement') ||
-    $user->hasRole('directeur_etude')
-)
+    $user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude')||$user->hasRole('surveillant'))
         <button type="button"
     onclick="openAbsenceModal()"
     class="text-white bg-green-600 text-sm rounded-md shadow-md px-4 py-2 hover:bg-green-700">
@@ -231,7 +212,7 @@
             <button onclick="closeAbsenceModal()" class="text-gray-500 hover:text-gray-800 text-xl">&times;</button>
         </div>
   <h4 class="font-bold text-xl mb-4">
-                                Gestion des absences de     {{ $currentApprenant->apprenant->prenom }} {{ $currentApprenant->apprenant->nom }} 
+                                Gestion des absences de {{ $currentApprenant->apprenant->prenom }} {{ $currentApprenant->apprenant->nom }} 
                             </h4>
         <form method="POST" action="{{ route('absences.store') }}" class="p-6">
             @csrf
@@ -483,70 +464,84 @@
 </div>
 
 
-                        <!-- Tableau des compétences -->
-                        @if ($competences && $competences->count() > 0)
-                            <div class="overflow-x-auto">
-                                <table class="min-w-full border text-sm">
-                                    <thead class="bg-green-600 text-white uppercase">
-                                        <tr>
-                                            <th class="px-4 py-2 border text-center">COMPÉTENCE</th>
-                                            <th class="px-4 py-2 border text-center">ÉLÉMENT DE COMPÉTENCE</th>
-                                            <th class="px-4 py-2 border text-center">Seuil de reussite</th>
-                                            <th class="px-4 py-2 border text-center">NOTE /20</th>
-                                            <th class="px-4 py-2 border text-center">DATE</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="bg-white divide-y">
-                                        @foreach ($competences as $comp)
-                                            @php
-                                                if ($filtre && $comp->id != $filtre) continue;
-                                                $totalCriteres = $comp->elementCompetences->sum(fn($el) => $el->criteres->count());
-                                                $rowspan = max($totalCriteres, 1);
-                                                $firstRow = true;
-                                            @endphp
+                       
+                        @if ($competences && $competences->count() > 0) 
+    <div class="overflow-x-auto">
+        <table class="min-w-full border text-sm">
+            <thead class="bg-green-600 text-white uppercase">
+                <tr>
+                    <th class="px-4 py-2 border text-center">COMPÉTENCE</th>
+                    <th class="px-4 py-2 border text-center">ÉLÉMENT DE COMPÉTENCE</th>
+                    <th class="px-4 py-2 border text-center">Seuil de reussite</th>
 
-                                            @foreach ($comp->elementCompetences as $el)
-                                                @foreach ($el->criteres as $crit)
-                                                    @php
-                                                        $eval = $evaluations[$crit->id] ?? null;
-                                                        $note = $eval['note'] ?? null;
+                    {{-- ⭕ NOTE supprimée --}}
+                    {{-- ⭕ Ajout de ACQUIS & NON ACQUIS --}}
+                    <th class="px-4 py-2 border text-center">ACQUIS</th>
+                    <th class="px-4 py-2 border text-center">NON ACQUIS</th>
 
-                                                        $noteColor = 'text-gray-700';
-                                                        if ($note !== null) {
-                                                            if ($note >= 10) $noteColor = 'text-green-600 font-bold';
-                                                            elseif ($note >= 5) $noteColor = 'text-orange-500 font-bold';
-                                                            else $noteColor = 'text-red-600 font-bold';
-                                                        }
-                                                    @endphp
+                    <th class="px-4 py-2 border text-center">DATE</th>
+                </tr>
+            </thead>
 
-                                                    <tr>
-                                                        @if ($firstRow)
-                                                            <td rowspan="{{ $rowspan }}"
-                                                                class="px-4 py-2 border font-semibold bg-gray-50 align-top">
-                                                                {{ $comp->nom }}
-                                                            </td>
-                                                            @php $firstRow = false; @endphp
-                                                        @endif
-                                                        <td class="px-4 py-2 border">{{ $el->nom }}</td>
-                                                        <td class="px-4 py-2 border text-center">{{ $crit->libelle }}</td>
-                                                        <td class="px-4 py-2 border text-center {{ $noteColor }}">
-                                                            {{ $note !== null ? $note : '-' }}
-                                                        </td>
-                                                        <td class="px-4 py-2 border text-center">
-                                                            {{ $eval['date'] ?? '-' }}
-                                                        </td>
-                                                    </tr>
-                                                @endforeach
-                                            @endforeach
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        @else
-                            <div class="text-center py-4 text-gray-500">
-                                Aucune compétence assignée ou évaluation disponible.
-                            </div>
-                        @endif
+            <tbody class="bg-white divide-y">
+                @foreach ($competences as $comp)
+
+                    @php
+                        if ($filtre && $comp->id != $filtre) continue;
+                        $totalCriteres = $comp->elementCompetences->sum(fn($el) => $el->criteres->count());
+                        $rowspan = max($totalCriteres, 1);
+                        $firstRow = true;
+                    @endphp
+
+                    @foreach ($comp->elementCompetences as $el)
+                        @foreach ($el->criteres as $crit)
+
+                            @php
+                                $eval = $evaluations[$crit->id] ?? null;
+                                $acquis = $eval['acquis'] ?? null;
+                                $nonAcquis = $eval['nonAcquis'] ?? null;
+                            @endphp
+
+                            <tr>
+                                @if ($firstRow)
+                                    <td rowspan="{{ $rowspan }}"
+                                        class="px-4 py-2 border font-semibold bg-gray-50 align-top">
+                                        {{ $comp->nom }}
+                                    </td>
+                                    @php $firstRow = false; @endphp
+                                @endif
+
+                                <td class="px-4 py-2 border">{{ $el->nom }}</td>
+                                <td class="px-4 py-2 border text-center">{{ $crit->libelle }}</td>
+
+                                {{-- 🟢 ACQUIS --}}
+                                <td class="px-4 py-2 border text-center font-bold {{ $acquis ? 'text-green-600' : 'text-gray-500' }}">
+                                    {{ $acquis ? '✔' : '-' }}
+                                </td>
+
+                                {{-- 🔴 NON ACQUIS --}}
+                                <td class="px-4 py-2 border text-center font-bold {{ $nonAcquis ? 'text-red-600' : 'text-gray-500' }}">
+                                    {{ $nonAcquis ? '✘' : '-' }}
+                                </td>
+
+                                <td class="px-4 py-2 border text-center">
+                                    {{ $eval['date'] ?? '-' }}
+                                </td>
+                            </tr>
+
+                        @endforeach
+                    @endforeach
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+
+@else
+    <div class="text-center py-4 text-gray-500">
+        Aucune compétence assignée ou évaluation disponible.
+    </div>
+@endif
+
                     </div>
                 @else
                     <div class="sm:w-1/2 p-4 border bg-gray-100 rounded border shadow text-center">
