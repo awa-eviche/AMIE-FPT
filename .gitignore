@@ -1,4 +1,27 @@
+# Environment
 .env
 .env.*
-node_modules
 
+# Node
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Laravel storage & cache
+/storage
+/bootstrap/cache
+
+# Laravel compiled files
+/storage/framework
+/storage/framework/views
+/storage/framework/sessions
+/storage/framework/cache
+
+# IDE / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
