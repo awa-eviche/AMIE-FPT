@@ -2,6 +2,12 @@
 .env
 .env.*
 
+
+/storage
+/storage/*
+/storage/framework
+/storage/framework/*
+
 # Node
 node_modules
 npm-debug.log
@@ -25,3 +31,4 @@ Thumbs.db
 
 # Logs
 *.log
+

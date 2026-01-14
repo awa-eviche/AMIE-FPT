@@ -6,11 +6,12 @@
                 @if(optional(optional(Auth()->user()->personnel)->etablissement)->id == null)
                 <th scope="col" class="px-6 py-3 text-center">Etablissement</th>
                 @endif
-                <th scope="col" class="px-6 py-3 text-center">Nom</th>
+                <th scope="col" class="px-6 py-3 text-center">NomFA</th>
                 <th scope="col" class="px-6 py-3 text-center">Prénom</th>
                 <th scope="col" class="px-6 py-3 text-center">Courrier</th>
                 <th scope="col" class="px-6 py-3 text-center">Téléphone</th>
                 <th scope="col" class="px-6 py-3 text-center">Interne</th>
+              
                 {{--<th scope="col" class="px-6 py-3 text-center">Adresse</th>--}}
                 <th scope="col" class="px-6 py-3 text-center">Profil</th>
                 <th scope="col" class="px-6 py-3 text-center">Actions</th>
@@ -47,10 +48,15 @@
                 <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-gray-500 text-center">
                     {{ $user->telephone }}
                 </td>
-                <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-gray-500 text-center">
-                    {{ $user->interne ? "Oui" : "Non"}}
-                </td>
-                {{ optional($user->personnel)->interne ? "Oui" : "Non"}}
+  
+ <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-gray-500 text-center">
+    @if($user->personnel)
+        {{ $user->personnel->interne == 1 ? 'Oui' : 'Non' }}
+    @endif
+</td>
+
+
+             
                 {{--<td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-gray-500 text-center">
                     {{ $user->adresse}}
                 </td>--}}
