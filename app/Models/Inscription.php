@@ -66,4 +66,9 @@ public function devoirs()
 {
     return $this->hasMany(Devoir::class);
 }
+
+public function droitInscriptions()
+{
+    return $this->hasMany(DroitInscription::class);
+}
 }
