@@ -23,18 +23,8 @@ use App\Models\Ia;
 use App\Models\Ief;
 use Illuminate\Support\Facades\DB;
 use App\Models\Inspecteur;
-
 use Illuminate\Support\Str;
-
 use App\Mail\UserResetPassword;
-
-
-
-
-
-
-
-
 class UserController extends Controller
 {
     protected $userRepository;
@@ -121,11 +111,9 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
     public function create()
 {
     // Récupérer l'utilisateur connecté
-    $roles = $this->roleRepository->getList(Auth::user()); // Cette méthode gère maintenant les rôles selon le type d'utilisateur
+    $roles = $this->roleRepository->getList(Auth::user()); 
     $ias = Ia::all();
     $iefs = Ief::all();
-
-    // Passer les rôles à la vue
     return view('admin.users.create', compact('roles', 'ias', 'iefs'));
 }
 

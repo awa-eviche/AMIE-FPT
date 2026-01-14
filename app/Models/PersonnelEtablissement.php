@@ -16,8 +16,10 @@ class PersonnelEtablissement extends Model
         'user_id',
         'etablissement_id'
     ];
-
-
+ protected $casts = [
+        'interne' => 'boolean',
+    ];
+  
     public function etablissement()
     {
         return $this->belongsTo(Etablissement::class, 'etablissement_id');
@@ -25,7 +27,7 @@ class PersonnelEtablissement extends Model
 
     public function user()
     {
-       return $this->belongsTo(User::class); // Un PersonnelEtablissement appartient à un seul utilisateur
+       return $this->belongsTo(User::class); 
     }
 
  public function classes()
