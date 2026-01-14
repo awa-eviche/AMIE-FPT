@@ -226,6 +226,10 @@ Route::get('/classe/{classe}/bulletins/pdf', [InscriptionController::class, 'gen
     Route::resource('suiviIndicateur', SuiviIndicateurController::class);
 
 
+    Route::resource('droitInscription', DroitInscriptionController::class);
+
+
+
     Route::prefix('promoteur')->group(function () {
         Route::get('/', [PromoteurController::class, "index"])->name('index');
         Route::get('/demandes', [PromoteurController::class, "demandes"])->name('demandes');
