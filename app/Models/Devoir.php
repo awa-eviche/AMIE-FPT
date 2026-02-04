@@ -12,7 +12,10 @@ class Devoir extends Model
         'libelle',
         'note',
         'semestre',
-    ];
+        'mcc',
+        'classe_id',
+        
+    ]; 
 
     public function inscription()
     {

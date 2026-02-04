@@ -10,6 +10,7 @@ use App\Models\Apprenant;
 use App\Models\AnneeAcademique;
 use App\Models\Etablissement;
 use App\Models\Matiere;
+use App\Models\DevoirAPC;
 use Illuminate\Http\Request;
 use App\Enums\UserAction;
 use App\Repositories\LogUserRepository;
@@ -659,195 +660,301 @@ class InscriptionController extends Controller
 
 public function generateCompetencePdf(string $id)
 {
-    $semestre = session()->get('selectedsemestre1');
+    $semestre = session()->get('selectedsemestre1'); // peut être null
+    $semestreInt = $semestre ? (int) $semestre : null;
 
-    // Charger l'apprenant et sa classe
+    // ✅ Charger l'apprenant et sa classe
     $inscription = Inscription::with([
         'apprenant',
         'classe.niveau_etude',
-        'classe.annee_academique',
-        'classe.etablissement'
+        'classe.etablissement',
+        'anneeAcademique', // si relation existe
     ])->findOrFail($id);
 
-    // Récupérer les évaluations
-    $evaluations = Evalute::with([
-        'critere.elementCompetence.competence',
-        'ressource.elementCompetence.competence'
-    ])
-    ->where('inscription_id', $inscription->id)
-    ->when($semestre, fn($q) => $q->where('semestre', $semestre))
+    $niveauId = (int) $inscription->classe->niveau_etude_id;
+
+    // ✅ Compétences (SANS critères) + disciplines (ressources)
+    $competencesGenerales = Competence::query()
+        ->where('niveau_etude_id', $niveauId)
+        ->where('type', 'generale')
+        ->with('ressources')
+        ->orderBy('nom')
+        ->get();
+
+    $competencesParticulieres = Competence::query()
+        ->where('niveau_etude_id', $niveauId)
+        ->where('type', 'particuliere')
+        ->with('ressources')
+        ->orderBy('nom')
+        ->get();
+
+    // ✅ Toutes les ressources concernées
+    $ressourceIds = $competencesGenerales
+        ->merge($competencesParticulieres)
+        ->flatMap(fn ($c) => ($c->ressources ?? collect())->pluck('id'))
+        ->filter()
+        ->unique()
+        ->values()
+        ->all();
+
+    // ✅ Évaluations (intégration = composition) depuis evalutes (APC uniquement)
+    $evalQuery = Evalute::query()
+        ->where('inscription_id', (int) $inscription->id)
+       
+        ->whereIn('ressource_id', $ressourceIds);
+
+    if ($semestreInt) {
+        $evalQuery->where('semestre', $semestreInt);
+    }
+
+    $evalByRessource = $evalQuery
+        ->get(['ressource_id', 'composition'])
+        ->keyBy('ressource_id');
+
+    // ✅ MCC = AVG(note) depuis DevoirAPC
+    $mccQuery = DevoirAPC::query()
+        ->where('inscription_id', (int) $inscription->id)
+        ->whereIn('ressource_id', $ressourceIds)
+        ->whereNotNull('note');
+
+    if ($semestreInt) {
+        $mccQuery->where('semestre', $semestreInt);
+    }
+
+    $mccRows = $mccQuery
+        ->selectRaw('ressource_id, ROUND(AVG(note),2) as mcc')
+        ->groupBy('ressource_id')
+        ->get();
+
+    $mccByRessource = [];
+    foreach ($mccRows as $r) {
+        $mccByRessource[(int) $r->ressource_id] = (float) $r->mcc;
+    }
+
+    // ✅ helper appréciation
+    $obsFromNote = function ($note) {
+        if (!is_numeric($note)) return '-';
+        $note = (float) $note;
+        if ($note < 10) return 'Insuffisant';
+        if ($note < 12) return 'Passable';
+        if ($note < 14) return 'Assez bien';
+        if ($note < 16) return 'Bien';
+        return 'Très bien';
+    };
+
+    /**
+     * =========================================================
+     * ✅ HTML COMPETENCES GENERALES (rowspan + fallback MCC)
+     * =========================================================
+     */
+    $htmlGenerales = '';
+
+    foreach ($competencesGenerales as $comp) {
+        $ressources = ($comp->ressources ?? collect())->unique('id')->values();
+
+        if ($ressources->isEmpty()) {
+            $htmlGenerales .= "
+            <tr>
+                <td class='border-td bold-exo wrap' style='width:28%'>".htmlspecialchars($comp->nom)."</td>
+                <td class='border-td wrap' style='width:32%'>Aucune discipline</td>
+                <td class='border-td num' style='width:10%'>-</td>
+                <td class='border-td num' style='width:12%'>-</td>
+                <td class='border-td wrap' style='width:18%'>-</td>
+            </tr>";
+            continue;
+        }
+
+        $first = true;
+        $rowspan = $ressources->count();
+
+        foreach ($ressources as $res) {
+            $mcc = $mccByRessource[$res->id] ?? null;
+
+            $eval = $evalByRessource[$res->id] ?? null;
+            $integrationRaw = $eval?->composition; // peut être null
+
+            // ✅ règle générale : si pas d’intégration => MCC devient intégration
+            $integrationEffective = ($integrationRaw === null || $integrationRaw === '')
+                ? $mcc
+                : (float) $integrationRaw;
+
+            $app = $obsFromNote($integrationEffective);
+
+            $mccTxt = is_numeric($mcc) ? number_format((float)$mcc, 2) : '-';
+            $intTxt = is_numeric($integrationEffective) ? number_format((float)$integrationEffective, 2) : '-';
+
+            $htmlGenerales .= "<tr>";
+
+            if ($first) {
+                $htmlGenerales .= "
+                <td rowspan='{$rowspan}' class='border-td bold-exo wrap' style='width:28%'>
+                    ".htmlspecialchars($comp->nom)."
+                </td>";
+                $first = false;
+            }
+
+            $htmlGenerales .= "
+                <td class='border-td wrap' style='width:32%'>".htmlspecialchars($res->nom)."</td>
+                <td class='border-td num' style='width:10%'>{$mccTxt}</td>
+                <td class='border-td num' style='width:12%'>{$intTxt}</td>
+                <td class='border-td wrap' style='width:18%'>{$app}</td>
+            </tr>";
+        }
+    }
+
+    if (trim($htmlGenerales) === '') {
+        $htmlGenerales = "
+        <tr>
+            <td colspan='5' class='border-td' align='center'>Aucune compétence générale</td>
+        </tr>";
+    }
+
+  
+    $htmlParticulieres = '';
+
+    foreach ($competencesParticulieres as $comp) {
+        $ressources = ($comp->ressources ?? collect())->unique('id')->values();
+
+        if ($ressources->isEmpty()) {
+            $htmlParticulieres .= "
+            <tr>
+                <td class='border-td bold-exo wrap' style='width:28%'>".htmlspecialchars($comp->nom)."</td>
+                <td class='border-td wrap' style='width:32%'>Aucune discipline</td>
+                <td class='border-td num' style='width:10%'>-</td>
+                <td class='border-td num' style='width:12%'>-</td>
+                <td class='border-td wrap' style='width:18%'>-</td>
+            </tr>";
+            continue;
+        }
+
+        $first = true;
+        $rowspan = $ressources->count();
+
+        foreach ($ressources as $res) {
+            $mcc = $mccByRessource[$res->id] ?? null;
+
+            $eval = $evalByRessource[$res->id] ?? null;
+            $integration = $eval?->composition; // ici on affiche tel quel (si vide => '-')
+
+            $mccTxt = is_numeric($mcc) ? number_format((float)$mcc, 2) : '-';
+            $intTxt = is_numeric($integration) ? number_format((float)$integration, 2) : '-';
+
+            $app = is_numeric($integration) ? $obsFromNote((float)$integration) : '-';
+
+            $htmlParticulieres .= "<tr>";
+
+            if ($first) {
+                $htmlParticulieres .= "
+                <td rowspan='{$rowspan}' class='border-td bold-exo wrap' style='width:28%'>
+                    ".htmlspecialchars($comp->nom)."
+                </td>";
+                $first = false;
+            }
+
+            $htmlParticulieres .= "
+                <td class='border-td wrap' style='width:32%'>".htmlspecialchars($res->nom)."</td>
+                <td class='border-td num' style='width:10%'>{$mccTxt}</td>
+                <td class='border-td num' style='width:12%'>{$intTxt}</td>
+                <td class='border-td wrap' style='width:18%'>{$app}</td>
+            </tr>";
+        }
+    }
+
+    if (trim($htmlParticulieres) === '') {
+        $htmlParticulieres = "
+        <tr>
+            <td colspan='5' class='border-td' align='center'>Aucune compétence particulière</td>
+        </tr>";
+    }
+
+    
+     // $nbAbsences = $absencesSemestre->where('type', 'absence')->where('justifie', false);
+    // $nbRetards  = $absencesSemestre->where('type', 'retard')->count();
+    // $absencesSemestre = Absence::where('inscription_id', (int) $inscription->id)
+    // ->when($semestreInt, fn($q) => $q->where('semestre', (int) $semestreInt))
+    // ->get();
+   $absencesSemestre = Absence::where('inscription_id', (int) $inscription->id)
+    ->when($semestreInt, fn($q) => $q->where('semestre', (int) $semestreInt))
     ->get();
 
-    // Indexation
-    $evalRessources = $evaluations->whereNotNull('ressource_id')->keyBy('ressource_id');
-    $evalCriteres   = $evaluations->whereNotNull('critere_id')->keyBy('critere_id');
+$hAbsJust = (float) $absencesSemestre->where('type','absence')->where('justifie', 1)->sum('nombre_heure_absence');
+
+$hAbsNon = (float) $absencesSemestre->where('type','absence')
+    ->filter(fn($r) => (int)$r->justifie === 0 || (int)$r->nonjustifie === 1)
+    ->sum('nombre_heure_absence');
+
+$hRetJust = (float) $absencesSemestre->where('type','retard')->where('justifie', 1)->sum('nombre_heure_retard');
+
+$hRetNon = (float) $absencesSemestre->where('type','retard')
+    ->filter(fn($r) => (int)$r->justifie === 0 || (int)$r->nonjustifie === 1)
+    ->sum('nombre_heure_retard');
+;
+
+$hAbsTotal = $hAbsJust + $hAbsNon;
+$hRetTotal = $hRetJust + $hRetNon;
 
 
+    // ✅ Template (chemin robuste)
+    $templatePath = public_path('competence.html');
+    if (!file_exists($templatePath)) $templatePath = base_path('competence.html');
+    if (!file_exists($templatePath)) $templatePath = resource_path('views/competence.html');
 
-    $competencesGenerales = Competence::where('niveau_etude_id', $inscription->classe->niveau_etude_id)
-        ->where('type', 'generale')
-        ->with('elementCompetences.ressource')
-        ->get();
+    $template = file_get_contents($templatePath);
 
-    $htmlRessources = '';
+    // ✅ Inject CSS anti-débordement (Dompdf friendly)
+    $antiOverflowCss = "
+        .full-table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+        .border-td{ border:1px solid #000; padding:.25em; font-size:11px; vertical-align:top; white-space:normal; }
+        .wrap{ word-wrap:break-word; overflow-wrap:break-word; }
+        .num{ text-align:center; white-space:nowrap; }
+    ";
+    $template = str_replace('</style>', $antiOverflowCss . "\n</style>", $template);
 
-    foreach ($competencesGenerales as $competence) {
-        foreach ($competence->elementCompetences as $element) {
-            foreach ($element->ressource()->get() as $res) {
-
-                $evaluation = $evalRessources[$res->id] ?? null;
-                $note = $evaluation?->note ?? '-';
-
-                
-                $obs = '-';
-                if (is_numeric($note)) {
-                    if ($note < 10) $obs = 'Insuffisant';
-                    elseif ($note < 12) $obs = 'Passable';
-                    elseif ($note < 14) $obs = 'Assez bien';
-                    elseif ($note < 16) $obs = 'Bien';
-                    else $obs = 'Très bien';
-                }
-
-                $htmlRessources .= "
-                <tr>
-                    <td class='border-td'>".htmlspecialchars($res->nom)."</td>
-                    <td class='border-td' align='center'>$note</td>
-                    <td class='border-td'>$obs</td>
-                </tr>";
-            }
-        }
-    }
-
-    if (trim($htmlRessources) === '') {
-        $htmlRessources = "
-        <tr>
-            <td colspan='3' class='border-td' align='center'>Aucune ressource évaluée</td>
-        </tr>";
-    }
-
-
-
-
-    $competencesParticulieres = Competence::where('niveau_etude_id', $inscription->classe->niveau_etude_id)
-        ->where('type', 'particuliere')
-        ->with('elementCompetences.criteres')
-        ->get();
-
-    $htmlCompetences = '';
-
-    foreach ($competencesParticulieres as $competence) {
-
-        $firstRow = true;
-        $printedElement = [];
-
-        foreach ($competence->elementCompetences as $element) {
-
-            foreach ($element->criteres as $critere) {
-
-                $evaluation = $evalCriteres[$critere->id] ?? null;
-             $acquis = $evaluation?->acquis 
-    ? '<span style="font-size:22px; font-weight:bold;">×</span>' 
-    : '';
-
-$nonAcquis = $evaluation?->nonAcquis 
-    ? '<span style="font-size:22px; font-weight:bold;">×</span>' 
-    : '';
-
-
-                
-                if ($evaluation?->acquis) {
-                    $obs = "Réussi";
-                } elseif ($evaluation?->nonAcquis) {
-                    $obs = "Non réussi";
-                } else {
-                    $obs = "-";
-                }
-
-                $htmlCompetences .= "<tr>";
-
-                
-                if ($firstRow) {
-                    $rowCount = $competence->elementCompetences->sum(fn($el) => $el->criteres->count());
-
-                    $htmlCompetences .= '
-                        <td rowspan="'.$rowCount.'" class="border-td bold-exo">'.
-                        htmlspecialchars($competence->nom).'</td>';
-
-                    $firstRow = false;
-                }
-
-                
-                $rowElement = $element->criteres->count();
-                if (!isset($printedElement[$element->id])) {
-
-                    $htmlCompetences .= '
-                        <td rowspan="'.$rowElement.'" class="border-td">'.
-                        htmlspecialchars($element->nom).'</td>';
-
-                    $printedElement[$element->id] = true;
-                }
-
-                
-                $htmlCompetences .= "
-                    <td class='border-td'>".htmlspecialchars($critere->libelle)."</td>
-                    <td class='border-td' align='center'>{$acquis}</td>
-                    <td class='border-td' align='center'>{$nonAcquis}</td>
-                    <td class='border-td'>".$obs."</td>
-                </tr>";
-            }
-        }
-    }
-
-    if (trim($htmlCompetences) === '') {
-        $htmlCompetences = "
-        <tr>
-            <td colspan='6' class='border-td' align='center'>Aucune compétence particulière</td>
-        </tr>";
-    }
-    $absencesSemestre = Absence::where('inscription_id', $inscription->id)
-        ->when($semestre, fn($q) => $q->where('semestre', $semestre))
-        ->get();
-
-    $nbAbsences = $absencesSemestre->where('type', 'absence')->where('justifie', false)->count();
-    $nbRetards = $absencesSemestre->where('type', 'retard')->count();
-      $logoPath = public_path('assets/images/titleHead.png');
-  
-    $template = file_get_contents('competence.html');
- $logoPath = public_path('assets/images/titleHead.png');
+    // Logo
+    $logoPath = public_path('assets/images/titleHead.png');
     $logoBase64 = '';
-
     if (file_exists($logoPath)) {
         $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
     }
-
     $template = str_replace('[LOGO]', $logoBase64, $template);
-  
-    $template = str_replace('[BODYRESSOURCE]', $htmlRessources, $template);
-    $template = str_replace('[BODYCOMP]', $htmlCompetences, $template);
-    $template = str_replace('[NB_ABSENCES]', $nbAbsences, $template);
-    $template = str_replace('[NB_RETARDS]', $nbRetards, $template);
 
-    setlocale(LC_TIME, 'fr_FR.UTF-8');
-    $dateNow = strftime('%e %B %Y');
+    // ✅ Blocs
+    $template = str_replace('[BODYRESSOURCE]', $htmlGenerales, $template);
+    $template = str_replace('[BODYCOMP]', $htmlParticulieres, $template);
+   $fmt = fn($n) => rtrim(rtrim(number_format((float)$n, 2, '.', ''), '0'), '.');
+
+$template = str_replace('[NB_ABSENCES]', $fmt($hAbsTotal), $template);
+$template = str_replace('[NB_RETARDS]',  $fmt($hRetTotal), $template);
+
+
+      setlocale(LC_TIME, 'fr_FR.UTF-8', 'fr_FR', 'fr');
+$dateNow = strftime('%e %B %Y');
+$dateNow = trim($dateNow);
+
+    
+    $anneeScolaire = $inscription->anneeAcademique->code
+        ?? ($inscription->classe->annee_academique->code ?? '');
 
     $replace = [
         '[DATE]' => $dateNow,
-        '[USER]' => $inscription->apprenant->nom.' '.$inscription->apprenant->prenom,
+        '[USER]' => $inscription->apprenant->nom . ' ' . $inscription->apprenant->prenom,
         '[DATENAISSANCE]' => $inscription->apprenant->date_naissance,
         '[LIEUNAISSANCE]' => $inscription->apprenant->lieu_naissance,
         '[TEL]' => $inscription->apprenant->telephone,
         '[EMAIL]' => $inscription->apprenant->email,
-        '[SEMESTRE]' => $semestre ?: 'Tous',
+        '[SEMESTRE]' => $semestreInt ?: 'Tous',
         '[MATRICULE]' => $inscription->apprenant->matricule,
         '[CLASSE]' => $inscription->classe->libelle,
         '[ANNEE]' => $inscription->classe->niveau_etude->nom,
-        '[ANNEESCOLAIRE]' => $inscription->anneeAcademique->code ?? '',
+        '[ANNEESCOLAIRE]' => $anneeScolaire,
         '[EFPT]' => $inscription->classe->etablissement->nom,
         '[EFPTTEL]' => $inscription->classe->etablissement->telephone,
         '[EFPTMAIL]' => $inscription->classe->etablissement->email,
     ];
 
     $template = str_replace(array_keys($replace), array_values($replace), $template);
+
+    // ✅ Dompdf
     $dompdf = new Dompdf();
     $dompdf->getOptions()->set('isRemoteEnabled', true);
     $dompdf->loadHtml($template);
@@ -861,199 +968,322 @@ $nonAcquis = $evaluation?->nonAcquis
 
 
 
-
-
-
-
 public function generateClassePdf(string $classe_id)
 {
-    $semestre = session()->get('selectedsemestre1');
+    $semestre = session()->get('selectedsemestre1'); // peut être null
+    $semestreInt = $semestre ? (int) $semestre : null;
 
-    $classe = Classe::with(['niveau_etude', 'annee_academique', 'etablissement', 'inscriptions.apprenant'])
-        ->findOrFail($classe_id);
+    $classe = Classe::with([
+        'niveau_etude',
+        'etablissement',
+        'inscriptions.apprenant',
+        'annee_academique', // si relation existe côté classe
+    ])->findOrFail($classe_id);
 
-    $competencesGenerales = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
+    $niveauId = (int) $classe->niveau_etude_id;
+
+    $competencesGenerales = Competence::query()
+        ->where('niveau_etude_id', $niveauId)
         ->where('type', 'generale')
-        ->with('elementCompetences.ressource')
+        ->with('ressources')
+        ->orderBy('nom')
         ->get();
 
-    $competencesParticulieres = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
+    $competencesParticulieres = Competence::query()
+        ->where('niveau_etude_id', $niveauId)
         ->where('type', 'particuliere')
-        ->with('elementCompetences.criteres')
+        ->with('ressources')
+        ->orderBy('nom')
         ->get();
 
-    $bulletins = "";
+    // ✅ Toutes les ressources concernées
+    $ressourceIds = $competencesGenerales
+        ->merge($competencesParticulieres)
+        ->flatMap(fn ($c) => ($c->ressources ?? collect())->pluck('id'))
+        ->filter()
+        ->unique()
+        ->values()
+        ->all();
 
-    foreach ($classe->inscriptions as $inscription) {
+    $inscriptionIds = $classe->inscriptions->pluck('id')->filter()->values()->all();
 
-        $evaluations = Evalute::with(['critere.elementCompetence.competence', 'ressource.elementCompetence.competence'])
-            ->where('inscription_id', $inscription->id)
-            ->when($semestre, fn($q) => $q->where('semestre', $semestre))
+    // helper appréciation
+    $obsFromNote = function ($note) {
+        if (!is_numeric($note)) return '-';
+        $note = (float) $note;
+        if ($note < 10) return 'Insuffisant';
+        if ($note < 12) return 'Passable';
+        if ($note < 14) return 'Assez bien';
+        if ($note < 16) return 'Bien';
+        return 'Très bien';
+    };
+
+    // ✅ Précharger toutes les intégrations (Evalute.composition) APC de la classe
+    $evalMap = []; // [inscription_id][ressource_id] => composition
+    if (!empty($inscriptionIds) && !empty($ressourceIds)) {
+        $evalQuery = Evalute::query()
+            ->whereIn('inscription_id', $inscriptionIds)
+            ->whereIn('ressource_id', $ressourceIds);
+
+        if ($semestreInt) {
+            $evalQuery->where('semestre', $semestreInt);
+        }
+
+        $evalRows = $evalQuery->get(['inscription_id', 'ressource_id', 'composition']);
+
+        foreach ($evalRows as $e) {
+            $evalMap[(int)$e->inscription_id][(int)$e->ressource_id] = $e->composition;
+        }
+    }
+
+    // ✅ Précharger tous les MCC (AVG(note)) depuis DevoirAPC
+    $mccMap = []; // [inscription_id][ressource_id] => mcc
+    if (!empty($inscriptionIds) && !empty($ressourceIds)) {
+        $mccQuery = DevoirAPC::query()
+            ->whereIn('inscription_id', $inscriptionIds)
+            ->whereIn('ressource_id', $ressourceIds)
+            ->whereNotNull('note');
+
+        if ($semestreInt) {
+            $mccQuery->where('semestre', $semestreInt);
+        }
+
+        $mccRows = $mccQuery
+            ->selectRaw('inscription_id, ressource_id, ROUND(AVG(note),2) as mcc')
+            ->groupBy('inscription_id', 'ressource_id')
             ->get();
 
-        $evalRessources = $evaluations->whereNotNull('ressource_id')->keyBy('ressource_id');
-        $evalCriteres   = $evaluations->whereNotNull('critere_id')->keyBy('critere_id');
-
-
-        /* ================================================================
-            🔵 RESSOURCES — NOTE + APPRECIATION
-        ================================================================ */
-        $htmlRessources = '';
-
-        foreach ($competencesGenerales as $competence) {
-            foreach ($competence->elementCompetences as $element) {
-
-                foreach ($element->ressource()->get() as $res) {
-
-                    $evaluation = $evalRessources[$res->id] ?? null;
-                    $note = $evaluation?->note ?? '-';
-
-                    // Appréciation automatique
-                    $obs = '-';
-                    if (is_numeric($note)) {
-                        if ($note < 10) $obs = 'Insuffisant';
-                        elseif ($note < 12) $obs = 'Passable';
-                        elseif ($note < 14) $obs = 'Assez bien';
-                        elseif ($note < 16) $obs = 'Bien';
-                        else $obs = 'Très bien';
-                    }
-
-                    $htmlRessources .= "
-                    <tr>
-                        <td class='border-td'>".htmlspecialchars($res->nom)."</td>
-                        <td class='border-td' align='center'>{$note}</td>
-                        <td class='border-td'>{$obs}</td>
-                    </tr>";
-                }
-            }
+        foreach ($mccRows as $r) {
+            $mccMap[(int)$r->inscription_id][(int)$r->ressource_id] = (float)$r->mcc;
         }
+    }
 
-        if (trim($htmlRessources) === '') {
-            $htmlRessources = "
-            <tr>
-                <td colspan='3' class='border-td' align='center'>Aucune ressource évaluée</td>
-            </tr>";
-        }
+    // ✅ Charger template (chemin robuste)
+    $templatePath = public_path('competence.html');
+    if (!file_exists($templatePath)) $templatePath = base_path('competence.html');
+    if (!file_exists($templatePath)) $templatePath = resource_path('views/competence.html');
 
+    $templateRaw = file_get_contents($templatePath);
 
-        /* ================================================================
-            🔶 APC — ACQUIS / NON ACQUIS + OBS AUTOMATIQUE
-        ================================================================ */
-        $htmlCompetences = '';
+    // ✅ Inject CSS anti-débordement dompdf
+    $antiOverflowCss = "
+        .full-table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+        .border-td{ border:1px solid #000; padding:.25em; font-size:11px; vertical-align:top; white-space:normal; }
+        .wrap{ word-wrap:break-word; overflow-wrap:break-word; }
+        .num{ text-align:center; white-space:nowrap; }
+    ";
+    $templateRaw = str_replace('</style>', $antiOverflowCss . "\n</style>", $templateRaw);
 
-        foreach ($competencesParticulieres as $competence) {
-
-            $firstRow = true;
-            $printedElement = [];
-
-            foreach ($competence->elementCompetences as $element) {
-
-                foreach ($element->criteres as $critere) {
-
-                    $evaluation = $evalCriteres[$critere->id] ?? null;
-
-                    // X agrandi
-                    $x = '<span style="font-size:22px; font-weight:bold;">×</span>';
-
-                    $acquis = $evaluation?->acquis ? $x : '';
-                    $nonAcquis = $evaluation?->nonAcquis ? $x : '';
-
-                    // OBSERVATION AUTOMATIQUE
-                    if ($evaluation?->acquis) {
-                        $obs = "Réussi";
-                    } elseif ($evaluation?->nonAcquis) {
-                        $obs = "Non réussi";
-                    } else {
-                        $obs = "-";
-                    }
-
-                    $htmlCompetences .= "<tr>";
-
-                    // COMPETENCE (fusion)
-                    if ($firstRow) {
-                        $rowCount = $competence->elementCompetences->sum(fn($el) => $el->criteres->count());
-
-                        $htmlCompetences .= "
-                            <td rowspan='{$rowCount}' class='border-td bold-exo'>
-                                ".htmlspecialchars($competence->nom)."
-                            </td>";
-                        $firstRow = false;
-                    }
-
-                    // ELEMENT (fusion)
-                    $rowElement = $element->criteres->count();
-                    if (!isset($printedElement[$element->id])) {
-                        $htmlCompetences .= "
-                            <td rowspan='{$rowElement}' class='border-td'>
-                                ".htmlspecialchars($element->nom)."
-                            </td>";
-                        $printedElement[$element->id] = true;
-                    }
-
-                    // CRITERE
-                    $htmlCompetences .= "
-                        <td class='border-td'>".htmlspecialchars($critere->libelle)."</td>
-                        <td class='border-td' align='center'>{$acquis}</td>
-                        <td class='border-td' align='center'>{$nonAcquis}</td>
-                        <td class='border-td'>{$obs}</td>
-                    </tr>";
-                }
-            }
-        }
-
-        if (trim($htmlCompetences) === '') {
-            $htmlCompetences = "
-            <tr>
-                <td colspan='6' class='border-td' align='center'>Aucune compétence APC</td>
-            </tr>";
-        }
-
-        
-        $absencesSemestre = Absence::where('inscription_id', $inscription->id)
-            ->when($semestre, fn($q) => $q->where('semestre', $semestre))
-            ->get();
-
-        $nbAbsences = $absencesSemestre->where('type', 'absence')->where('justifie', false)->count();
-        $nbRetards = $absencesSemestre->where('type', 'retard')->count();
- $logoPath = public_path('assets/images/titleHead.png');
-  
-    $template = file_get_contents('competence.html');
- $logoPath = public_path('assets/images/titleHead.png');
+    // ✅ Logo
+    $logoPath = public_path('assets/images/titleHead.png');
     $logoBase64 = '';
-
     if (file_exists($logoPath)) {
         $logoBase64 = 'data:image/png;base64,' . base64_encode(file_get_contents($logoPath));
     }
+    $templateRaw = str_replace('[LOGO]', $logoBase64, $templateRaw);
 
-    $template = str_replace('[LOGO]', $logoBase64, $template);
-        $template = str_replace('[BODYRESSOURCE]', $htmlRessources, $template);
-        $template = str_replace('[BODYCOMP]', $htmlCompetences, $template);
-        $template = str_replace('[NB_ABSENCES]', $nbAbsences, $template);
-        $template = str_replace('[NB_RETARDS]', $nbRetards, $template);
+    // ✅ format heures
+    $fmt = fn($n) => rtrim(rtrim(number_format((float)$n, 2, '.', ''), '0'), '.');
 
-        setlocale(LC_TIME, 'fr_FR.UTF-8');
-        $dateNow = strftime('%e %B %Y');
+    // ✅ Génération bulletins
+    $bulletins = '';
+
+    foreach ($classe->inscriptions as $inscription) {
+
+        $inscId = (int) $inscription->id;
+
+        /**
+         * =========================
+         * ✅ HTML GÉNÉRALES (rowspan + fallback MCC)
+         * =========================
+         */
+        $htmlGenerales = '';
+
+        foreach ($competencesGenerales as $comp) {
+            $ressources = ($comp->ressources ?? collect())->unique('id')->values();
+
+            if ($ressources->isEmpty()) {
+                $htmlGenerales .= "
+                <tr>
+                    <td class='border-td bold-exo wrap' style='width:28%'>".htmlspecialchars($comp->nom)."</td>
+                    <td class='border-td wrap' style='width:32%'>Aucune discipline</td>
+                    <td class='border-td num' style='width:10%'>-</td>
+                    <td class='border-td num' style='width:12%'>-</td>
+                    <td class='border-td wrap' style='width:18%'>-</td>
+                </tr>";
+                continue;
+            }
+
+            $first = true;
+            $rowspan = $ressources->count();
+
+            foreach ($ressources as $res) {
+                $resId = (int) $res->id;
+
+                $mcc = $mccMap[$inscId][$resId] ?? null;
+                $compositionRaw = $evalMap[$inscId][$resId] ?? null;
+
+                // ✅ règle générale : si pas d’intégration => MCC
+                $integrationEffective = ($compositionRaw === null || $compositionRaw === '')
+                    ? $mcc
+                    : (float)$compositionRaw;
+
+                $mccTxt = is_numeric($mcc) ? number_format((float)$mcc, 2) : '-';
+                $intTxt = is_numeric($integrationEffective) ? number_format((float)$integrationEffective, 2) : '-';
+                $app    = $obsFromNote($integrationEffective);
+
+                $htmlGenerales .= "<tr>";
+
+                if ($first) {
+                    $htmlGenerales .= "
+                    <td rowspan='{$rowspan}' class='border-td bold-exo wrap' style='width:28%>
+                        ".htmlspecialchars($comp->nom)."
+                    </td>";
+                    $first = false;
+                }
+
+                $htmlGenerales .= "
+                    <td class='border-td wrap' style='width:32%'>".htmlspecialchars($res->nom)."</td>
+                    <td class='border-td num' style='width:10%'>{$mccTxt}</td>
+                    <td class='border-td num' style='width:12%'>{$intTxt}</td>
+                    <td class='border-td wrap' style='width:18%'>{$app}</td>
+                </tr>";
+            }
+        }
+
+        if (trim($htmlGenerales) === '') {
+            $htmlGenerales = "
+            <tr>
+                <td colspan='5' class='border-td' align='center'>Aucune compétence générale</td>
+            </tr>";
+        }
+
+        /**
+         * =========================
+         * ✅ HTML PARTICULIÈRES
+         * =========================
+         */
+        $htmlParticulieres = '';
+
+        foreach ($competencesParticulieres as $comp) {
+            $ressources = ($comp->ressources ?? collect())->unique('id')->values();
+
+            if ($ressources->isEmpty()) {
+                $htmlParticulieres .= "
+                <tr>
+                    <td class='border-td bold-exo wrap' style='width:28%'>".htmlspecialchars($comp->nom)."</td>
+                    <td class='border-td wrap' style='width:32%'>Aucune discipline</td>
+                    <td class='border-td num' style='width:10%'>-</td>
+                    <td class='border-td num' style='width:12%'>-</td>
+                    <td class='border-td wrap' style='width:18%'>-</td>
+                </tr>";
+                continue;
+            }
+
+            $first = true;
+            $rowspan = $ressources->count();
+
+            foreach ($ressources as $res) {
+                $resId = (int) $res->id;
+
+                $mcc = $mccMap[$inscId][$resId] ?? null;
+                $integration = $evalMap[$inscId][$resId] ?? null; // pas de fallback ici (particulière)
+
+                $mccTxt = is_numeric($mcc) ? number_format((float)$mcc, 2) : '-';
+                $intTxt = is_numeric($integration) ? number_format((float)$integration, 2) : '-';
+                $app    = is_numeric($integration) ? $obsFromNote((float)$integration) : '-';
+
+                $htmlParticulieres .= "<tr>";
+
+                if ($first) {
+                    $htmlParticulieres .= "
+                    <td rowspan='{$rowspan}' class='border-td bold-exo wrap' style='width:28%'>
+                        ".htmlspecialchars($comp->nom)."
+                    </td>";
+                    $first = false;
+                }
+
+                $htmlParticulieres .= "
+                    <td class='border-td wrap' style='width:32%'>".htmlspecialchars($res->nom)."</td>
+                    <td class='border-td num' style='width:10%'>{$mccTxt}</td>
+                    <td class='border-td num' style='width:12%'>{$intTxt}</td>
+                    <td class='border-td wrap' style='width:18%'>{$app}</td>
+                </tr>";
+            }
+        }
+
+        if (trim($htmlParticulieres) === '') {
+            $htmlParticulieres = "
+            <tr>
+                <td colspan='5' class='border-td' align='center'>Aucune compétence particulière</td>
+            </tr>";
+        }
+
+        /**
+         * =========================
+         * ✅ ABSENCES / RETARDS (HEURES)
+         * =========================
+         */
+        $absencesSemestre = Absence::where('inscription_id', (int) $inscription->id)
+            ->when($semestreInt, fn($q) => $q->where('semestre', (int) $semestreInt))
+            ->get();
+
+        $hAbsJust = (float) $absencesSemestre->where('type','absence')->where('justifie', 1)->sum('nombre_heure_absence');
+
+        $hAbsNon = (float) $absencesSemestre->where('type','absence')
+            ->filter(fn($r) => (int)$r->justifie === 0 || (int)$r->nonjustifie === 1)
+            ->sum('nombre_heure_absence');
+
+        $hRetJust = (float) $absencesSemestre->where('type','retard')->where('justifie', 1)->sum('nombre_heure_retard');
+
+        $hRetNon = (float) $absencesSemestre->where('type','retard')
+            ->filter(fn($r) => (int)$r->justifie === 0 || (int)$r->nonjustifie === 1)
+            ->sum('nombre_heure_retard');
+
+        $hAbsTotal = $hAbsJust + $hAbsNon;
+        $hRetTotal = $hRetJust + $hRetNon;
+
+        // ✅ Date
+   setlocale(LC_TIME, 'fr_FR.UTF-8', 'fr_FR', 'fr');
+$dateNow = strftime('%e %B %Y');
+$dateNow = trim($dateNow);
+
+        // ✅ Année scolaire
+        $anneeScolaire = $inscription->anneeAcademique->code
+            ?? ($classe->annee_academique->code ?? '');
+
+        // ✅ Remplacements page
+        $page = $templateRaw;
+        $page = str_replace('[BODYRESSOURCE]', $htmlGenerales, $page);
+        $page = str_replace('[BODYCOMP]', $htmlParticulieres, $page);
+
+        // ✅ ICI : heures (et pas $nbAbsences/$nbRetards)
+        $page = str_replace('[NB_ABSENCES]', $fmt($hAbsTotal), $page);
+        $page = str_replace('[NB_RETARDS]',  $fmt($hRetTotal), $page);
+
         $replace = [
             '[DATE]' => $dateNow,
-            '[USER]' => $inscription->apprenant->nom.' '.$inscription->apprenant->prenom,
-            '[DATENAISSANCE]' => $inscription->apprenant->date_naissance,
-            '[LIEUNAISSANCE]' => $inscription->apprenant->lieu_naissance,
-            '[TEL]' => $inscription->apprenant->telephone,
-            '[SEMESTRE]' => $semestre ?: 'Tous',
-            '[MATRICULE]' => $inscription->apprenant->matricule,
-            '[CLASSE]' => $classe->libelle,
-            '[ANNEE]' => $classe->niveau_etude->nom,
-            '[ANNEESCOLAIRE]' => $inscription->anneeAcademique->code ?? '',
-            '[EFPT]' => $classe->etablissement->nom,
-            '[EFPTTEL]' => $classe->etablissement->telephone,
-               '[EFPTMAIL]' => $inscription->classe->etablissement->email,
+            '[USER]' => ($inscription->apprenant->nom ?? '') . ' ' . ($inscription->apprenant->prenom ?? ''),
+            '[DATENAISSANCE]' => $inscription->apprenant->date_naissance ?? '',
+            '[LIEUNAISSANCE]' => $inscription->apprenant->lieu_naissance ?? '',
+            '[TEL]' => $inscription->apprenant->telephone ?? '',
+            '[EMAIL]' => $inscription->apprenant->email ?? '',
+            '[SEMESTRE]' => $semestreInt ?: 'Tous',
+            '[MATRICULE]' => $inscription->apprenant->matricule ?? '',
+            '[CLASSE]' => $classe->libelle ?? '',
+            '[ANNEE]' => $classe->niveau_etude->nom ?? '',
+            '[ANNEESCOLAIRE]' => $anneeScolaire,
+            '[EFPT]' => $classe->etablissement->nom ?? '',
+            '[EFPTTEL]' => $classe->etablissement->telephone ?? '',
+            '[EFPTMAIL]' => $classe->etablissement->email ?? '',
         ];
 
-        $page = str_replace(array_keys($replace), array_values($replace), $template);
+        $page = str_replace(array_keys($replace), array_values($replace), $page);
+
         $bulletins .= $page . '<div style="page-break-after: always;"></div>';
     }
 
-
+    // ✅ Dompdf unique pour toute la classe
     $dompdf = new Dompdf();
     $dompdf->getOptions()->set('isRemoteEnabled', true);
     $dompdf->loadHtml($bulletins);
@@ -1064,8 +1294,6 @@ public function generateClassePdf(string $classe_id)
         ->header('Content-Type', 'application/pdf')
         ->header('Content-Disposition', 'inline; filename="Carnets_Classe_'.$classe->libelle.'.pdf"');
 }
-
-
 
 
 public function suspendre($id)

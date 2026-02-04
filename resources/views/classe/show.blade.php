@@ -215,9 +215,9 @@
                 {{ $classe->modalite === 'PPO' ? 'Matière' : 'Compétence' }}
             </th>
 
-            @if ($classe->modalite === 'APC')
-                <th class="px-3 py-2 text-left border">Éléments de compétence</th>
-            @endif
+     @if($classe ->modalite=== 'APC')
+       <th class="px-3 py-2 text-center border">Discipline</th>
+    @endif
 
             <th class="px-3 py-2 text-center border">Action</th>
         </tr>
@@ -231,114 +231,327 @@
             @endphp
 
             {{-- ====================== MODALITÉ PPO ====================== --}}
-            @if($classe->modalite === 'PPO')
-                @if(!$user->hasRole('formateur') || $user->id === $a->formateur_id)
-                    <tr class="border-b hover:bg-gray-50">
-                        <td class="px-3 py-2 border">{{ $a->formateur_prenom }} {{ $a->formateur_nom }}</td>
-                        <td class="px-3 py-2 border font-semibold text-gray-800">{{ $a->matiere_nom ?? '-' }}</td>
-                        <td class="px-3 py-2 border text-center">
-                            {{-- ✅ Bouton Supprimer visible uniquement pour les non-formateurs --}}
-                            @if(!$user->hasRole('formateur'))
-                                <form method="POST"
-                                      action="{{ route('classe.assign.destroy', [$classe->id, $a->formateur_id, $a->matiere_id]) }}">
-                                    @csrf @method('DELETE')
-                                    <button type="submit"
-                                            class="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700">
-                                        Supprimer
-                                    </button>
-                                </form>
-                            @else
-                                <span class="text-gray-400 text-xs italic">Aucune action disponible</span>
-                            @endif
-                        </td>
-                    </tr>
+ @if($classe->modalite === 'PPO')
+    @if(!$user->hasRole('formateur') || $user->id === $a->formateur_id)
+        @php
+            // ✅ compteur fiable (vient du controller)
+            $hasDevoir = ((int) ($devoirCountByMatiere[$a->matiere_id] ?? 0)) > 0;
+
+            // $hasDevoirNonFormateur = ((int) ($devoirCountRenseigneByMatiere[$a->matiere_id] ?? 0)) > 0;
+
+            $isFormateurOwner = $user->hasRole('formateur') && $user->id === $a->formateur_id;
+        @endphp
+
+        <tr class="border-b hover:bg-gray-50">
+            <td class="px-3 py-2 border">{{ $a->formateur_prenom }} {{ $a->formateur_nom }}</td>
+            <td class="px-3 py-2 border font-semibold text-gray-800">{{ $a->matiere_nom ?? '-' }}</td>
+
+            <td class="px-3 py-2 border text-center">
+                {{-- Supprimer seulement admin --}}
+                @if(!$user->hasRole('formateur'))
+                    <form class="inline-block" method="POST"
+                          action="{{ route('classe.assign.destroy', [$classe->id, $a->formateur_id, $a->matiere_id]) }}">
+                        @csrf @method('DELETE')
+                        <button type="submit"
+                                class="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700">
+                            Supprimer
+                        </button>
+                    </form>
                 @endif
+
+                
+                @if($isFormateurOwner && !$hasDevoir)
+                    <button type="button"
+                            onclick="openDevoirPpoModal({{ $a->matiere_id }})"
+                            class="bg-green-600 text-white text-xs px-2 py-1 rounded">
+                        + Devoir
+                    </button>
+                @endif
+
+                
+                @if($hasDevoir)
+                    <button type="button"
+                            onclick="openVoirDevoirPpoModal({{ $a->matiere_id }})"
+                            class="bg-indigo-600 text-white text-xs px-2 py-1 rounded">
+                        Voir devoir
+                    </button>
+                @endif
+            </td>
+        </tr>
+    @endif
+
+
+
+
+
 
        
-            @elseif($classe->modalite === 'APC')
+ @elseif($classe->modalite === 'APC')
 
-                {{-- Compétence générale --}}
-                @if ($a->competence_type === 'generale' && $elements->count() > 0)
-                    @if(!$user->hasRole('formateur') || $user->id === $a->formateur_id)
-                        @foreach($elements as $index => $el)
-                            <tr class="border-b hover:bg-gray-50">
-                                {{-- Formateur fusionné --}}
-                                @if($index === 0)
-                                    <td class="px-3 py-2 border align-top" rowspan="{{ $rowspan }}">
-                                        {{ $a->formateur_prenom }} {{ $a->formateur_nom ?? '-'}}
-                                    </td>
-                                    <td class="px-3 py-2 border align-top font-semibold text-gray-800" rowspan="{{ $rowspan }}">
-                                        {{ $a->competence_nom ?? '-' }}
-                                        <div class="text-xs text-gray-500">(Compétence générale)</div>
-                                    </td>
-                                @endif
+   
+{{-- ================= COMPÉTENCE GÉNÉRALE ================= --}}
 
-                                <td class="px-3 py-2 border text-gray-800">
-                                    {{ $el->nom }}
-                                </td>
+@if ($a->competence_type === 'generale')
+@if(!$user->hasRole('formateur') || $user->id === $a->formateur_id)
 
-                                <td class="px-3 py-2 border text-center flex justify-center items-center gap-2">
-                                                                       @if($el->ressource && ($user->hasRole('formateur') || $user->hasRole('chef_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude')))
-                                            <button onclick="openViewRessourceModal('{{ $el->ressource->nom }}', '{{ $el->nom }}')"
-                                                    class="bg-cyan-700 text-white text-xs px-2 py-1 rounded hover:bg-cyan-700">
-                                                Voir
-                                            </button>  
-					 @endif
-					    @if($el->ressource && $user->hasRole('formateur'))
-                                            <button onclick="openEditRessourceModal({{ $el->ressource->id }}, '{{ $el->ressource->nom }}')"
-                                                    class="bg-blue-700 text-white text-xs px-2 py-1 rounded hover:bg-blue-700">
-                                                Modifier
-                                            </button>
-                                             @endif
-                                         @if(!$el->ressource && $user->hasRole('formateur'))
-                                            <button onclick="openRessourceModal({{ $el->id }}, '{{ $el->nom }}')"
-                                                    class="bg-green-600 text-white text-xs px-2 py-1 rounded hover:bg-green-700">
-                                                + Ressource
-                                            </button>
-                                        @endif
-                                    
+@php
+    // ✅ Compter les doublons d'affectation (même classe + formateur + compétence)
+    $apcOcc = $apcOcc ?? [];
+    $apcRessourcesCache = $apcRessourcesCache ?? [];
 
-                                    @if(!$user->hasRole('formateur') && $index === 0)
-                                        <form method="POST" class="inline-block"
-                                              action="{{ route('classe.assign.destroy', [$classe->id, $a->formateur_id, $a->competence_id]) }}">
-                                            @csrf @method('DELETE')
-                                            <button type="submit"
-                                                    class="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700">
-                                                Supprimer
-                                            </button>
-                                        </form>
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    @endif
+    $key = $classe->id.'|'.$a->formateur_id.'|'.$a->competence_id;
 
-                {{-- Compétence particulière --}}
-                @elseif($a->competence_type === 'particuliere')
-                    @if(!$user->hasRole('formateur') || $user->id === $a->formateur_id)
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="px-3 py-2 border">{{ $a->formateur_prenom }} {{ $a->formateur_nom }}</td>
-                            <td class="px-3 py-2 border font-semibold text-gray-800">
-                                {{ $a->competence_nom }}
-                                <div class="text-xs text-gray-500">(Compétence particulière)</div>
-                            </td>
-                            <td class="px-3 py-2 border text-center text-gray-400">—</td>
-                            <td class="px-3 py-2 border text-center">
-                                @if(!$user->hasRole('formateur'))
-                                    <form method="POST"
-                                          action="{{ route('classe.assign.destroy', [$classe->id, $a->formateur_id, $a->competence_id]) }}">
-                                        @csrf @method('DELETE')
-                                        <button type="submit"
-                                                class="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700">
-                                            Supprimer
-                                        </button>
-                                    </form>
-                                @endif
-                            </td>
-                        </tr>
+    // numéro d'occurrence: 0,1,2...
+    $apcOcc[$key] = ($apcOcc[$key] ?? 0) + 1;
+    $slotIndex = $apcOcc[$key] - 1;
+
+    // ✅ Cache des ressources pour éviter N requêtes
+    if (!isset($apcRessourcesCache[$key])) {
+        $apcRessourcesCache[$key] = \App\Models\Ressource::where('competence_id', $a->competence_id)
+            ->where('classe_id', $classe->id)
+            ->where('formateur_id', $a->formateur_id)
+            ->orderBy('id')
+            ->get();
+    }
+
+    // ✅ On prend la ressource correspondant à l'occurrence
+    $ressource = $apcRessourcesCache[$key]->get($slotIndex);
+
+    $devoirs = $ressource
+        ? (
+            $user->hasRole('formateur')
+                ? $ressource->devoirsAPC
+                : $ressource->devoirsAPC->whereNotNull('note')
+          )
+        : collect();
+@endphp
+
+
+<tr class="border-b hover:bg-gray-50">
+
+    <td class="px-3 py-2 border">
+        {{ $a->formateur_prenom }} {{ $a->formateur_nom }}
+    </td>
+
+    <td class="px-3 py-2 border font-semibold">
+        {{ $a->competence_nom }}
+        <div class="text-xs text-gray-500">(Compétence générale)</div>
+    </td>
+
+    <td class="px-3 py-2 border text-center">
+        @if($ressource)
+            <span class="font-semibold">{{ $ressource->nom }}</span>
+        @else
+            <span class="italic text-gray-400">Discipline non disponible</span>
+        @endif
+    </td>
+
+    <td class="px-3 py-2 border">
+        <div class="flex gap-2 justify-center flex-wrap">
+
+            {{-- FORMATEUR --}}
+            @if($user->hasRole('formateur'))
+
+                @if(!$ressource)
+                    <button onclick="openRessourceModal({{ $a->competence_id }}, '{{ $a->competence_nom }}')"
+                            class="bg-green-600 text-white text-xs px-2 py-1 rounded">
+                        + Discipline
+                    </button>
+                @else
+                    <button onclick="openEditRessourceModal({{ $ressource->id }}, '{{ $ressource->nom }}')"
+                            class="bg-blue-700 text-white text-xs px-2 py-1 rounded">
+                        Modifier
+                    </button>
+
+                    @if($devoirs->count() === 0)
+                        <button onclick="openDevoirModal({{ $ressource->id }})"
+                                  class="bg-green-600 text-white text-xs px-2 py-1 rounded">
+                            + Devoir
+                        </button>
+                    @else
+                        <button onclick="openVoirDevoirModal({{ $ressource->id }})"
+                                class="bg-indigo-600 text-white text-xs px-2 py-1 rounded">
+                            Voir mes devoirs
+                        </button>
                     @endif
                 @endif
+
             @endif
+
+            {{-- ADMIN --}}
+            @if(!$user->hasRole('formateur'))
+                @if($devoirs->count() > 0)
+                    <button onclick="openVoirDevoirModal({{ $ressource->id }})"
+                            class="bg-indigo-600 text-white text-xs px-2 py-1 rounded">
+                        Voir mes devoirs
+                    </button>
+                @endif
+
+          <form method="POST"
+    action="{{ route('classe.assign.destroy', [$classe->id, $a->formateur_id, $a->competence_id]) }}">
+    @csrf
+    @method('DELETE')
+
+    {{-- ✅ id unique de l'assignation (ligne cfc) --}}
+    
+    <input type="hidden" name="assign_id" value="{{ $a->assign_id }}">
+
+
+
+    {{-- ✅ optionnel : si une discipline existe, on peut supprimer la discipline ciblée --}}
+    @if($ressource)
+        <input type="hidden" name="ressource_id" value="{{ $ressource->id }}">
+    @endif
+
+    <button class="bg-red-600 text-white text-xs px-2 py-1 rounded">
+        Supprimer
+    </button>
+</form>
+
+               
+            @endif
+
+        </div>
+    </td>
+
+</tr>
+@endif
+@endif
+
+
+{{-- ================= COMPÉTENCE PARTICULIÈRE ================= --}}
+@if ($a->competence_type === 'particuliere')
+@if(!$user->hasRole('formateur') || $user->id === $a->formateur_id)
+
+@php
+    // ✅ Compter les doublons d'affectation (même classe + formateur + compétence)
+    $apcOcc = $apcOcc ?? [];
+    $apcRessourcesCache = $apcRessourcesCache ?? [];
+
+    $key = $classe->id.'|'.$a->formateur_id.'|'.$a->competence_id;
+
+    // numéro d'occurrence: 0,1,2...
+    $apcOcc[$key] = ($apcOcc[$key] ?? 0) + 1;
+    $slotIndex = $apcOcc[$key] - 1;
+
+    // ✅ Cache des ressources pour éviter N requêtes
+    if (!isset($apcRessourcesCache[$key])) {
+        $apcRessourcesCache[$key] = \App\Models\Ressource::where('competence_id', $a->competence_id)
+            ->where('classe_id', $classe->id)
+            ->where('formateur_id', $a->formateur_id)
+            ->orderBy('id')
+            ->get();
+    }
+
+    // ✅ On prend la ressource correspondant à l'occurrence
+    $ressource = $apcRessourcesCache[$key]->get($slotIndex);
+
+    $devoirs = $ressource
+        ? (
+            $user->hasRole('formateur')
+                ? $ressource->devoirsAPC
+                : $ressource->devoirsAPC->whereNotNull('note')
+          )
+        : collect();
+@endphp
+
+
+<tr class="border-b hover:bg-gray-50">
+
+    {{-- FORMATEUR --}}
+    <td class="px-3 py-2 border">
+        {{ $a->formateur_prenom }} {{ $a->formateur_nom }}
+    </td>
+
+    {{-- COMPÉTENCE --}}
+    <td class="px-3 py-2 border font-semibold">
+        {{ $a->competence_nom }}
+        <div class="text-xs text-gray-500">(Compétence particulière)</div>
+    </td>
+
+    
+    <td class="px-3 py-2 border text-center">
+        @if($ressource)
+            <span class="font-semibold">{{ $ressource->nom }}</span>
+        @else
+            <span class="italic text-gray-400">Discipline non disponible</span>
+        @endif
+    </td>
+
+    
+    <td class="px-3 py-2 border">
+        <div class="flex gap-2 justify-center flex-wrap">
+
+           
+            @if($user->hasRole('formateur'))
+
+                @if(!$ressource)
+                    <button onclick="openRessourceModal({{ $a->competence_id }}, '{{ $a->competence_nom }}')"
+                            class="bg-green-600 text-white text-xs px-2 py-1 rounded">
+                        + Discipline
+                    </button>
+                @else
+                    <button onclick="openEditRessourceModal({{ $ressource->id }}, '{{ $ressource->nom }}')"
+                            class="bg-blue-700 text-white text-xs px-2 py-1 rounded">
+                        Modifier
+                    </button>
+
+                    @if($devoirs->count() === 0)
+                        <button onclick="openDevoirModal({{ $ressource->id }})"
+                                class="bg-green-600 text-white text-xs px-2 py-1 rounded">
+                            + Devoir
+                        </button>
+                    @else
+                        <button onclick="openVoirDevoirModal({{ $ressource->id }})"
+                                class="bg-indigo-600 text-white text-xs px-2 py-1 rounded">
+                            Voir mes devoirs
+                        </button>
+                    @endif
+                @endif
+
+            @endif
+
+          
+            @if(!$user->hasRole('formateur'))
+                @if($devoirs->count() > 0)
+                    <button onclick="openVoirDevoirModal({{ $ressource->id }})"
+                            class="bg-indigo-600 text-white text-xs px-2 py-1 rounded">
+                        Voir mes devoirs
+                    </button>
+                @endif
+
+          <form method="POST"
+    
+    action="{{ route('classe.assign.destroy', [$classe->id, $a->formateur_id, $a->competence_id]) }}">
+    @csrf
+    @method('DELETE')
+
+<input type="hidden" name="assign_id" value="{{ $a->assign_id }}">
+
+
+    {{-- ✅ optionnel : si une discipline existe, on peut supprimer la discipline ciblée --}}
+    @if($ressource)
+        <input type="hidden" name="ressource_id" value="{{ $ressource->id }}">
+    @endif
+
+    <button class="bg-red-600 text-white text-xs px-2 py-1 rounded">
+        Supprimer
+    </button>
+</form>
+
+
+            @endif
+
+        </div>
+    </td>
+
+</tr>
+@endif
+@endif
+@endif
+
+
+
         @empty
            
             <tr>
@@ -360,18 +573,19 @@
 <div id="ressourceModal" class="hidden fixed inset-0 z-50 bg-gray-900 bg-opacity-50 flex justify-center items-center p-12 bg-black bg-opacity-25 hidden  hidden overflow-y-auto overflow-x-hidden items-center smd:inset-0 h-[calc(100%-1rem)]  w-100 h-100 mx-auto max-w-full max-h-full">
     <div class="bg-white w-full max-w-md rounded-lg shadow-lg p-6 relative">
         <h3 class="text-lg font-semibold text-gray-800 mb-4">
-            Ajouter une ressource à <span id="elementNom" class="text-green-600"></span>
+            Ajouter une discipline à <span id="elementNom" class="text-green-600"></span>
         </h3>
-
-      
 
         <form method="POST" action="{{ route('ressources.store') }}">
             @csrf
-            <input type="hidden" name="element_competence_id" id="elementId">
-             <input type=�"hidden" name="classe_id" value="{{ $classe->id }}" >
+
+            <input type="hidden" name="competence_id" id="elementId">
+            <input type="hidden" name="classe_id" value="{{ $classe->id }}">
+
             <label class="block text-sm font-medium text-gray-700 mb-1">
-                Nom de la ressource :
+                Nom de la discipline :
             </label>
+
             <input type="text" name="nom" required
                    class="w-full border rounded p-2 text-sm focus:ring-green-500 focus:border-green-500"
                    placeholder="Ex :Anglais"/>
@@ -389,40 +603,15 @@
             </div>
         </form>
     </div>
-    
 </div>
 
-<div id="viewRessourceModal"
-     class="hidden fixed inset-0 z-50 bg-gray-900 bg-opacity-50 flex justify-center items-center p-12 bg-black bg-opacity-25 hidden  hidden overflow-y-auto overflow-x-hidden items-center smd:inset-0 h-[calc(100%-1rem)]  w-100 h-100 mx-auto max-w-full max-h-full">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 relative">
-        <h2 class="text-lg font-semibold text-gray-800 mb-3">
-            Ressource enregistrée
-        </h2>
 
-        <div class="space-y-2">
-            <p class="text-sm text-gray-700">
-                <strong>Élément de compétence :</strong>
-                <span id="viewRessourceElement" class="text-gray-900 font-medium"></span>
-            </p>
-            <p class="text-sm text-gray-700">
-                <strong>Nom de la ressource :</strong>
-                <span id="viewRessourceName" class="text-green-700 font-semibold"></span>
-            </p>
-        </div>
 
-        <div class="mt-5 text-right">
-            <button onclick="closeViewRessourceModal()"
-                    class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
-                Fermer
-            </button>
-        </div>
-    </div>
-</div>
-        <div id="editRessourceModal"
+ <div id="editRessourceModal"
      class="hidden fixed inset-0 z-50 bg-gray-900 bg-opacity-50 flex justify-center items-center p-12 bg-black bg-opacity-25 hidden  hidden overflow-y-auto overflow-x-hidden items-center smd:inset-0 h-[calc(100%-1rem)]  w-100 h-100 mx-auto max-w-full max-h-full">
     <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 relative">
         <h2 class="text-lg font-semibold text-gray-800 mb-4">
-            Modifier la ressource
+            Modification de la discipline
         </h2>
 
         <form id="editRessourceForm" method="POST">
@@ -431,7 +620,7 @@
 
             <div class="mb-4">
                 <label for="editRessourceNom" class="block text-sm font-medium text-gray-700 mb-1">
-                    Nom de la ressource
+                    Nom de la discipline :
                 </label>
                 <input type="text" id="editRessourceNom" name="nom"
                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-first-orange focus:border-first-orange"
@@ -452,7 +641,231 @@
     </div>
 </div>
 
+<div id="devoirModal"
+     class="hidden fixed inset-0 z-50 bg-black bg-opacity-70 flex items-center justify-center p-4">
 
+  <div class="bg-white rounded-lg shadow-xl w-[700px] max-w-[95vw]"
+       style="height:90vh; display:flex; flex-direction:column; overflow:hidden;">
+
+    {{-- HEADER FIXE --}}
+    <div class="p-4 border-b flex items-center justify-between bg-white"
+         style="flex:0 0 auto;">
+      <h3 class="font-semibold">Ajouter un devoir</h3>
+      <button type="button" onclick="closeDevoirModal()"
+              class="text-red-600 font-bold text-lg leading-none">✕</button>
+    </div>
+
+    <form method="POST" action="{{ route('devoirAPC.store') }}"
+          style="flex:1 1 auto; min-height:0; display:flex; flex-direction:column;">
+      @csrf
+
+      <input type="hidden" name="ressource_id" id="devoir_ressource_id">
+
+      {{-- CHAMPS (FIXES) --}}
+      <div class="p-4 bg-white" style="flex:0 0 auto;">
+        <div class="flex items-center gap-3">
+          <div>
+            <label class="block text-sm mb-1">Semestre</label>
+            <select name="semestre" required class="rounded border-gray-300 text-sm">
+              <option value="1">Premier semestre</option>
+              <option value="2">Deuxième semestre</option>
+            </select>
+          </div>
+
+          <div class="flex-1">
+            <label class="block text-sm mb-1">Libellé du devoir</label>
+            <input type="text" name="libelle"
+                   class="w-full border rounded px-2 py-1" required>
+          </div>
+        </div>
+      </div>
+
+      {{-- ✅ BODY SCROLL --}}
+      <div id="devoirApcBodyScroll"
+           class="px-4 pb-4"
+           style="flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;">
+        <table class="w-full border text-sm">
+          <thead class="bg-gray-100" style="position:sticky; top:0; z-index:5;">
+            <tr>
+              <th class="border px-2 py-2 text-left">Apprenant</th>
+              <th class="border px-2 py-2 w-32 text-center">Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach($inscriptionsAll as $inscription)
+              <tr>
+                <td class="border px-2 py-1">
+                  {{ $inscription->apprenant->prenom }} {{ $inscription->apprenant->nom }}
+                </td>
+                <td class="border px-2 py-1 text-center">
+                  <input type="number"
+                         name="notes[{{ $inscription->id }}]"
+                         step="0.01" min="0" max="20"
+                         class="border rounded px-2 py-1 w-24 text-center">
+                </td>
+              </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+
+      {{-- FOOTER FIXE --}}
+      <div class="p-4 border-t bg-white flex justify-between"
+           style="flex:0 0 auto;">
+        <button type="button"
+                onclick="closeDevoirModal()"
+                class="bg-gray-500 text-white px-3 py-2 rounded">
+          Annuler
+        </button>
+
+        <button type="submit"
+                class="bg-green-600 text-white px-3 py-2 rounded">
+          Enregistrer
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+
+<div id="voirDevoirsModal"
+     class="hidden fixed inset-0 z-50 bg-gray-900 bg-opacity-50 flex justify-center items-center p-12 bg-black bg-opacity-25 hidden overflow-y-auto overflow-x-hidden items-center smd:inset-0 h-[calc(100%-1rem)] w-100 h-100 mx-auto max-w-full max-h-full">
+    
+    <div class="bg-white rounded-lg w-[900px] p-5 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold text-lg">Liste des devoirs</h3>
+            <button onclick="closeVoirDevoirsModal()" class="text-red-600 font-bold text-xl">✕</button>
+        </div>
+
+        <div class="mb-4 flex items-center gap-4">
+            <label class="text-sm font-medium">Filtrer par semestre :</label>
+            <select id="filtreSemestre" onchange="filtrerParSemestre()"
+                    class="border rounded px-3 py-1 text-sm">
+                <option value="">Tous les semestres</option>
+                <option value="1">Premier semestre</option>
+                <option value="2">Deuxième semestre</option>
+            </select>
+        </div>
+
+        
+        <div id="devoirsListContainer">
+            <div class="text-center py-8 text-gray-500">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700 mb-3"></div>
+                <p class="italic">Chargement des devoirs...</p>
+            </div>
+        </div>
+
+       
+        @if(auth()->user()->hasRole('formateur'))
+        <div class="border-t pt-4 mt-6 text-center">
+            <button onclick="openAddDevoirModal()"
+                    class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                + Ajouter un nouveau devoir
+            </button>
+        </div>
+        @endif
+    </div>
+</div>
+
+
+<div id="addDevoirModal"
+     class="hidden fixed inset-0 z-50 bg-gray-900 bg-opacity-50 flex justify-center items-center p-12 bg-black bg-opacity-25 hidden overflow-y-auto overflow-x-hidden items-center smd:inset-0 h-[calc(200%-1rem)] w-500 h-100 mx-auto max-w-full max-h-full">
+    
+    <div class="bg-white rounded-lg w-[95%] max-w-[1400px] p-6 max-h-[95vh] overflow-y-auto shadow-2xl">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold text-lg">Ajouter un nouveau devoir</h3>
+            <button onclick="closeAddDevoirModal()" class="text-red-600 font-bold">✕</button>
+        </div>
+
+        <form method="POST" action="{{ route('devoirAPC.store') }}">
+            @csrf
+            <input type="hidden" name="ressource_id" id="add_devoir_ressource_id">
+    <select name="semestre" class="rounded border-gray-300 text-sm">
+            <option value="">Tous les semestres</option>
+            <option value="1">Premier semestre</option>
+            <option value="2">Deuxième semestre</option>
+        </select>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Libellé du devoir</label>
+                <input type="text" name="libelle"
+                       class="w-full border rounded px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                       required placeholder="Ex: Devoir 1">
+            </div>
+
+            <table class="w-full border text-sm">
+                <thead class="bg-gray-100">
+                <tr>
+                    <th class="border px-3 py-2 text-left">Apprenant</th>
+                    <th class="border px-3 py-2 text-left w-32">Note</th>
+                </tr>
+                </thead>
+                <tbody id="notesTableBody">
+                    <!-- Les lignes seront ajoutées dynamiquement -->
+                </tbody>
+            </table>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button type="button" onclick="closeAddDevoirModal()"
+                        class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                    Annuler
+                </button>
+
+                <button type="submit"
+                        class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                    Enregistrer le devoir
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="editDevoirModal"
+     class="hidden fixed inset-0 z-50 bg-gray-900 bg-opacity-50 flex justify-center items-center p-12 bg-black bg-opacity-25 hidden overflow-y-auto overflow-x-hidden items-center smd:inset-0 h-[calc(100%-1rem)] w-100 h-100 mx-auto max-w-full max-h-full">
+    
+    <div class="bg-white rounded-lg w-[700px] p-5 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-semibold text-lg">Modifier les notes</h3>
+            <button onclick="closeEditDevoirModal()" class="text-red-600 font-bold text-xl">✕</button>
+        </div>
+
+        <form id="editDevoirForm" method="POST">
+            @csrf
+            @method('PUT')
+            <input type="hidden" name="libelle" id="edit_devoir_libelle">
+            <input type="hidden" name="ressource_id" id="edit_devoir_ressource_id">
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Devoir</label>
+                <p class="font-semibold text-blue-700" id="edit_devoir_titre"></p>
+            </div>
+
+            <table class="w-full border text-sm">
+                <thead class="bg-gray-100">
+                <tr>
+                    <th class="border px-3 py-2 text-left">Apprenant</th>
+                    <th class="border px-3 py-2 text-left w-32">Note actuelle</th>
+                    <th class="border px-3 py-2 text-left w-32">Nouvelle note</th>
+                </tr>
+                </thead>
+                <tbody id="editNotesTableBody">
+                    <!-- Les lignes seront ajoutées dynamiquement -->
+                </tbody>
+            </table>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button type="button" onclick="closeEditDevoirModal()"
+                        class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                    Annuler
+                </button>
+                <button type="submit"
+                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Mettre à jour les notes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
                 
                 <div class="lg:w-full border shadow p-4 rounded bg-gray-100">
@@ -563,6 +976,7 @@
                                 </tr>
                             @endforelse
                         </tbody>
+       
                     </table>
 
                     {{-- Pagination --}}
@@ -586,20 +1000,22 @@
             document.getElementById('exportForm').submit();
         }
     </script>
-    <script>
-function openRessourceModal(id, nom) {
-    document.getElementById('elementId').value = id;
-    document.getElementById('elementNom').textContent = nom;
-    document.getElementById('ressourceModal').classList.remove('hidden');
-}
-function closeRessourceModal() {
-    document.getElementById('ressourceModal').classList.add('hidden');
-}
+ <script>
+    function openRessourceModal(id, nom) {
+        document.getElementById('elementId').value = id; // competence_id
+        document.getElementById('elementNom').textContent = nom;
+        document.getElementById('ressourceModal').classList.remove('hidden');
+    }
+
+    function closeRessourceModal() {
+        document.getElementById('ressourceModal').classList.add('hidden');
+    }
 </script>
+
 <script>
-    function openViewRessourceModal(nomRessource, nomElement) {
+    function openViewRessourceModal(nomRessource, nomCompetence) {
         document.getElementById('viewRessourceModal').classList.remove('hidden');
-        document.getElementById('viewRessourceElement').textContent = nomElement;
+        document.getElementById('viewRessourceElement').textContent = nomCompetence;
         document.getElementById('viewRessourceName').textContent = nomRessource;
     }
 
@@ -607,6 +1023,7 @@ function closeRessourceModal() {
         document.getElementById('viewRessourceModal').classList.add('hidden');
     }
 </script>
+
 <script>
     // Ouvrir le modal prérempli
     function openEditRessourceModal(id, nom) {
@@ -614,7 +1031,7 @@ function closeRessourceModal() {
         const form = document.getElementById('editRessourceForm');
         const inputNom = document.getElementById('editRessourceNom');
 
-        form.action = `/ressources/${id}`; // ✅ route update dynamique
+        form.action = `/ressources/${id}`; 
         inputNom.value = nom;
 
         modal.classList.remove('hidden');
@@ -625,4 +1042,335 @@ function closeRessourceModal() {
         document.getElementById('editRessourceModal').classList.add('hidden');
     }
 </script>
+<script>
+function openDevoirModal(ressourceId) {
+    document.getElementById('devoir_ressource_id').value = ressourceId;
+    document.getElementById('devoirModal').classList.remove('hidden');
+}
+
+function closeDevoirModal() {
+    document.getElementById('devoirModal').classList.add('hidden');
+}
+
+function openVoirDevoirModal(ressourceId) {
+    fetch(`/devoir-apc/ressource/${ressourceId}`)
+        .then(res => res.json())
+        .then(data => {
+            let html = '';
+            data.forEach(d => {
+                html += `
+                    <div class="border p-2 rounded">
+                        <strong>${d.libelle}</strong>
+                        ${d.note !== null ? `<span class="text-sm text-gray-500"> (${d.note})</span>` : ''}
+                        <form method="POST" action="/devoir-apc/${d.id}" class="mt-1 flex gap-1">
+                            <input type="hidden" name="_method" value="DELETE">
+                            <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                            <button class="bg-red-600 text-white text-xs px-2 py-0.5 rounded">
+                                Supprimer
+                            </button>
+                        </form>
+                    </div>
+                `;
+            });
+            document.getElementById('devoirList').innerHTML = html;
+            document.getElementById('voirDevoirModal').classList.remove('hidden');
+        });
+}
+
+function closeVoirDevoirModal() {
+    document.getElementById('voirDevoirModal').classList.add('hidden');
+}
+</script>
+<script>
+  let currentRessourceId = null;
+
+// Fonction pour charger la liste des devoirs
+function openVoirDevoirModal(ressourceId) {
+    currentRessourceId = ressourceId;
+    
+    // Vider le contenu et afficher un indicateur de chargement
+    document.getElementById('devoirsListContainer').innerHTML = 
+        '<p class="text-center text-gray-500 italic">Chargement des devoirs...</p>';
+    
+    // Afficher le modal immédiatement
+    document.getElementById('voirDevoirsModal').classList.remove('hidden');
+    
+    // Charger les devoirs via AJAX
+    fetch(`/devoirAPC/ressource/${ressourceId}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erreur réseau');
+        }
+        return response.text();
+    })
+    .then(html => {
+        document.getElementById('devoirsListContainer').innerHTML = html;
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        document.getElementById('devoirsListContainer').innerHTML = 
+            '<div class="text-center py-8 text-red-500">' +
+            '<p>Erreur de chargement des devoirs</p>' +
+            '<p class="text-sm">Vérifiez la console pour plus de détails</p>' +
+            '</div>';
+    });
+}
+
+function closeVoirDevoirsModal() {
+    document.getElementById('voirDevoirsModal').classList.add('hidden');
+}
+
+// Fonction pour ouvrir le modal d'ajout
+function openAddDevoirModal() {
+    // Fermer d'abord le modal de liste
+    closeVoirDevoirsModal();
+    
+    // Remplir l'ID de la ressource
+    document.getElementById('add_devoir_ressource_id').value = currentRessourceId;
+    
+    // Vider le tableau
+    const tbody = document.getElementById('notesTableBody');
+    tbody.innerHTML = '';
+    
+    // Ajouter les apprenants (utilise tes données existantes)
+    @foreach($inscriptions as $inscription)
+        tbody.innerHTML += `
+            <tr>
+                <td class="border px-2 py-1">
+                     {{ $inscription->apprenant->nom }} {{ $inscription->apprenant->prenom }}
+                </td>
+                <td class="border px-2 py-1 text-center">
+                    <input type="number"
+                           name="notes[{{ $inscription->id }}]"
+                           step="0.01" min="0" max="20"
+                           class="border rounded px-2 py-1 w-24"
+                           placeholder="0.00">
+                </td>
+            </tr>
+        `;
+    @endforeach
+    
+    // Ouvrir le modal
+    document.getElementById('addDevoirModal').classList.remove('hidden');
+}
+
+function closeAddDevoirModal() {
+    document.getElementById('addDevoirModal').classList.add('hidden');
+    // Réouvrir la liste des devoirs
+    if (currentRessourceId) {
+        openVoirDevoirModal(currentRessourceId);
+    }
+}
+</script>
+
+<script>
+  // Fonction pour modifier une note en ligne
+function editNoteInline(devoirId) {
+    const row = document.getElementById('devoir-row-' + devoirId);
+    const noteDisplay = document.getElementById('note-display-' + devoirId);
+    const currentNote = noteDisplay.textContent.replace('/20', '').trim();
+    
+    // Remplacer l'affichage par un champ de saisie
+    noteDisplay.outerHTML = `
+        <div class="flex items-center justify-center gap-1">
+            <input type="number" 
+                   id="edit-input-${devoirId}"
+                   value="${isNaN(parseFloat(currentNote)) ? '' : currentNote}"
+                   step="0.01" min="0" max="20"
+                   class="border rounded px-2 py-1 w-20 text-center">
+            <button onclick="saveNoteInline(${devoirId})"
+                    class="bg-green-600 text-white text-xs px-2 py-1 rounded hover:bg-green-700">
+                <i class="fa fa-check"></i>
+            </button>
+            <button onclick="cancelEditNoteInline(${devoirId})"
+                    class="bg-gray-600 text-white text-xs px-2 py-1 rounded hover:bg-gray-700">
+                <i class="fa fa-times"></i>
+            </button>
+        </div>
+    `;
+}
+
+// Fonction pour sauvegarder la note
+function saveNoteInline(devoirId) {
+    const input = document.getElementById('edit-input-' + devoirId);
+    const newNote = input.value;
+    const apprenantName = document.querySelector('#devoir-row-' + devoirId + ' td:first-child').textContent.trim();
+    
+    if (!newNote || isNaN(newNote) || newNote < 0 || newNote > 20) {
+        alert('Note invalide (0-20)');
+        return;
+    }
+    
+    if (!confirm(`Mettre à jour la note de ${apprenantName} à ${newNote}/20 ?`)) {
+        return;
+    }
+    
+    fetch('/devoirAPC/' + devoirId, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ note: newNote })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Mettre à jour l'affichage
+            const colorClass = newNote >= 10 ? 'text-green-600' : 'text-red-600';
+            document.querySelector('#edit-input-' + devoirId).parentElement.outerHTML = 
+                `<span id="note-display-${devoirId}" class="font-semibold ${colorClass}">${parseFloat(newNote).toFixed(2)}/20</span>`;
+            
+            // Rafraîchir la MCC si nécessaire
+            setTimeout(() => {
+                if (currentRessourceId) {
+                    openVoirDevoirModal(currentRessourceId);
+                }
+            }, 500);
+        } else {
+            alert('Erreur: ' + data.message);
+        }
+    })
+    .catch(error => {
+        alert('Erreur lors de la mise à jour');
+        cancelEditNoteInline(devoirId);
+    });
+}
+
+// Fonction pour annuler l'édition
+function cancelEditNoteInline(devoirId) {
+    // Recharger la ligne pour afficher la note originale
+    if (currentRessourceId) {
+        openVoirDevoirModal(currentRessourceId);
+    }
+}
+
+// Fonction pour supprimer une note individuelle
+
+</script>
+<script>// Fonction pour charger la liste des devoirs avec filtre
+function openVoirDevoirModal(ressourceId) {
+    currentRessourceId = ressourceId;
+    
+    document.getElementById('devoirsListContainer').innerHTML = 
+        '<div class="text-center py-8">Chargement...</div>';
+    
+    document.getElementById('voirDevoirsModal').classList.remove('hidden');
+    
+    // Charger sans filtre initial
+    chargerDevoirs(ressourceId);
+}
+
+function chargerDevoirs(ressourceId, semestre = '') {
+    let url = `/devoirAPC/ressource/${ressourceId}`;
+    
+    // Ajouter le filtre semestre si spécifié
+    if (semestre) {
+        url += `?semestre=${semestre}`;
+    }
+    
+    fetch(url, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        document.getElementById('devoirsListContainer').innerHTML = html;
+    })
+    .catch(error => {
+        document.getElementById('devoirsListContainer').innerHTML = 
+            '<div class="text-center py-8 text-red-500">Erreur de chargement</div>';
+    });
+}
+
+// Fonction pour filtrer par semestre
+function filtrerParSemestre() {
+    const semestre = document.getElementById('filtreSemestre').value;
+    
+    if (currentRessourceId) {
+        chargerDevoirs(currentRessourceId, semestre);
+    }
+}</script>
+<script>
+    // Fonction pour charger une page spécifique
+function chargerPage(page) {
+    currentPage = page;
+    chargerDevoirs(currentRessourceId, currentSemestre, currentPage);
+}
+
+// Fonction pour charger les devoirs
+function chargerDevoirs(ressourceId, semestre = '', page = 1) {
+    if (!ressourceId) return;
+    
+    // Construire l'URL correctement
+    let url = `/devoirAPC/ressource/${ressourceId}?page=${page}`;
+    
+    if (semestre) {
+        url += `&semestre=${semestre}`;
+    }
+    
+    console.log('Chargement URL:', url); // Debug
+    
+    // Afficher le chargement
+    const container = document.getElementById('devoirsListContainer');
+    if (container) {
+        container.innerHTML = '<div class="text-center py-8">Chargement...</div>';
+    }
+    
+    fetch(url, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'text/html'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.text();
+    })
+    .then(html => {
+        if (container) {
+            container.innerHTML = html;
+            // Réinitialiser les événements après chargement
+            reinitPaginationEvents();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        if (container) {
+            container.innerHTML = '<div class="text-center py-8 text-red-500">Erreur de chargement</div>';
+        }
+    });
+}
+
+// Réinitialiser les événements de pagination
+function reinitPaginationEvents() {
+    // Réattacher les événements aux liens de pagination
+    document.querySelectorAll('a[onclick^="chargerPage"]').forEach(link => {
+        const oldOnclick = link.getAttribute('onclick');
+        link.removeAttribute('onclick');
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const pageMatch = oldOnclick.match(/chargerPage\((\d+)\)/);
+            if (pageMatch && pageMatch[1]) {
+                chargerPage(parseInt(pageMatch[1]));
+            }
+        });
+    });
+}
+</script>
+ @if($classe->modalite === 'PPO')
+        @include('classe.ppo.partials.devoir_modal')
+        @include('classe.ppo.partials.voir_devoir_modal')
+        @include('classe.ppo.partials.add_devoir_modal')
+        @include('classe.ppo.partials.devoir_script')
+
+    @endif
 </x-app-layout>

@@ -53,6 +53,8 @@ use App\Http\Controllers\IndicateurController;
 use App\Http\Controllers\SuiviIndicateurController;
 use App\Http\Controllers\TypeIndicateurController;
 use App\Http\Controllers\FaqController;
+use App\Http\Controllers\DevoirAPCController;
+use App\Http\Controllers\DevoirController;
 use App\Http\Controllers\ActualiteController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ClasseMatiereFormateurController;
@@ -383,3 +385,37 @@ Route::get(
  Route::get('/users', [UserController::class, 'index'])->name('users.index');
 Route::get('/etablissement/{id}/classes', [ClasseController::class, 'byEtablissement'])
     ->name('classes.byEtablissement');
+Route::delete('/ressource/{id}', [RessourceController::class, 'destroy'])
+    ->name('ressource.destroy');
+Route::post('/devoir-apc', [DevoirAPCController::class, 'store'])->name('devoirAPC.store');
+Route::put('/devoir-apc/{id}', [DevoirAPCController::class, 'update'])->name('devoirAPC.update');
+Route::delete('/devoir-apc/{id}', [DevoirAPCController::class, 'destroy'])->name('devoirAPC.destroy');
+
+    Route::get('/devoirAPC/ressource/{ressource}',
+    [DevoirAPCController::class, 'indexByRessource']
+)->name('devoirAPC.byRessource');
+
+
+Route::get('/devoirAPC/ressource/{ressource}', 
+    [DevoirAPCController::class, 'listeParRessource']
+)->name('devoirAPC.liste');
+// Modification d'une note spécifique (par apprenant)
+Route::put('/devoirAPC/{devoir}', [DevoirAPCController::class, 'update'])
+    ->name('devoirAPC.update');
+
+// Route pour afficher le formulaire de modification
+Route::get('/devoirAPC/{devoir}/edit', [DevoirAPCController::class, 'edit'])
+    ->name('devoirAPC.edit');
+
+// Route pour supprimer un devoir (par libellé)
+Route::delete('/devoirAPC/{id}', [DevoirAPCController::class, 'destroy'])
+    ->name('devoirAPC.destroy');
+Route::post('/devoirPPO', [DevoirController::class, 'store'])->name('devoirPPO.store');
+
+
+Route::put('/devoirPPO/{id}', [DevoirController::class, 'update'])->name('devoirPPO.update');
+Route::delete('/devoirPPO/{id}', [DevoirController::class, 'destroy'])->name('devoirPPO.destroy');
+
+// (optionnel)
+Route::get('/devoirPPO/{id}/edit', [DevoirController::class, 'edit'])->name('devoirPPO.edit');
+Route::get('/devoirPPO/matiere/{matiereId}', [DevoirController::class, 'listeParMatiere']);

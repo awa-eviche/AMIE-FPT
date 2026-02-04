@@ -85,7 +85,7 @@
 
             <div class="w-full rounded-lg shadow-xs p-0" style="padding-top: 20px;">
                 <span class="col-span-6"></span>
-                <!-- Pagination -->
+               
                 <table class="w-full whitespace-no-wrap" style="font-size: 10px;">
                     <thead>
                         <tr class="text-xs font-semibold tracking-wide text-left text-gray-500 border-b dark:border-gray-700 bg-gray-50 dark:text-gray-400 dark:bg-gray-800 bg-gray-100" style="background-color: rgb(239, 241, 244); border-radius:7px; font-size: 12px;">
@@ -101,7 +101,8 @@
                         </tr>
                     </thead>
 
-                    <tbody class="bg-white divide-y dark:divide-gray-700 dark:bg-gray-800 ">
+                    <tbody class="bg-white di
+                    ide-y dark:divide-gray-700 dark:bg-gray-800 ">
 
                     @foreach ($evaluations as $evaluation)
 <tr class="text-gray-700 dark:text-gray-400">

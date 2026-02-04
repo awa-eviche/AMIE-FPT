@@ -22,8 +22,7 @@ class ListeEvaluation extends Component
     public $selectedEvaluationMetier;
     public $selectedEvaluationAnnee;
 
-    // public $orderField = "";
-    // public $orderDirection = "ASC";
+    
 
     function mount()
     {
@@ -68,13 +67,13 @@ class ListeEvaluation extends Component
 
     
         if ($this->selectedEvaluationMetier) {
-            // Utilise une sous-requête EXISTS pour vérifier si la classe a un niveau d'étude avec le 'metier_id' spécifié
+        
             $qry->whereHas('evaluation.inscription.classe.niveau_etude', function ($query) {
                 $query->where('metier_id', $this->selectedEvaluationMetier);
             });
         }
         if ($this->selectedEvaluationAnnee) {
-            // Utilise une sous-requête EXISTS pour vérifier si la classe a un niveau d'étude avec le 'metier_id' spécifié
+         
             $qry->whereHas('evaluation.inscription.classe', function ($query) {
                 $query->where('annee_academique_id', $this->selectedEvaluationAnnee);
             });

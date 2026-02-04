@@ -162,18 +162,16 @@
 @endphp
 
 @if ($user->hasRole('formateur'))
-  
-  <button type="button"
-        wire:click="openApcClasseModal"
-        class="text-white bg-blue-600 text-sm rounded-md shadow-md px-4 py-2 hover:bg-blue-700">
-  <i class="fa fa-edit"></i>&nbsp;Évaluer
-</button>
-
+    {{-- 🔹 Bouton pour le formateur : peut évaluer --}}
+    <a href="{{ route('evaluate.create', $currentApprenant->id) }}"
+       class="text-white bg-blue-600 text-sm rounded-md shadow-md px-4 py-2 hover:bg-blue-700">
+        <i class="fa fa-edit"></i>&nbsp;Évaluer
+    </a>
 
 @elseif ($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude'))
 
     {{-- 🔹 Bouton pour le chef de travaux : ne peut que consulter --}}
-    <a href="#"
+    <a href="{{ route('evaluate.create', $currentApprenant->id) }}"
        class="text-white bg-blue-600 text-sm rounded-md shadow-md px-4 py-2 hover:bg-green-700">
         <i class="fa fa-eye"></i>&nbsp;Voir les notes
     </a>
@@ -201,159 +199,85 @@
                         </div>
                          @if(
     $user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude')||$user->hasRole('surveillant'))
-     <button type="button"
-       wire:click="openAbsenceClasseModal"
-        class="text-white bg-green-600 text-sm rounded-md shadow-md px-4 py-2 hover:bg-green-700">
-  <i class="fa fa-plus-circle"></i>&nbsp;Ajouter des absences/Retards
+        <button type="button"
+    onclick="openAbsenceModal()"
+    class="text-white bg-green-600 text-sm rounded-md shadow-md px-4 py-2 hover:bg-green-700">
+    <i class="fa fa-plus-circle"></i>&nbsp;Ajouter une absence
 </button>
-
-@if($showAbsenceClasseModal)
-<div class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
-     wire:click.self="closeAbsenceClasseModal"
-     wire:keydown.escape.window="closeAbsenceClasseModal">
-
-  <div class="bg-white rounded-lg shadow-xl w-[900px] max-w-[95vw]"
-       style="height:90vh; display:flex; flex-direction:column; overflow:hidden;">
-
-    {{-- HEADER --}}
-    <div class="p-4 border-b flex items-center justify-between bg-white" style="flex:0 0 auto;">
-      <div>
-        <div class="font-semibold text-lg text-green-600">Gestion des absences</div>
-        <div class="text-xs text-gray-600">
-          Classe : <span class="font-semibold">{{ $currentClasse?->libelle ?? '-' }}</span>
-          • Année : <span class="font-semibold">{{ $anneeAcademiqueLabel ?? '-' }}</span>
+<div id="absenceModal"
+    class="hidden fixed inset-0 z-50 bg-white/70 backdrop-blur-sm flex justify-center items-center p-4 transition duration-300 ease-in-out">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-lg relative">
+        <div class="flex justify-between items-center border-b px-4 py-2 bg-black bg-opacity-25 hidden  hidden overflow-y-auto ">
+            <h2 class="text-lg font-bold text-gray-800">Ajouter une absence</h2>
+            <button onclick="closeAbsenceModal()" class="text-gray-500 hover:text-gray-800 text-xl">&times;</button>
         </div>
-      </div>
+  <h4 class="font-bold text-xl mb-4">
+                                Gestion des absences de {{ $currentApprenant->apprenant->prenom }} {{ $currentApprenant->apprenant->nom }} 
+                            </h4>
+        <form method="POST" action="{{ route('absences.store') }}" class="p-6">
+            @csrf
+            <input type="hidden" name="inscription_id" value="{{ $currentApprenant->id ?? '' }}">
 
-      <button type="button" wire:click="closeAbsenceClasseModal"
-              class="text-red-600 font-bold text-lg leading-none">✕</button>
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700">Date</label>
+                <input type="date" name="date_absence" class="w-full border rounded p-2" required>
+            </div>
+ <div class="mb-3">
+                <label for="semestre" class="block text-sm font-medium text-gray-700">Semestre</label>
+                <select name="semestre" id="semestre" class="w-full border rounded p-2" required>
+                    <option value="">-- Sélectionnez le semestre --</option>
+                    <option value="1">Premier semestre</option>
+                    <option value="2">Deuxième semestre</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="block text-sm font-medium">Type</label>
+                <select name="type" id="typeAbsence" class="w-full border rounded p-2">
+                    <option value="">Selectionner un type</option>
+                    <option value="absence">Absence</option>
+                    <option value="retard">Retard</option>
+                </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                    <label class="block text-sm font-medium">Heure début</label>
+                    <input type="time" name="heure_debut" class="w-full border rounded p-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Heure fin</label>
+                    <input type="time" name="heure_fin" class="w-full border rounded p-2">
+                </div>
+            </div>
+
+            <div id="minutesRetardDiv" class="mb-3 hidden">
+                <label class="block text-sm font-medium">Minutes de retard (si applicable)</label>
+                <input type="number" name="minutes_retard" min="0" class="w-full border rounded p-2">
+            </div>
+
+            <div class="mb-3">
+                <label class="block text-sm font-medium">Motif</label>
+                <textarea name="motif" rows="3" class="w-full border rounded p-2"></textarea>
+            </div>
+
+            <div class="flex items-center gap-2 mb-4">
+                <input type="checkbox" name="justifie" value="1" id="justifie">
+                <label for="justifie" class="text-sm font-medium">Justifiée</label>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-4">
+                <button type="button" onclick="closeAbsenceModal()"
+                    class="px-4 py-2 text-sm bg-gray-300 hover:bg-gray-400 rounded-md ms-2">
+                    Annuler
+                </button>
+                <button type="submit"
+                    class="px-4 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700">
+                    <i class="fa fa-save"></i>&nbsp;Enregistrer
+                </button>
+            </div>
+        </form>
     </div>
-
-    {{-- BODY SCROLL --}}
-    <form method="POST" action="{{ route('absences.store') }}"
-          style="flex:1 1 auto; min-height:0; display:flex; flex-direction:column;">
-      @csrf
-
-      <div class="p-4"
-           style="flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;">
-
-        @if(empty($apprenantsAbsModal) || count($apprenantsAbsModal) === 0)
-          <div class="text-sm text-gray-500">Aucun apprenant chargé.</div>
-        @else
-
-          <div class="text-xs text-gray-600 mb-6">
-            Déplie un apprenant et remplisser le formulaire.
-          </div>
-
-          @foreach($apprenantsAbsModal as $insc)
-            <details class="mb-3 border rounded-lg bg-white" data-absence-details>
-              <summary class="cursor-pointer px-4 py-3 font-semibold bg-gray-50">
-                
-                  <span class="truncate">
-                    {{ $insc->apprenant?->prenom }} {{ $insc->apprenant?->nom }}
-                  </span>
-                  <span class="text-xs text-gray-500 whitespace-nowrap">
-                    [{{ $insc->apprenant?->matricule ?? '-' }}]
-                  </span>
-               
-                <!-- <span class="text-xs text-gray-400 whitespace-nowrap">Ouvrir/Fermer</span> -->
-              </summary>
-
-              <div class="p-4 space-y-3">
-
-                
-              
-
-                           <input type="hidden" name="inscription_id[{{ $insc->id }}]" value="{{ $insc->id }}">
-
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700">Semestre</label>
-                    <select name="semestre[{{ $insc->id }}]"
-                            class="w-full border rounded p-2 js-semestre">
-                      <option value="">-- Sélectionnez --</option>
-                      <option value="1">Premier semestre</option>
-                      <option value="2">Deuxième semestre</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700">Type</label>
-                    <select name="type[{{ $insc->id }}]"
-                            class="w-full border rounded p-2 js-absence-type">
-                      <option value="">-- Sélectionnez --</option>
-                      <option value="absence">Absence</option>
-                      <option value="retard">Retard</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 js-absence-label">
-                      Nombre d’heures d’absence
-                    </label>
-                    <input type="number" step="0.5" min="0"
-                           name="nombre_heure_absence[{{ $insc->id }}]"
-                           class="w-full border rounded p-2 js-hours-abs"
-                           placeholder="Ex: 2">
-                  </div>
-
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700">Nombre d’heures de retard</label>
-                    <input type="number" step="0.5" min="0"
-                           name="nombre_heure_retard[{{ $insc->id }}]"
-                           class="w-full border rounded p-2 js-hours-ret "
-                           placeholder="Ex: 0.5">
-                  </div>
-
-                </div>
-
-                <div class="flex flex-wrap items-center gap-6">
-                  <label class="inline-flex items-center gap-2">
-                    <input type="checkbox"
-                           name="justifie[{{ $insc->id }}]"
-                           value="1"
-                           class="js-justifie">
-                    <span class="text-sm font-medium">Justifiée</span>
-                  </label>
-
-                  <label class="inline-flex items-center gap-2">
-                    <input type="checkbox"
-                           name="nonjustifie[{{ $insc->id }}]"
-                           value="1"
-                           class="js-nonjustifie">
-                    <span class="text-sm font-medium">Non justifiée</span>
-                  </label>
-
-                  
-                </div>
-
-              </div>
-            </details>
-          @endforeach
-
-        @endif
-      </div>
-
-      
-      <div class="p-4 border-t bg-white flex justify-end gap-2" style="flex:0 0 auto;">
-        <button type="submit"
-                class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md shadow inline-flex items-center gap-2">
-          <i class="fa fa-save"></i>&nbsp; Enregistrer
-        </button>
-        <button type="button" wire:click="closeAbsenceClasseModal"
-                class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
-          Fermer
-        </button>
-      </div>
-
-    </form>
-
-  </div>
 </div>
-@endif
-
-
 
 <button type="button"
     onclick="openAbsencesListModal()"
@@ -384,21 +308,21 @@
                     <table class="min-w-full text-sm">
                         <thead class="bg-green-700 text-black uppercase text-xs">
                             <tr>
-                               
+                                <th class="px-3 py-2 border">Date</th>
                                 <th class="px-3 py-2 border">Semestre</th>
                                 <th class="px-3 py-2 border">Type</th>
-                                <th class="px-3 py-2 border">Nombre  heures d'absence</th>
-                                <th class="px-3 py-2 border">Nombre  heures de retard</th>
-                                
+                                <th class="px-3 py-2 border">Heure début</th>
+                                <th class="px-3 py-2 border">Heure fin</th>
+                                <th class="px-3 py-2 border">Durée / Retard</th>
                                 <th class="px-3 py-2 border">Justifiée</th>
-                               
+                                <th class="px-3 py-2 border">Motif</th>
                                 <th class="px-3 py-2 border">Action</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             @foreach ($absences as $abs)
                                 <tr class="hover:bg-gray-50">
-                                   
+                                    <td class="px-3 py-2 border">{{ \Carbon\Carbon::parse($abs->date_absence)->format('d/m/Y') }}</td>
                                     <td class="px-3 py-2 border text-center">{{ $abs->semestre ?? '-' }}</td>
                                     <td class="px-3 py-2 border text-center">
                                         @if($abs->type === 'retard')
@@ -407,9 +331,17 @@
                                             <span class="bg-red-200 text-red-800 px-2 py-1 rounded text-xs font-semibold">Absence</span>
                                         @endif
                                     </td>
-                                    <td class="px-3 py-2 border text-center">{{ $abs->nombre_heure_absence ?? '-' }}</td>
-                                    <td class="px-3 py-2 border text-center">{{ $abs->nombre_heure_retard ?? '-' }}</td>
-                                    
+                                    <td class="px-3 py-2 border text-center">{{ $abs->heure_debut ?? '-' }}</td>
+                                    <td class="px-3 py-2 border text-center">{{ $abs->heure_fin ?? '-' }}</td>
+                                    <td class="px-3 py-2 border text-center">
+                                        @if($abs->minutes_retard)
+                                            {{ $abs->minutes_retard }} min
+                                        @elseif($abs->duree)
+                                            {{ $abs->duree }} h
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
                                     <td class="px-3 py-2 border text-center">
                                         @if($abs->justifie)
                                             <span class="bg-green-200 text-green-800 px-2 py-1 rounded text-xs font-semibold">Oui</span>
@@ -417,11 +349,11 @@
                                             <span class="bg-gray-200 text-gray-600 px-2 py-1 rounded text-xs">Non</span>
                                         @endif
                                     </td>
-                                   
+                                    <td class="px-3 py-2 border">{{ $abs->motif ?? '-' }}</td>
     <td class="px-3 py-2 border text-center">
     <button 
-        class="bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 rounded text-xs shadow"
-        onclick="openEditAbsenceModal({{ $abs->id }}, '{{ $abs->semestre }}', '{{ $abs->type }}', '{{ $abs->nombre_heure_absence }}', '{{ $abs->nombre_heure_retard }}',  {{ $abs->justifie ? 1 : 0 }})">
+        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs shadow"
+        onclick="openEditAbsenceModal({{ $abs->id }}, '{{ $abs->date_absence }}', '{{ $abs->semestre }}', '{{ $abs->type }}', '{{ $abs->heure_debut }}', '{{ $abs->heure_fin }}', '{{ $abs->minutes_retard }}', '{{ $abs->motif }}', {{ $abs->justifie ? 1 : 0 }})">
         <i class="fa fa-edit"></i> Modifier
     </button>
     
@@ -451,148 +383,159 @@
 </div>
 @endif
 
-<div id="editAbsenceModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-center items-center p-4 transition duration-300 ease-in-out">
+<div id="editAbsenceModal" class="hidden fixed inset-0 bg-white bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white rounded-lg shadow-lg w-96 p-5">
         <h3 class="text-lg font-bold mb-4 text-gray-700">Modifier l'absence</h3>
 
-        <form id="editAbsenceForm" method="POST"  action="#">
-        @csrf
-         @method('PUT')
+        <form id="editAbsenceForm" method="POST">
+            @csrf
+            @method('PUT')
 
-  <!-- IMPORTANT : doit avoir name="id" ou edit_absence_id pour script -->
-  <input type="hidden" id="edit_absence_id" name="absence_id">
+            <input type="hidden" id="absenceId">
 
- 
+            <div class="mb-3">
+                <label class="text-sm font-semibold text-gray-700">Date de l'absence</label>
+                <input type="date" id="edit_date_absence" name="date_absence"
+                       class="w-full border rounded p-2 focus:ring-green-600 focus:border-green-600">
+            </div>
 
-  <div class="mb-3">
-    <label class="text-sm font-semibold text-gray-700">Semestre</label>
-    <input type="text" id="edit_semestre" name="semestre"
-           class="w-full border rounded p-2 focus:ring-green-600 focus:border-green-600">
-  </div>
+            <div class="mb-3">
+                <label class="text-sm font-semibold text-gray-700">Semestre</label>
+                <input type="text" id="edit_semestre" name="semestre"
+                       class="w-full border rounded p-2 focus:ring-green-600 focus:border-green-600">
+            </div>
 
-  <div class="mb-3">
-    <label class="text-sm font-semibold text-gray-700">Type</label>
-    <select id="edit_type" name="type"
-            class="w-full border rounded p-2 focus:ring-green-600 focus:border-green-600">
-      <option value="absence">Absence</option>
-      <option value="retard">Retard</option>
-    </select>
-  </div>
+            <div class="mb-3">
+                <label class="text-sm font-semibold text-gray-700">Type</label>
+                <select id="edit_type" name="type"
+                        class="w-full border rounded p-2 focus:ring-green-600 focus:border-green-600">
+                    <option value="absence">Absence</option>
+                    <option value="retard">Retard</option>
+                </select>
+            </div>
 
-  <div class="grid grid-cols-2 gap-3 mb-3">
-    <div>
-      <label class="text-sm font-semibold text-gray-700">Nombre d’heures d’absence</label>
-   
-      <input type="number" step="0.5" min="0"
-             id="edit_nombre_heure_absence"
-             name="nombre_heure_absence"
-             class="w-full border rounded p-2 focus:ring-green-600 focus:border-green-600">
-    </div>
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                    <label class="text-sm font-semibold text-gray-700">Heure début</label>
+                    <input type="time" id="edit_heure_debut" name="heure_debut"
+                           class="w-full border rounded p-2 focus:ring-green-600 focus:border-green-600">
+                </div>
+                <div>
+                    <label class="text-sm font-semibold text-gray-700">Heure fin</label>
+                    <input type="time" id="edit_heure_fin" name="heure_fin"
+                           class="w-full border rounded p-2 focus:ring-green-600 focus:border-green-600">
+                </div>
+            </div>
 
-    <div>
-      <label class="text-sm font-semibold text-gray-700">Nombre d’heures de retard</label>
-     
-      <input type="number" step="0.5" min="0"
-             id="edit_nombre_heure_retard"
-             name="nombre_heure_retard"
-             class="w-full border rounded p-2 focus:ring-green-600 focus:border-green-600">
-    </div>
-  </div>
+            <div class="mb-3">
+                <label class="text-sm font-semibold text-gray-700">Minutes de retard</label>
+                <input type="number" id="edit_minutes_retard" name="minutes_retard"
+                       class="w-full border rounded p-2 focus:ring-green-600 focus:border-green-600">
+            </div>
 
+            <div class="mb-3">
+                <label class="text-sm font-semibold text-gray-700">Motif</label>
+                <textarea id="edit_motif" name="motif"
+                          class="w-full border rounded p-2 focus:ring-green-600 focus:border-green-600"
+                          rows="2"></textarea>
+            </div>
 
-  <div class="mb-3">
-    <label class="inline-flex items-center gap-2">
-      <input type="checkbox" id="edit_justifie" name="justifie" value="1">
-      <span class="text-sm font-semibold text-gray-700">Justifiée ?</span>
-    </label>
-  </div>
-  <div class="mb-3">
-     <label class="inline-flex items-center gap-2">
-      <input type="checkbox" name="nonjustifie" value="nonjustifie" id="edit_nonjustifie_radio">
-      <span class="text-sm">Non justifiée</span>
-    </label>
-     </div>
+            <div class="mb-3">
+                <label class="text-sm font-semibold text-gray-700">Justifiée ?</label>
+                <select id="edit_justifie" name="justifie"
+                        class="w-full border rounded p-2 focus:ring-green-600 focus:border-green-600">
+                    <option value="0">Non</option>
+                    <option value="1">Oui</option>
+                </select>
+            </div>
 
-  <div class="flex justify-end mt-4 space-x-2 border-t pt-4">
-    <button type="button" onclick="closeEditAbsenceModal()"
-            class="bg-gray-300 px-3 py-2 rounded text-gray-800 hover:bg-gray-400">
-      Annuler
-    </button>
-
-    <button type="submit"
-            class="bg-green-600 px-3 py-2 rounded text-white hover:bg-green-700">
-      Enregistrer
-    </button>
-  </div>
-</form>
-
+            <div class="flex justify-end mt-4 space-x-2 border-t pt-4">
+                <button type="button" onclick="closeEditAbsenceModal()"
+                        class="bg-gray-300 px-3 py-2 rounded text-gray-800 hover:bg-gray-400">
+                    Annuler
+                </button>
+                <button type="submit"
+                        class="bg-green-600 px-3 py-2 rounded text-white hover:bg-green-700">
+                    Enregistrer
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
 
                        
-     @if ($competences && $competences->count() > 0)
-  <div class="overflow-x-auto">
-    <table class="min-w-full border text-sm">
-      <thead class="bg-green-600 text-white uppercase">
-        <tr>
-          <th class="px-4 py-2 border text-center">COMPÉTENCE</th>
-          <th class="px-4 py-2 border text-center">Discipline</th>
-          <th class="px-4 py-2 border text-center">MCC</th>
-          <th class="px-4 py-2 border text-center">Intégration</th>
-        </tr>
-      </thead>
+                        @if ($competences && $competences->count() > 0) 
+    <div class="overflow-x-auto">
+        <table class="min-w-full border text-sm">
+            <thead class="bg-green-600 text-white uppercase">
+                <tr>
+                    <th class="px-4 py-2 border text-center">COMPÉTENCE</th>
+                    <th class="px-4 py-2 border text-center">ÉLÉMENT DE COMPÉTENCE</th>
+                    <th class="px-4 py-2 border text-center">Seuil de reussite</th>
 
-      <tbody class="bg-white divide-y">
-        @foreach ($competences as $comp)
-          @php
-            if ($filtre && $comp->id != $filtre) continue;
+                    {{-- ⭕ NOTE supprimée --}}
+                    {{-- ⭕ Ajout de ACQUIS & NON ACQUIS --}}
+                    <th class="px-4 py-2 border text-center">ACQUIS</th>
+                    <th class="px-4 py-2 border text-center">NON ACQUIS</th>
 
-            $ressources = $comp->ressources ?? collect();
-            $rowspan = max($ressources->count(), 1);
-            $firstRow = true;
-          @endphp
+                    <th class="px-4 py-2 border text-center">DATE</th>
+                </tr>
+            </thead>
 
-          @forelse($ressources as $res)
-            @php
-              $eval = $evaluations[$res->id] ?? null;
-              $mcc = $eval['mcc'] ?? 0;
-              $composition = $eval['composition'] ?? null;
-            @endphp
+            <tbody class="bg-white divide-y">
+                @foreach ($competences as $comp)
 
-            <tr>
-              @if ($firstRow)
-                <td rowspan="{{ $rowspan }}" class="px-4 py-2 border font-semibold bg-gray-50 align-top">
-                  {{ $comp->nom }}
-                </td>
-                @php $firstRow = false; @endphp
-              @endif
+                    @php
+                        if ($filtre && $comp->id != $filtre) continue;
+                        $totalCriteres = $comp->elementCompetences->sum(fn($el) => $el->criteres->count());
+                        $rowspan = max($totalCriteres, 1);
+                        $firstRow = true;
+                    @endphp
 
-              <td class="px-4 py-2 border">{{ $res->nom }}</td>
+                    @foreach ($comp->elementCompetences as $el)
+                        @foreach ($el->criteres as $crit)
 
-              <td class="px-4 py-2 border text-center font-bold text-green-700">
-                {{ number_format((float)$mcc, 2) }}
-              </td>
+                            @php
+                                $eval = $evaluations[$crit->id] ?? null;
+                                $acquis = $eval['acquis'] ?? null;
+                                $nonAcquis = $eval['nonAcquis'] ?? null;
+                            @endphp
 
-              <td class="px-4 py-2 border text-center">
-                {{ $composition !== null ? number_format((float)$composition, 2) : '-' }}
-              </td>
-            </tr>
-          @empty
-            <tr>
-              <td class="px-4 py-2 border font-semibold bg-gray-50">{{ $comp->nom }}</td>
-              <td class="px-4 py-2 border text-center text-gray-500" colspan="3">
-                Aucune discipline liée
-              </td>
-            </tr>
-          @endforelse
-        @endforeach
-      </tbody>
-    </table>
-  </div>
+                            <tr>
+                                @if ($firstRow)
+                                    <td rowspan="{{ $rowspan }}"
+                                        class="px-4 py-2 border font-semibold bg-gray-50 align-top">
+                                        {{ $comp->nom }}
+                                    </td>
+                                    @php $firstRow = false; @endphp
+                                @endif
 
+                                <td class="px-4 py-2 border">{{ $el->nom }}</td>
+                                <td class="px-4 py-2 border text-center">{{ $crit->libelle }}</td>
 
-   @include('livewire.param._apc_classe_modal')
+                                {{-- 🟢 ACQUIS --}}
+                                <td class="px-4 py-2 border text-center font-bold {{ $acquis ? 'text-green-600' : 'text-gray-500' }}">
+                                    {{ $acquis ? '✔' : '-' }}
+                                </td>
+
+                                {{-- 🔴 NON ACQUIS --}}
+                                <td class="px-4 py-2 border text-center font-bold {{ $nonAcquis ? 'text-red-600' : 'text-gray-500' }}">
+                                    {{ $nonAcquis ? '✘' : '-' }}
+                                </td>
+
+                                <td class="px-4 py-2 border text-center">
+                                    {{ $eval['date'] ?? '-' }}
+                                </td>
+                            </tr>
+
+                        @endforeach
+                    @endforeach
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+
 @else
     <div class="text-center py-4 text-gray-500">
         Aucune compétence assignée ou évaluation disponible.
@@ -614,8 +557,6 @@
             </h3>
         </div>
     @endif
-  
-
 </div>
 <script>
     function openAbsenceModal() {
@@ -652,75 +593,38 @@
         modal.classList.remove('flex');
     }
 </script>
-
 <script>
-(function () {
-  function syncType(details){
-    const typeSel = details.querySelector('.js-absence-type');
-    const label   = details.querySelector('.js-absence-label');
-    const hAbs    = details.querySelector('.js-hours-abs');
-    const hRet    = details.querySelector('.js-hours-ret');
-    if(!typeSel || !label || !hAbs || !hRet) return;
+    // 🔹 Fonction pour ouvrir le modal et pré-remplir les champs
+    function openEditAbsenceModal(id, date, semestre, type, heureDebut, heureFin, minutesRetard, motif, justifie) {
+        // Afficher le modal
+        document.getElementById('editAbsenceModal').classList.remove('hidden');
 
-    if(typeSel.value === 'retard'){
-      label.textContent = "Nombre d’heures de retard";
-      hAbs.classList.add('hidden'); hAbs.value = '';
-      hRet.classList.remove('hidden');
-    } else {
-      label.textContent = "Nombre d’heures d’absence";
-      hRet.classList.add('hidden'); hRet.value = '';
-      hAbs.classList.remove('hidden');
-    }
-  }
+        // Remplir les champs
+        document.getElementById('absenceId').value = id;
+        document.getElementById('edit_date_absence').value = date;
+        document.getElementById('edit_semestre').value = semestre;
+        document.getElementById('edit_type').value = type;
+        document.getElementById('edit_heure_debut').value = heureDebut || '';
+        document.getElementById('edit_heure_fin').value = heureFin || '';
+        document.getElementById('edit_minutes_retard').value = minutesRetard || '';
+        document.getElementById('edit_motif').value = motif || '';
+        document.getElementById('edit_justifie').value = justifie;
 
-  document.addEventListener('change', function(e){
-    const el = e.target;
-    if(!el) return;
-
-    // type change
-    if(el.classList.contains('js-absence-type')){
-      const details = el.closest('[data-absence-details]');
-      if(details) syncType(details);
+        // Définir dynamiquement l’action du formulaire
+        const form = document.getElementById('editAbsenceForm');
+        form.action = `/absences/${id}`;
     }
 
-    // exclusivité
-    if(el.classList.contains('js-justifie')){
-      const details = el.closest('[data-absence-details]');
-      const nj = details?.querySelector('.js-nonjustifie');
-      if(el.checked && nj) nj.checked = false;
+    // 🔹 Fermer le modal
+    function closeEditAbsenceModal() {
+        document.getElementById('editAbsenceModal').classList.add('hidden');
     }
-    if(el.classList.contains('js-nonjustifie')){
-      const details = el.closest('[data-absence-details]');
-      const j = details?.querySelector('.js-justifie');
-      if(el.checked && j) j.checked = false;
-    }
-  });
-})();
-</script>
 
-<script>
-  function openEditAbsenceModal(id, semestre, type, hAbs, hRet, justifie, updateUrl) {
-    const modal = document.getElementById('editAbsenceModal');
-    const form  = document.getElementById('editAbsenceForm');
-
-    // ✅ URL correcte /absences/{id}
-    form.action = updateUrl;
-
-    // ✅ Remplissage champs
-    document.getElementById('edit_absence_id').value = id;
-    document.getElementById('edit_semestre').value = (semestre ?? '').toString();
-    document.getElementById('edit_type').value = (type ?? 'absence').toString();
-
-    document.getElementById('edit_nombre_heure_absence').value = (hAbs ?? '');
-    document.getElementById('edit_nombre_heure_retard').value = (hRet ?? '');
-
-    document.getElementById('edit_justifie').checked = (parseInt(justifie) === 1);
-
-    // ✅ Afficher modal
-    modal.classList.remove('hidden');
-  }
-
-  function closeEditAbsenceModal() {
-    document.getElementById('editAbsenceModal').classList.add('hidden');
-  }
+    // 🔹 Fermer le modal quand on clique en dehors de la boîte
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('editAbsenceModal');
+        if (event.target === modal) {
+            closeEditAbsenceModal();
+        }
+    });
 </script>

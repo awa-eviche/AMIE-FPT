@@ -12,12 +12,10 @@ class Evalute extends Model
         "inscription_id",
         "critere_id",
         "ressource_id",    
+        "devoirapc_id",    //la ou on stocke le mcc
         "semestre",
-        "acquis",
-        "nonAcquis",
-        "date",
-      "note",
       
+      "composition",
     ];
     public function critere()
     {
@@ -27,6 +25,22 @@ class Evalute extends Model
     {
         return $this->belongsTo(Ressource::class, 'ressource_id');
     }
+  public function devoir()
+    {
+        return $this->belongsTo(DevoirAPC::class, 'devoirapc_id');
+    }
 
+    /* 🔵 MCC direct */
+    public function getMccAttribute()
+    {
+        return $this->devoir?->mcc ?? 0;
+    }
+
+    /* 🔵 Moyenne calculée */
+    public function getMoyenneAttribute()
+    {
+        if ($this->composition === null) return null;
+        return ($this->mcc + $this->composition) / 2;
+    }
 }
 

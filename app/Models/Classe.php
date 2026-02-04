@@ -21,15 +21,10 @@ class Classe extends Model
         "libelle",
         "modalite",
         "niveau_etude_id",
-       // "annee_academique_id",
+      
         "etablissement_id",
         "statut",
-       
-
-        
-        
-        
-
+    
 
        
     ];

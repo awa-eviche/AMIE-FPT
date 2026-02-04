@@ -10,16 +10,22 @@ class Ressource extends Model
 
     protected $fillable = [
         'nom',
-        'element_competence_id',
+        'competence_id',
         'classe_id',
+        'formateur_id'
     ];
 
-    public function elementCompetence()
+    public function competence()
     {
-        return $this->belongsTo(ElementCompetence::class);
+        return $this->belongsTo(Competence::class);
     }
       public function classe()
     {
         return $this->belongsTo(Classe::class);
     }
+    public function devoirsAPC()
+{
+    return $this->hasMany(\App\Models\DevoirAPC::class, 'ressource_id');
+}
+ 
 }
