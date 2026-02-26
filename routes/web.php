@@ -56,6 +56,7 @@ use App\Http\Controllers\FaqController;
 use App\Http\Controllers\DevoirAPCController;
 use App\Http\Controllers\DevoirController;
 use App\Http\Controllers\ActualiteController;
+use App\Http\Controllers\EvaluationSomativeController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ClasseMatiereFormateurController;
 /*
@@ -68,7 +69,8 @@ use App\Http\Controllers\ClasseMatiereFormateurController;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
-
+Route::get('/evaluation-sommative', [EvaluationSomativeController::class, 'index'])
+    ->name('evaluation.sommative.page');
 Route::get('/absences/create/{inscription}', [AbsenceController::class, 'create'])->name('absences.create');
 Route::post('/absences/store', [AbsenceController::class, 'store'])->name('absences.store');
 Route::get('/absences/{inscription_id}', [AbsenceController::class, 'show'])->name('absences.show');
@@ -98,6 +100,9 @@ Route::middleware([
 
 Route::get('/classe/{classe}/bulletins/pdf', [InscriptionController::class, 'generateClassePdf'])
     ->name('classe.bulletins.pdf');
+
+Route::get('/classe/{classe}/sommation/pdf', [EvaluationSomativeController::class, 'generateClassePdf'])
+    ->name('classe.sommation.pdf');
 
     // Route::resource('demande', DemandeController::class);
     Route::group(['prefix' => 'demande', 'as' => 'demande.'], function () {

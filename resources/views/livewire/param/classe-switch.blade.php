@@ -45,7 +45,7 @@
         </div>
     </div>
 
-    @if ($currentClasse)
+    @if($currentClasse)
         <!-- Informations classe -->
         <div class="py-2 px-4 m-2 shadow bg-vert2 border border-black rounded-md">
             <div class="grid sm:grid-cols-3 gap-2 py-2 text-md">
@@ -73,33 +73,67 @@
                 @php
     $user = auth()->user();
 @endphp
-         @if ($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude'))
- <div class="flex flex-col sm:flex-row items-center gap-4 px-4 pb-4">
-    <form method="GET" action="{{ route('classe.bulletins.pdf', $currentClasse->id) }}" target="_blank" class="flex items-center gap-2">
-        <select name="semestre" class="rounded border-gray-300 text-sm">
-            <option value="">Tous les semestres</option>
-            <option value="1">Premier semestre</option>
-            <option value="2">Deuxième semestre</option>
-        </select>
+         @if ($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude') || $user->hasRole('surveillant')|| $user->hasRole('superadmin'))
+<div class="flex flex-col sm:flex-row sm:items-center gap-3 px-4 pb-4">
 
-        <button type="submit"
-            class="text-white bg-red-800 text-sm rounded-md shadow-md px-4 py-2 hover:bg-red-700">
-            <i class="fa fa-file-pdf"></i>&nbsp;Télécharger les bulletins de la classe (PDF)
-        </button>
+  <!-- Ligne des actions -->
+  <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
+
+    <!-- Form PDF -->
+    <form method="GET"
+          action="{{ route('classe.bulletins.pdf', $currentClasse->id) }}"
+          target="_blank"
+          class="flex flex-col sm:flex-row sm:items-center gap-2">
+      
+      <select name="semestre" class="rounded border-gray-300 text-sm">
+        <option value="">Tous les semestres</option>
+        <option value="1">Premier semestre</option>
+        <option value="2">Deuxième semestre</option>
+      </select>
+
+      <button type="submit"
+              class="text-white bg-red-800 text-sm rounded-md shadow-md px-4 py-2 hover:bg-red-700">
+        <i class="fa fa-file-pdf"></i>&nbsp;Télécharger les bulletins de la classe (PDF)
+      </button>
     </form>
+
+<button type="button"
+        wire:click="goEvaluationSomative"
+        class="text-white bg-green-700 text-sm rounded-md shadow-md px-4 py-2 hover:bg-green-800">
+  <i class="fa-solid fa-file-lines"></i>&nbsp;Évaluation Finale
+</button>
+
+
+  </div>
 </div>
+
 @endif
-
-
         
         <div class="w-full sm:px-2 lg:px-4">
             <div class="flex flex-col sm:flex-row py-2 gap-4">
 
-    
+ 
                 <div class="sm:w-1/2 p-4 border bg-gray border shadow rounded" style="min-height:50vh">
+        
+    @include('livewire.param._apc_classe_modal')
+ @php
+    $user = auth()->user();
+@endphp
+
+@if ($user->hasRole('formateur'))
+<div class="flex justify-end mb-3">
+    <button type="button"
+        wire:click="openApcClasseModal"
+        class="text-white bg-blue-600 text-sm rounded-md shadow-md px-4 py-2 hover:bg-blue-700">
+        <i class="fa fa-edit"></i>&nbsp;Évaluer
+    </button>
+</div>
+@endif
+
                     <h2 class="font-bold text-xl mb-4">Liste des apprenants ({{ sizeof($apprenants) }})</h2>
                     <hr class="mb-2">
                     <div class="text-sm w-full overflow-x-auto">
+                      
                         <table class="w-full border-t mb-3">
                             <thead>
                                 <tr class="text-xs font-black tracking-wide text-left text-maquette-gris border-b">
@@ -137,9 +171,12 @@
                             </tbody>
                         </table>
                     </div>
+     
                 </div>
+       
 
                 @if ($selectedApprenant)
+                
                     <div class="sm:w-1/2 p-4 border bg-gray-100 rounded border shadow">
                         <h2 class="font-bold text-xl mb-4">
                             Liste des compétences de
@@ -161,27 +198,23 @@
     $user = auth()->user();
 @endphp
 
-@if ($user->hasRole('formateur'))
+
+
+
+@if ($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude')|| $user->hasRole('surveillant')|| $user->hasRole('superadmin'))
+
   
-  <button type="button"
-        wire:click="openApcClasseModal"
-        class="text-white bg-blue-600 text-sm rounded-md shadow-md px-4 py-2 hover:bg-blue-700">
-  <i class="fa fa-edit"></i>&nbsp;Évaluer
-</button>
+ <a href="#"
+   wire:click.prevent="openNotesModal"
+   class="text-white bg-blue-600 text-sm rounded-md shadow-md px-4 py-2 hover:bg-green-700">
+    <i class="fa fa-eye"></i>&nbsp;Voir les notes
+</a>
 
-
-@elseif ($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude'))
-
-    {{-- 🔹 Bouton pour le chef de travaux : ne peut que consulter --}}
-    <a href="#"
-       class="text-white bg-blue-600 text-sm rounded-md shadow-md px-4 py-2 hover:bg-green-700">
-        <i class="fa fa-eye"></i>&nbsp;Voir les notes
-    </a>
 @endif
 
                         </div>
 
-                        <!-- Sélection semestre -->
+                        
                         <div class="flex items-center justify-end mb-3">
                             <label for="selectedsemestre1" class="text-sm font-bold text-gray-700 mr-2">Semestre :</label>
                             <select wire:model.live="selectedsemestre1" id="selectedsemestre1" name="semestre"
@@ -193,7 +226,7 @@
                 @php
     $user = auth()->user();
 @endphp
-         @if ($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude'))
+         @if ($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude')|| $user->hasRole('autorite'))
                               <a class="text-white bg-red-800 text-sm rounded-md shadow-md px-4 py-1" target="_blank" href="{{route('competence.generate.pdf',$currentApprenant->id)}}">
                             <i class="fa fa-file-pdf"></i>&nbsp;Télecharger le Bulletin
                         </a>
@@ -592,7 +625,9 @@
   </div>
 
 
-   @include('livewire.param._apc_classe_modal')
+  
+   @include('livewire.param.shownote')
+
 @else
     <div class="text-center py-4 text-gray-500">
         Aucune compétence assignée ou évaluation disponible.
@@ -614,6 +649,7 @@
             </h3>
         </div>
     @endif
+
   
 
 </div>

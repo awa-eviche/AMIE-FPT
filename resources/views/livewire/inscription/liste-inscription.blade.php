@@ -185,7 +185,7 @@
      <button type="button"
         wire:click="openCompositionClasseModal({{ $matiere->id }})"
         class="bg-indigo-600 text-white text-xs px-5 py-3 rounded hover:bg-indigo-700">
-  <i class="fa fa-edit"></i>&nbsp;Évaluer
+  <i class="fa fa-edit"></i>&nbsp;Notes {{ $matiere->nom }}
 </button>
 
     </td>

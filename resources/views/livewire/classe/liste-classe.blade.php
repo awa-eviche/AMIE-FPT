@@ -118,10 +118,17 @@
                 <hr>
                 <div class="mt-4">
                     <div class="flex justify-between items-center mt-3">
+
+                        @php
+    $user = auth()->user();
+@endphp
+
+@if (!$user->hasRole('formateur'))
                         <a href="{{route('classe.edit',$classe->id)}}" class="flex items-center px-1 rounded-md py-1 border flex text-orange-600 text-sm text-center bg-white border-orange-600 hover:bg-orange-600 hover:text-white">
                             <i class="fa fa-edit"></i>
                             <span class="mx-2">Modifier</span>
                         </a>
+                        @endif
                         @if(!$classe->statut)
                         <a href="{{ route('classe.validate', $classe->id) }}" class="flex items-center px-1 rounded-md py-1 border flex text-purple-600 text-sm text-center bg-white border-purple-600 hover:bg-purple-600 hover:text-white">
                             <i class="fa fa-check"></i>

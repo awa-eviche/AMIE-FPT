@@ -671,24 +671,32 @@ public function generateCompetencePdf(string $id)
         'anneeAcademique', // si relation existe
     ])->findOrFail($id);
 
+    // ✅ MODIF ICI : on récupère l’ID de la classe (pour filtrer les ressources)
+    $classeId = (int) $inscription->classe_id;
+
     $niveauId = (int) $inscription->classe->niveau_etude_id;
 
-    // ✅ Compétences (SANS critères) + disciplines (ressources)
+    // ✅ MODIF ICI : filtrer les ressources par classe_id
     $competencesGenerales = Competence::query()
         ->where('niveau_etude_id', $niveauId)
         ->where('type', 'generale')
-        ->with('ressources')
+        ->with(['ressources' => function ($q) use ($classeId) {
+            $q->where('classe_id', $classeId);
+        }])
         ->orderBy('nom')
         ->get();
 
+    // ✅ MODIF ICI : filtrer les ressources par classe_id
     $competencesParticulieres = Competence::query()
         ->where('niveau_etude_id', $niveauId)
         ->where('type', 'particuliere')
-        ->with('ressources')
+        ->with(['ressources' => function ($q) use ($classeId) {
+            $q->where('classe_id', $classeId);
+        }])
         ->orderBy('nom')
         ->get();
 
-    // ✅ Toutes les ressources concernées
+    // ✅ Toutes les ressources concernées (déjà filtrées par classe)
     $ressourceIds = $competencesGenerales
         ->merge($competencesParticulieres)
         ->flatMap(fn ($c) => ($c->ressources ?? collect())->pluck('id'))
@@ -700,7 +708,6 @@ public function generateCompetencePdf(string $id)
     // ✅ Évaluations (intégration = composition) depuis evalutes (APC uniquement)
     $evalQuery = Evalute::query()
         ->where('inscription_id', (int) $inscription->id)
-       
         ->whereIn('ressource_id', $ressourceIds);
 
     if ($semestreInt) {
@@ -755,7 +762,7 @@ public function generateCompetencePdf(string $id)
         if ($ressources->isEmpty()) {
             $htmlGenerales .= "
             <tr>
-                <td class='border-td bold-exo wrap' style='width:28%'>".htmlspecialchars($comp->nom)."</td>
+                <td class='border-td bold-exo wrap' style='width:28%'>".htmlspecialchars($comp->nom, ENT_QUOTES, 'UTF-8')."</td>
                 <td class='border-td wrap' style='width:32%'>Aucune discipline</td>
                 <td class='border-td num' style='width:10%'>-</td>
                 <td class='border-td num' style='width:12%'>-</td>
@@ -785,16 +792,17 @@ public function generateCompetencePdf(string $id)
 
             $htmlGenerales .= "<tr>";
 
+            // ✅ MODIF ICI : correction du HTML cassé (guillemet manquant) -> sinon la colonne "Compétence" disparaît
             if ($first) {
                 $htmlGenerales .= "
                 <td rowspan='{$rowspan}' class='border-td bold-exo wrap' style='width:28%'>
-                    ".htmlspecialchars($comp->nom)."
+                    ".htmlspecialchars($comp->nom, ENT_QUOTES, 'UTF-8')."
                 </td>";
                 $first = false;
             }
 
             $htmlGenerales .= "
-                <td class='border-td wrap' style='width:32%'>".htmlspecialchars($res->nom)."</td>
+                <td class='border-td wrap' style='width:32%'>".htmlspecialchars($res->nom, ENT_QUOTES, 'UTF-8')."</td>
                 <td class='border-td num' style='width:10%'>{$mccTxt}</td>
                 <td class='border-td num' style='width:12%'>{$intTxt}</td>
                 <td class='border-td wrap' style='width:18%'>{$app}</td>
@@ -809,7 +817,11 @@ public function generateCompetencePdf(string $id)
         </tr>";
     }
 
-  
+    /**
+     * =========================================================
+     * ✅ HTML COMPETENCES PARTICULIERES
+     * =========================================================
+     */
     $htmlParticulieres = '';
 
     foreach ($competencesParticulieres as $comp) {
@@ -818,7 +830,7 @@ public function generateCompetencePdf(string $id)
         if ($ressources->isEmpty()) {
             $htmlParticulieres .= "
             <tr>
-                <td class='border-td bold-exo wrap' style='width:28%'>".htmlspecialchars($comp->nom)."</td>
+                <td class='border-td bold-exo wrap' style='width:28%'>".htmlspecialchars($comp->nom, ENT_QUOTES, 'UTF-8')."</td>
                 <td class='border-td wrap' style='width:32%'>Aucune discipline</td>
                 <td class='border-td num' style='width:10%'>-</td>
                 <td class='border-td num' style='width:12%'>-</td>
@@ -846,13 +858,13 @@ public function generateCompetencePdf(string $id)
             if ($first) {
                 $htmlParticulieres .= "
                 <td rowspan='{$rowspan}' class='border-td bold-exo wrap' style='width:28%'>
-                    ".htmlspecialchars($comp->nom)."
+                    ".htmlspecialchars($comp->nom, ENT_QUOTES, 'UTF-8')."
                 </td>";
                 $first = false;
             }
 
             $htmlParticulieres .= "
-                <td class='border-td wrap' style='width:32%'>".htmlspecialchars($res->nom)."</td>
+                <td class='border-td wrap' style='width:32%'>".htmlspecialchars($res->nom, ENT_QUOTES, 'UTF-8')."</td>
                 <td class='border-td num' style='width:10%'>{$mccTxt}</td>
                 <td class='border-td num' style='width:12%'>{$intTxt}</td>
                 <td class='border-td wrap' style='width:18%'>{$app}</td>
@@ -867,32 +879,24 @@ public function generateCompetencePdf(string $id)
         </tr>";
     }
 
-    
-     // $nbAbsences = $absencesSemestre->where('type', 'absence')->where('justifie', false);
-    // $nbRetards  = $absencesSemestre->where('type', 'retard')->count();
-    // $absencesSemestre = Absence::where('inscription_id', (int) $inscription->id)
-    // ->when($semestreInt, fn($q) => $q->where('semestre', (int) $semestreInt))
-    // ->get();
-   $absencesSemestre = Absence::where('inscription_id', (int) $inscription->id)
-    ->when($semestreInt, fn($q) => $q->where('semestre', (int) $semestreInt))
-    ->get();
+    $absencesSemestre = Absence::where('inscription_id', (int) $inscription->id)
+        ->when($semestreInt, fn($q) => $q->where('semestre', (int) $semestreInt))
+        ->get();
 
-$hAbsJust = (float) $absencesSemestre->where('type','absence')->where('justifie', 1)->sum('nombre_heure_absence');
+    $hAbsJust = (float) $absencesSemestre->where('type','absence')->where('justifie', 1)->sum('nombre_heure_absence');
 
-$hAbsNon = (float) $absencesSemestre->where('type','absence')
-    ->filter(fn($r) => (int)$r->justifie === 0 || (int)$r->nonjustifie === 1)
-    ->sum('nombre_heure_absence');
+    $hAbsNon = (float) $absencesSemestre->where('type','absence')
+        ->filter(fn($r) => (int)$r->justifie === 0 || (int)$r->nonjustifie === 1)
+        ->sum('nombre_heure_absence');
 
-$hRetJust = (float) $absencesSemestre->where('type','retard')->where('justifie', 1)->sum('nombre_heure_retard');
+    $hRetJust = (float) $absencesSemestre->where('type','retard')->where('justifie', 1)->sum('nombre_heure_retard');
 
-$hRetNon = (float) $absencesSemestre->where('type','retard')
-    ->filter(fn($r) => (int)$r->justifie === 0 || (int)$r->nonjustifie === 1)
-    ->sum('nombre_heure_retard');
-;
+    $hRetNon = (float) $absencesSemestre->where('type','retard')
+        ->filter(fn($r) => (int)$r->justifie === 0 || (int)$r->nonjustifie === 1)
+        ->sum('nombre_heure_retard');
 
-$hAbsTotal = $hAbsJust + $hAbsNon;
-$hRetTotal = $hRetJust + $hRetNon;
-
+    $hAbsTotal = $hAbsJust + $hAbsNon;
+    $hRetTotal = $hRetJust + $hRetNon;
 
     // ✅ Template (chemin robuste)
     $templatePath = public_path('competence.html');
@@ -921,17 +925,15 @@ $hRetTotal = $hRetJust + $hRetNon;
     // ✅ Blocs
     $template = str_replace('[BODYRESSOURCE]', $htmlGenerales, $template);
     $template = str_replace('[BODYCOMP]', $htmlParticulieres, $template);
-   $fmt = fn($n) => rtrim(rtrim(number_format((float)$n, 2, '.', ''), '0'), '.');
 
-$template = str_replace('[NB_ABSENCES]', $fmt($hAbsTotal), $template);
-$template = str_replace('[NB_RETARDS]',  $fmt($hRetTotal), $template);
+    $fmt = fn($n) => rtrim(rtrim(number_format((float)$n, 2, '.', ''), '0'), '.');
+    $template = str_replace('[NB_ABSENCES]', $fmt($hAbsTotal), $template);
+    $template = str_replace('[NB_RETARDS]',  $fmt($hRetTotal), $template);
 
+    setlocale(LC_TIME, 'fr_FR.UTF-8', 'fr_FR', 'fr');
+    $dateNow = strftime('%e %B %Y');
+    $dateNow = trim($dateNow);
 
-      setlocale(LC_TIME, 'fr_FR.UTF-8', 'fr_FR', 'fr');
-$dateNow = strftime('%e %B %Y');
-$dateNow = trim($dateNow);
-
-    
     $anneeScolaire = $inscription->anneeAcademique->code
         ?? ($inscription->classe->annee_academique->code ?? '');
 
@@ -967,7 +969,6 @@ $dateNow = trim($dateNow);
 }
 
 
-
 public function generateClassePdf(string $classe_id)
 {
     $semestre = session()->get('selectedsemestre1'); // peut être null
@@ -977,11 +978,15 @@ public function generateClassePdf(string $classe_id)
         'niveau_etude',
         'etablissement',
         'inscriptions.apprenant',
-        'annee_academique', // si relation existe côté classe
+        'annee_academique',
     ])->findOrFail($classe_id);
 
     $niveauId = (int) $classe->niveau_etude_id;
 
+    // ✅ MODIF ICI : on se base sur la classe (PAS $inscription)
+    $classeId = (int) $classe->id;
+
+   
     $competencesGenerales = Competence::query()
         ->where('niveau_etude_id', $niveauId)
         ->where('type', 'generale')
@@ -996,7 +1001,29 @@ public function generateClassePdf(string $classe_id)
         ->orderBy('nom')
         ->get();
 
-    // ✅ Toutes les ressources concernées
+    // ✅ MODIF ICI : filtrer les ressources par classe (supporte classe_id OU pivot->classe_id)
+    $filterRessourcesByClasse = function ($competences) use ($classeId) {
+        foreach ($competences as $comp) {
+            $ressources = collect($comp->ressources ?? []);
+            $filtered = $ressources
+                ->filter(function ($res) use ($classeId) {
+                    $direct = (int) ($res->classe_id ?? 0);
+                    $pivot  = (int) ($res->pivot->classe_id ?? 0);
+                    return $direct === $classeId || $pivot === $classeId;
+                })
+                ->unique('id')
+                ->values();
+
+            // important : on remplace la relation pour le PDF
+            $comp->setRelation('ressources', $filtered);
+        }
+        return $competences;
+    };
+
+    $competencesGenerales = $filterRessourcesByClasse($competencesGenerales);
+    $competencesParticulieres = $filterRessourcesByClasse($competencesParticulieres);
+
+    // ✅ Toutes les ressources concernées (déjà filtrées par classe)
     $ressourceIds = $competencesGenerales
         ->merge($competencesParticulieres)
         ->flatMap(fn ($c) => ($c->ressources ?? collect())->pluck('id'))
@@ -1018,7 +1045,7 @@ public function generateClassePdf(string $classe_id)
         return 'Très bien';
     };
 
-    // ✅ Précharger toutes les intégrations (Evalute.composition) APC de la classe
+    // ✅ Précharger intégrations (Evalute.composition)
     $evalMap = []; // [inscription_id][ressource_id] => composition
     if (!empty($inscriptionIds) && !empty($ressourceIds)) {
         $evalQuery = Evalute::query()
@@ -1030,13 +1057,12 @@ public function generateClassePdf(string $classe_id)
         }
 
         $evalRows = $evalQuery->get(['inscription_id', 'ressource_id', 'composition']);
-
         foreach ($evalRows as $e) {
             $evalMap[(int)$e->inscription_id][(int)$e->ressource_id] = $e->composition;
         }
     }
 
-    // ✅ Précharger tous les MCC (AVG(note)) depuis DevoirAPC
+    // ✅ Précharger MCC (AVG(note)) depuis DevoirAPC
     $mccMap = []; // [inscription_id][ressource_id] => mcc
     if (!empty($inscriptionIds) && !empty($ressourceIds)) {
         $mccQuery = DevoirAPC::query()
@@ -1058,7 +1084,7 @@ public function generateClassePdf(string $classe_id)
         }
     }
 
-    // ✅ Charger template (chemin robuste)
+    // ✅ Charger template
     $templatePath = public_path('competence.html');
     if (!file_exists($templatePath)) $templatePath = base_path('competence.html');
     if (!file_exists($templatePath)) $templatePath = resource_path('views/competence.html');
@@ -1074,7 +1100,7 @@ public function generateClassePdf(string $classe_id)
     ";
     $templateRaw = str_replace('</style>', $antiOverflowCss . "\n</style>", $templateRaw);
 
-    // ✅ Logo
+    // ✅ Logo (base64)
     $logoPath = public_path('assets/images/titleHead.png');
     $logoBase64 = '';
     if (file_exists($logoPath)) {
@@ -1092,11 +1118,7 @@ public function generateClassePdf(string $classe_id)
 
         $inscId = (int) $inscription->id;
 
-        /**
-         * =========================
-         * ✅ HTML GÉNÉRALES (rowspan + fallback MCC)
-         * =========================
-         */
+        // ----------- GÉNÉRALES -----------
         $htmlGenerales = '';
 
         foreach ($competencesGenerales as $comp) {
@@ -1105,7 +1127,7 @@ public function generateClassePdf(string $classe_id)
             if ($ressources->isEmpty()) {
                 $htmlGenerales .= "
                 <tr>
-                    <td class='border-td bold-exo wrap' style='width:28%'>".htmlspecialchars($comp->nom)."</td>
+                    <td class='border-td bold-exo wrap' style='width:28%'>".htmlspecialchars($comp->nom, ENT_QUOTES, 'UTF-8')."</td>
                     <td class='border-td wrap' style='width:32%'>Aucune discipline</td>
                     <td class='border-td num' style='width:10%'>-</td>
                     <td class='border-td num' style='width:12%'>-</td>
@@ -1114,8 +1136,8 @@ public function generateClassePdf(string $classe_id)
                 continue;
             }
 
-            $first = true;
             $rowspan = $ressources->count();
+            $first = true;
 
             foreach ($ressources as $res) {
                 $resId = (int) $res->id;
@@ -1126,7 +1148,7 @@ public function generateClassePdf(string $classe_id)
                 // ✅ règle générale : si pas d’intégration => MCC
                 $integrationEffective = ($compositionRaw === null || $compositionRaw === '')
                     ? $mcc
-                    : (float)$compositionRaw;
+                    : (float) $compositionRaw;
 
                 $mccTxt = is_numeric($mcc) ? number_format((float)$mcc, 2) : '-';
                 $intTxt = is_numeric($integrationEffective) ? number_format((float)$integrationEffective, 2) : '-';
@@ -1136,14 +1158,14 @@ public function generateClassePdf(string $classe_id)
 
                 if ($first) {
                     $htmlGenerales .= "
-                    <td rowspan='{$rowspan}' class='border-td bold-exo wrap' style='width:28%>
-                        ".htmlspecialchars($comp->nom)."
-                    </td>";
+                        <td rowspan='{$rowspan}' class='border-td bold-exo wrap' style='width:28%'>
+                            ".htmlspecialchars($comp->nom, ENT_QUOTES, 'UTF-8')."
+                        </td>";
                     $first = false;
                 }
 
                 $htmlGenerales .= "
-                    <td class='border-td wrap' style='width:32%'>".htmlspecialchars($res->nom)."</td>
+                    <td class='border-td wrap' style='width:32%'>".htmlspecialchars($res->nom, ENT_QUOTES, 'UTF-8')."</td>
                     <td class='border-td num' style='width:10%'>{$mccTxt}</td>
                     <td class='border-td num' style='width:12%'>{$intTxt}</td>
                     <td class='border-td wrap' style='width:18%'>{$app}</td>
@@ -1158,11 +1180,7 @@ public function generateClassePdf(string $classe_id)
             </tr>";
         }
 
-        /**
-         * =========================
-         * ✅ HTML PARTICULIÈRES
-         * =========================
-         */
+        // ----------- PARTICULIÈRES -----------
         $htmlParticulieres = '';
 
         foreach ($competencesParticulieres as $comp) {
@@ -1171,7 +1189,7 @@ public function generateClassePdf(string $classe_id)
             if ($ressources->isEmpty()) {
                 $htmlParticulieres .= "
                 <tr>
-                    <td class='border-td bold-exo wrap' style='width:28%'>".htmlspecialchars($comp->nom)."</td>
+                    <td class='border-td bold-exo wrap' style='width:28%'>".htmlspecialchars($comp->nom, ENT_QUOTES, 'UTF-8')."</td>
                     <td class='border-td wrap' style='width:32%'>Aucune discipline</td>
                     <td class='border-td num' style='width:10%'>-</td>
                     <td class='border-td num' style='width:12%'>-</td>
@@ -1180,14 +1198,14 @@ public function generateClassePdf(string $classe_id)
                 continue;
             }
 
-            $first = true;
             $rowspan = $ressources->count();
+            $first = true;
 
             foreach ($ressources as $res) {
                 $resId = (int) $res->id;
 
                 $mcc = $mccMap[$inscId][$resId] ?? null;
-                $integration = $evalMap[$inscId][$resId] ?? null; // pas de fallback ici (particulière)
+                $integration = $evalMap[$inscId][$resId] ?? null; // pas de fallback ici
 
                 $mccTxt = is_numeric($mcc) ? number_format((float)$mcc, 2) : '-';
                 $intTxt = is_numeric($integration) ? number_format((float)$integration, 2) : '-';
@@ -1197,14 +1215,14 @@ public function generateClassePdf(string $classe_id)
 
                 if ($first) {
                     $htmlParticulieres .= "
-                    <td rowspan='{$rowspan}' class='border-td bold-exo wrap' style='width:28%'>
-                        ".htmlspecialchars($comp->nom)."
-                    </td>";
+                        <td rowspan='{$rowspan}' class='border-td bold-exo wrap' style='width:28%'>
+                            ".htmlspecialchars($comp->nom, ENT_QUOTES, 'UTF-8')."
+                        </td>";
                     $first = false;
                 }
 
                 $htmlParticulieres .= "
-                    <td class='border-td wrap' style='width:32%'>".htmlspecialchars($res->nom)."</td>
+                    <td class='border-td wrap' style='width:32%'>".htmlspecialchars($res->nom, ENT_QUOTES, 'UTF-8')."</td>
                     <td class='border-td num' style='width:10%'>{$mccTxt}</td>
                     <td class='border-td num' style='width:12%'>{$intTxt}</td>
                     <td class='border-td wrap' style='width:18%'>{$app}</td>
@@ -1219,11 +1237,7 @@ public function generateClassePdf(string $classe_id)
             </tr>";
         }
 
-        /**
-         * =========================
-         * ✅ ABSENCES / RETARDS (HEURES)
-         * =========================
-         */
+        // ✅ ABSENCES / RETARDS
         $absencesSemestre = Absence::where('inscription_id', (int) $inscription->id)
             ->when($semestreInt, fn($q) => $q->where('semestre', (int) $semestreInt))
             ->get();
@@ -1243,12 +1257,11 @@ public function generateClassePdf(string $classe_id)
         $hAbsTotal = $hAbsJust + $hAbsNon;
         $hRetTotal = $hRetJust + $hRetNon;
 
-        // ✅ Date
-   setlocale(LC_TIME, 'fr_FR.UTF-8', 'fr_FR', 'fr');
-$dateNow = strftime('%e %B %Y');
-$dateNow = trim($dateNow);
+        // ✅ Date FR
+        setlocale(LC_TIME, 'fr_FR.UTF-8', 'fr_FR', 'fr');
+        $dateNow = trim(strftime('%e %B %Y'));
 
-        // ✅ Année scolaire
+        // ✅ Année scolaire (garde ta logique)
         $anneeScolaire = $inscription->anneeAcademique->code
             ?? ($classe->annee_academique->code ?? '');
 
@@ -1257,7 +1270,6 @@ $dateNow = trim($dateNow);
         $page = str_replace('[BODYRESSOURCE]', $htmlGenerales, $page);
         $page = str_replace('[BODYCOMP]', $htmlParticulieres, $page);
 
-        // ✅ ICI : heures (et pas $nbAbsences/$nbRetards)
         $page = str_replace('[NB_ABSENCES]', $fmt($hAbsTotal), $page);
         $page = str_replace('[NB_RETARDS]',  $fmt($hRetTotal), $page);
 

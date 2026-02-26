@@ -128,7 +128,9 @@
         $user->hasRole('chef_de_travaux') ||
         $user->hasRole('chef_etablissement') ||
         $user->hasRole('directeur_etude') ||
-        $user->hasRole('formateur')
+        $user->hasRole('formateur')||
+        $user->hasRole('autorité')||
+        $user->hasRole('superadmin') || $user->hasRole('agent')
     )
         @if(($classe->modalite === 'PPO' && isset($matieres)) || ($classe->modalite === 'APC' && isset($competences)))
         <div class="border rounded-lg p-4 bg-white shadow-sm">
@@ -186,11 +188,14 @@
                             </select>
                         </div>
 
+
                         <div>
+                             @if($user->hasRole('chef_etablissement')|| $user->hasRole('directeur_etude') || $user->hasRole('chef_de_travaux'))
                             <button type="submit"
                                 class="bg-green-600 text-white text-sm px-4 py-2 rounded hover:bg-green-700">
                                 Assigner
                             </button>
+                             @endif
                         </div>
                     </div>
                 </form>
@@ -248,7 +253,7 @@
 
             <td class="px-3 py-2 border text-center">
                 {{-- Supprimer seulement admin --}}
-                @if(!$user->hasRole('formateur'))
+                @if(!$user->hasRole('formateur') && !$user->hasRole('superadmin') && !$user->hasRole('autorite') && !$user->hasRole('agent'))
                     <form class="inline-block" method="POST"
                           action="{{ route('classe.assign.destroy', [$classe->id, $a->formateur_id, $a->matiere_id]) }}">
                         @csrf @method('DELETE')
@@ -353,10 +358,20 @@
             @if($user->hasRole('formateur'))
 
                 @if(!$ressource)
-                    <button onclick="openRessourceModal({{ $a->competence_id }}, '{{ $a->competence_nom }}')"
+                    <!-- <button onclick="openRessourceModal({{ $a->competence_id }}, '{{ $a->competence_nom }}')"
                             class="bg-green-600 text-white text-xs px-2 py-1 rounded">
                         + Discipline
-                    </button>
+                    </button> -->
+                    <button
+  type="button"
+  data-competence-id="{{ $a->competence_id }}"
+  data-competence-nom="{{ $a->competence_nom }}"
+  onclick="openRessourceModalFromBtn(this)"
+  class="bg-green-600 text-white text-xs px-2 py-1 rounded"
+>
+  + Discipline
+</button>
+
                 @else
                     <button onclick="openEditRessourceModal({{ $ressource->id }}, '{{ $ressource->nom }}')"
                             class="bg-blue-700 text-white text-xs px-2 py-1 rounded">
@@ -402,10 +417,11 @@
     @if($ressource)
         <input type="hidden" name="ressource_id" value="{{ $ressource->id }}">
     @endif
-
+@if(!$user->hasRole('formateur') && !$user->hasRole('superadmin') && !$user->hasRole('autorite') && !$user->hasRole('agent'))
     <button class="bg-red-600 text-white text-xs px-2 py-1 rounded">
         Supprimer
     </button>
+@endif
 </form>
 
                
@@ -486,10 +502,14 @@
             @if($user->hasRole('formateur'))
 
                 @if(!$ressource)
-                    <button onclick="openRessourceModal({{ $a->competence_id }}, '{{ $a->competence_nom }}')"
+                    <!-- <button onclick="openRessourceModal({{ $a->competence_id }}, '{{ $a->competence_nom }}')"
                             class="bg-green-600 text-white text-xs px-2 py-1 rounded">
                         + Discipline
-                    </button>
+                    </button> -->
+                    <button type="button"data-competence-id="{{ $a->competence_id }}"data-competence-nom="{{ $a->competence_nom }}"onclick="openRessourceModalFromBtn(this)"
+                    class="bg-green-600 text-white text-xs px-2 py-1 rounded"> + Discipline
+                   </button>
+
                 @else
                     <button onclick="openEditRessourceModal({{ $ressource->id }}, '{{ $ressource->nom }}')"
                             class="bg-blue-700 text-white text-xs px-2 py-1 rounded">
@@ -529,7 +549,7 @@
 <input type="hidden" name="assign_id" value="{{ $a->assign_id }}">
 
 
-    {{-- ✅ optionnel : si une discipline existe, on peut supprimer la discipline ciblée --}}
+ 
     @if($ressource)
         <input type="hidden" name="ressource_id" value="{{ $ressource->id }}">
     @endif
@@ -680,7 +700,6 @@
         </div>
       </div>
 
-      {{-- ✅ BODY SCROLL --}}
       <div id="devoirApcBodyScroll"
            class="px-4 pb-4"
            style="flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;">
@@ -770,55 +789,84 @@
 
 
 <div id="addDevoirModal"
-     class="hidden fixed inset-0 z-50 bg-gray-900 bg-opacity-50 flex justify-center items-center p-12 bg-black bg-opacity-25 hidden overflow-y-auto overflow-x-hidden items-center smd:inset-0 h-[calc(200%-1rem)] w-500 h-100 mx-auto max-w-full max-h-full">
-    
-    <div class="bg-white rounded-lg w-[95%] max-w-[1400px] p-6 max-h-[95vh] overflow-y-auto shadow-2xl">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="font-semibold text-lg">Ajouter un nouveau devoir</h3>
-            <button onclick="closeAddDevoirModal()" class="text-red-600 font-bold">✕</button>
-        </div>
+     class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
 
-        <form method="POST" action="{{ route('devoirAPC.store') }}">
-            @csrf
-            <input type="hidden" name="ressource_id" id="add_devoir_ressource_id">
-    <select name="semestre" class="rounded border-gray-300 text-sm">
-            <option value="">Tous les semestres</option>
-            <option value="1">Premier semestre</option>
-            <option value="2">Deuxième semestre</option>
-        </select>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Libellé du devoir</label>
-                <input type="text" name="libelle"
-                       class="w-full border rounded px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-                       required placeholder="Ex: Devoir 1">
-            </div>
+  <!-- MODAL -->
+  <div class="bg-white rounded-lg shadow-2xl w-[95%] max-w-[1400px]"
+       style="height:90vh; display:flex; flex-direction:column; overflow:hidden;">
 
-            <table class="w-full border text-sm">
-                <thead class="bg-gray-100">
-                <tr>
-                    <th class="border px-3 py-2 text-left">Apprenant</th>
-                    <th class="border px-3 py-2 text-left w-32">Note</th>
-                </tr>
-                </thead>
-                <tbody id="notesTableBody">
-                    <!-- Les lignes seront ajoutées dynamiquement -->
-                </tbody>
-            </table>
-
-            <div class="flex justify-end gap-3 mt-6">
-                <button type="button" onclick="closeAddDevoirModal()"
-                        class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
-                    Annuler
-                </button>
-
-                <button type="submit"
-                        class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                    Enregistrer le devoir
-                </button>
-            </div>
-        </form>
+    <!-- HEADER FIXE -->
+    <div class="p-4 border-b flex justify-between items-center bg-white"
+         style="flex:0 0 auto;">
+      <h3 class="font-semibold text-lg">Ajouter un nouveau devoir</h3>
+      <button onclick="closeAddDevoirModal()"
+              class="text-red-600 font-bold text-lg leading-none">✕</button>
     </div>
+
+    <!-- FORM -->
+    <form method="POST"
+          action="{{ route('devoirAPC.store') }}"
+          style="flex:1 1 auto; min-height:0; display:flex; flex-direction:column;">
+      @csrf
+
+      <input type="hidden" name="ressource_id" id="add_devoir_ressource_id">
+
+      <!-- CHAMPS FIXES -->
+      <div class="p-4 border-b bg-white"
+           style="flex:0 0 auto;">
+        <select name="semestre" class="rounded border-gray-300 text-sm">
+          <option value="">Tous les semestres</option>
+          <option value="1">Premier semestre</option>
+          <option value="2">Deuxième semestre</option>
+        </select>
+
+        <div class="mt-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Libellé du devoir
+          </label>
+          <input type="text" name="libelle"
+                 class="w-full border rounded px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
+                 required>
+        </div>
+      </div>
+
+      <!-- CONTENU SCROLLABLE -->
+      <div class="p-4"
+           style="flex:1 1 auto; min-height:0; overflow-y:scroll; -webkit-overflow-scrolling:touch;">
+
+        <table class="w-full border text-sm">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="border px-3 py-2 text-left">Apprenant</th>
+              <th class="border px-3 py-2 text-left w-32">Note</th>
+            </tr>
+          </thead>
+          <tbody id="notesTableBody">
+            <!-- lignes dynamiques -->
+          </tbody>
+        </table>
+
+      </div>
+
+      <!-- FOOTER FIXE -->
+      <div class="p-4 border-t bg-white flex justify-end gap-3"
+           style="flex:0 0 auto;">
+        <button type="button"
+                onclick="closeAddDevoirModal()"
+                class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+          Annuler
+        </button>
+
+        <button type="submit"
+                class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+          Enregistrer le devoir
+        </button>
+      </div>
+
+    </form>
+  </div>
 </div>
+
 
 <div id="editDevoirModal"
      class="hidden fixed inset-0 z-50 bg-gray-900 bg-opacity-50 flex justify-center items-center p-12 bg-black bg-opacity-25 hidden overflow-y-auto overflow-x-hidden items-center smd:inset-0 h-[calc(100%-1rem)] w-100 h-100 mx-auto max-w-full max-h-full">
@@ -1000,7 +1048,7 @@
             document.getElementById('exportForm').submit();
         }
     </script>
- <script>
+ <!-- <script>
     function openRessourceModal(id, nom) {
         document.getElementById('elementId').value = id; // competence_id
         document.getElementById('elementNom').textContent = nom;
@@ -1010,6 +1058,20 @@
     function closeRessourceModal() {
         document.getElementById('ressourceModal').classList.add('hidden');
     }
+</script> -->
+<script>
+  function openRessourceModalFromBtn(btn) {
+    const id = btn.dataset.competenceId;
+    const nom = btn.dataset.competenceNom;
+
+    document.getElementById('elementId').value = id;
+    document.getElementById('elementNom').textContent = nom;
+    document.getElementById('ressourceModal').classList.remove('hidden');
+  }
+
+  function closeRessourceModal() {
+    document.getElementById('ressourceModal').classList.add('hidden');
+  }
 </script>
 
 <script>
@@ -1137,22 +1199,26 @@ function openAddDevoirModal() {
     tbody.innerHTML = '';
     
     // Ajouter les apprenants (utilise tes données existantes)
-    @foreach($inscriptions as $inscription)
-        tbody.innerHTML += `
-            <tr>
-                <td class="border px-2 py-1">
-                     {{ $inscription->apprenant->nom }} {{ $inscription->apprenant->prenom }}
-                </td>
-                <td class="border px-2 py-1 text-center">
-                    <input type="number"
-                           name="notes[{{ $inscription->id }}]"
-                           step="0.01" min="0" max="20"
-                           class="border rounded px-2 py-1 w-24"
-                           placeholder="0.00">
-                </td>
-            </tr>
-        `;
-    @endforeach
+ // Ajouter les apprenants (utilise tes données existantes)
+// ✅ Ajouter TOUS les apprenants de la classe (non paginé)
+@foreach($inscriptionsAll as $inscription)
+    tbody.innerHTML += `
+        <tr>
+            <td class="border px-2 py-1">
+                 {{ $inscription->apprenant->nom }} {{ $inscription->apprenant->prenom }}
+            </td>
+            <td class="border px-2 py-1 text-center">
+                <input type="number"
+                       name="notes[{{ $inscription->id }}]"
+                       step="0.01" min="0" max="20"
+                       class="border rounded px-2 py-1 w-24"
+                       placeholder="0.00">
+            </td>
+        </tr>
+    `;
+@endforeach
+
+
     
     // Ouvrir le modal
     document.getElementById('addDevoirModal').classList.remove('hidden');
@@ -1253,7 +1319,7 @@ function cancelEditNoteInline(devoirId) {
 // Fonction pour supprimer une note individuelle
 
 </script>
-<script>// Fonction pour charger la liste des devoirs avec filtre
+<script>
 function openVoirDevoirModal(ressourceId) {
     currentRessourceId = ressourceId;
     

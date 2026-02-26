@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 use App\Models\Apprenant;
 use App\Models\Commune;
-use App\Models\Etablissement; // Cette ligne doit être ici, avec les autres 'use'
+use App\Models\Etablissement; 
 use App\Models\User;
 use App\Models\Classe;
 use App\Models\AnneeAcademique;
@@ -87,11 +87,9 @@ class ApprenantController extends Controller
         ]);
     
         try {
-            // Création de l'apprenant (on enlève annee_academique_id et classe_id)
+            
             $apprenantData = $request->except(['annee_academique_id', 'classe_id']);
             $apprenant = Apprenant::create($apprenantData);
-    
-            // Génération du matricule
             $apprenant->matricule = $this->genererMatricule($request);
             $apprenant->save();
     

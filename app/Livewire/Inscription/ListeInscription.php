@@ -163,7 +163,7 @@ public function closeAbsenceClasseModal()
         $this->loadApprenants();
     }
 
-    // ✅ IMPORTANT : le hook doit correspondre au nom de la propriété (selectedsemestre)
+  
     public function updatedSelectedsemestre($value)
     {
         Session::put('selectedsemestre', $value);
@@ -354,7 +354,7 @@ public function closeAbsenceClasseModal()
         });
 
         session()->flash('success', 'Notes de composition enregistrées avec succès.');
-        $this->showCompositionModal = true;
+        $this->showCompositionModal = false;
     }
 
     public function render()

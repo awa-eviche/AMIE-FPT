@@ -19,7 +19,7 @@
               class="text-red-600 font-bold text-lg leading-none">✕</button>
     </div>
 
-    {{-- MESSAGE SUCCESS / ERROR --}}
+   
     <div class="px-4 pt-3" style="flex:0 0 auto;">
       @if (session()->has('success'))
         <div class="flex items-center p-3 text-sm text-green-800 border border-green-300 rounded-lg bg-green-50 shadow-sm" role="alert">
@@ -87,24 +87,40 @@
       </tr>
     </thead>
     <tbody class="bg-white">
-      @foreach($competencesGenerales as $competence)
-        @foreach($competence->ressources as $ressource)
-          @php($mcc = $mccsApc[$insc->id][$ressource->id] ?? 0)
-          <tr>
-            <td class="border px-4 py-2 font-bold">{{ $competence->nom }}</td>
+     @foreach($competencesGenerales as $competence)
+
+    @php
+        $ressources = $competence->ressources;
+        $rowspan = $ressources->count();
+    @endphp
+
+    @foreach($ressources as $index => $ressource)
+        @php($mcc = $mccsApc[$insc->id][$ressource->id] ?? 0)
+
+        <tr>
+            @if($index == 0)
+                <td rowspan="{{ $rowspan }}" class="border px-4 py-2 font-bold align-middle">
+                    {{ $competence->nom }}
+                </td>
+            @endif
+
             <td class="border px-4 py-2">{{ $ressource->nom }}</td>
+
             <td class="border px-4 py-2 text-center font-bold text-green-700">
-              {{ number_format((float)$mcc, 2) }}
+                {{ number_format((float)$mcc, 2) }}
             </td>
+
             <td class="border px-4 py-2 text-center">
-              <input type="number"
-                     wire:model.defer="compositionsApc.{{ $insc->id }}.{{ $ressource->id }}"
-                     min="0" max="20" step="0.5"
-                     class="border border-gray-300 p-1 w-24 text-center">
+                <input type="number"
+                       wire:model.defer="compositionsApc.{{ $insc->id }}.{{ $ressource->id }}"
+                       min="0" max="20" step="0.5"
+                       class="border border-gray-300 p-1 w-24 text-center">
             </td>
-          </tr>
-        @endforeach
-      @endforeach
+        </tr>
+    @endforeach
+
+@endforeach
+
     </tbody>
   </table>
 @endif
@@ -128,7 +144,9 @@
         @foreach($competence->ressources as $ressource)
           @php($mcc = $mccsApc[$insc->id][$ressource->id] ?? 0)
           <tr>
+            
             <td class="border px-2 py-2 font-bold text-center">{{ $competence->nom }}</td>
+            
             <td class="border px-2 py-2 text-center">{{ $ressource->nom }}</td>
             <td class="border px-2 py-2 text-center font-bold text-green-700">
               {{ number_format((float)$mcc, 2) }}

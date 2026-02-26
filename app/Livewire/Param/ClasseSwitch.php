@@ -46,10 +46,23 @@ class ClasseSwitch extends Component
 
     public $competencesGenerales = [];
     public $competencesParticulieres = [];
- public $showAbsenceClasseModal = false;
-public $apprenantsAbsModal = [];
+    public $showAbsenceClasseModal = false;
+    public $apprenantsAbsModal = [];
+
+public $showNotesModal = false;
+
+public $notesApprenantId = ''; // ✅ filtre apprenant (inscription_id)
+
+public $notesCompetenceType = '';
+public $notesCompetenceName = '';
+public $notesCompetenceOptions = [];
+public $notesCompetenceFilter = null;
 
 
+
+
+
+  // liste dynamique des noms
 
 #[On('open-absence-classe')]
 public function openAbsenceClasseModal()
@@ -71,6 +84,178 @@ public function openAbsenceClasseModal()
 public function closeAbsenceClasseModal()
 {
     $this->showAbsenceClasseModal = false;
+}
+
+public function openNotesModal()
+{
+    if (!$this->classe || !$this->annee_academique_id) {
+        session()->flash('error', 'Veuillez choisir une classe et une année académique.');
+        return;
+    }
+
+    $this->apcSemestre = $this->apcSemestre ?: session()->get('selectedsemestre1');
+    if (!$this->apcSemestre) {
+        session()->flash('error', 'Veuillez sélectionner un semestre.');
+        return;
+    }
+
+    // ✅ reset filtre apprenant
+    $this->notesApprenantId = '';
+
+    // 1) Apprenants
+    $this->apprenantsApcModal = Inscription::with('apprenant')
+        ->where('classe_id', $this->classe)
+        ->where('annee_academique_id', $this->annee_academique_id)
+        ->orderBy('id')
+        ->get();
+
+    $niveauId = Classe::whereKey($this->classe)->value('niveau_etude_id');
+    $user = auth()->user();
+
+    // 2) Compétences (formateur => uniquement ses compétences / non-formateur => toutes)
+ $classeId = $this->classe;
+
+$competencesQuery = Competence::query()
+    ->where('niveau_etude_id', $niveauId)
+    ->with(['ressources' => function ($q) use ($classeId) {
+        $q->where('classe_id', $classeId);
+    }]);
+
+
+
+    if ($user && $user->hasRole('formateur')) {
+        $competenceIds = DB::table('classe_formateur_competence')
+            ->where('classe_id', $this->classe)
+            ->where('formateur_id', $user->id)
+            ->pluck('competence_id')
+            ->toArray();
+
+        if (empty($competenceIds)) {
+            session()->flash('error', 'Aucune compétence ne vous est assignée dans cette classe.');
+            return;
+        }
+
+        $competencesQuery->whereIn('id', $competenceIds);
+    }
+
+    $competences = $competencesQuery->get();
+
+    $this->competencesGenerales = $competences->where('type', 'generale')->values();
+    $this->competencesParticulieres = $competences->where('type', 'particuliere')->values();
+
+    // ✅ charge les notes (tes fonctions existantes)
+    $this->loadApcMccAndCompositions();
+
+    $this->showNotesModal = true;
+}
+
+public function closeNotesModal()
+{
+    $this->showNotesModal = false;
+
+    // ✅ reset filtre
+    $this->notesApprenantId = '';
+    // dans openNotesModal()
+
+
+}
+
+
+
+
+private function buildApcDisciplines(): void
+{
+    $build = function ($competences) {
+        $map = [];
+
+        foreach ($competences as $comp) {
+            foreach (($comp->ressources ?? collect()) as $res) {
+                $rid = (int) $res->id;
+
+                if (!isset($map[$rid])) {
+                    $map[$rid] = [
+                        'ressource_id'    => $rid,
+                        'discipline'      => (string) $res->nom,
+                        'competence_ids'  => [],
+                        'competence_noms' => [],
+                    ];
+                }
+
+                $cid = (int) $comp->id;
+                if (!in_array($cid, $map[$rid]['competence_ids'], true)) {
+                    $map[$rid]['competence_ids'][]  = $cid;
+                    $map[$rid]['competence_noms'][] = (string) $comp->nom;
+                }
+            }
+        }
+
+        $items = array_values($map);
+        usort($items, fn($a, $b) => strcmp($a['discipline'], $b['discipline']));
+        return $items;
+    };
+
+    $this->apcDisciplinesGenerales     = $build($this->competencesGenerales);
+    $this->apcDisciplinesParticulieres = $build($this->competencesParticulieres);
+}
+
+public function updatedNotesApprenantId()
+{
+    $this->notesCompetenceName = '';
+    $this->rebuildNotesCompetenceOptions();
+}
+
+public function updatedNotesCompetenceType()
+{
+    $this->notesCompetenceName = '';
+    $this->rebuildNotesCompetenceOptions();
+}
+
+private function rebuildNotesCompetenceOptions(): void
+{
+    $iid  = $this->notesApprenantId ? (int) $this->notesApprenantId : 0;
+    $type = $this->notesCompetenceType ? trim((string) $this->notesCompetenceType) : '';
+
+    $this->notesCompetenceOptions = [];
+
+    if (!$iid || !in_array($type, ['generale', 'particuliere'], true)) {
+        return;
+    }
+
+    $competences = ($type === 'generale')
+        ? ($this->competencesGenerales ?? collect())
+        : ($this->competencesParticulieres ?? collect());
+
+    $iidKey = (string)$iid;
+    $names = [];
+
+    foreach ($competences as $comp) {
+        $compNom = trim((string) ($comp->nom ?? ''));
+        if ($compNom === '') continue;
+
+        $hasNote = false;
+
+        foreach (($comp->ressources ?? collect()) as $res) {
+            $rid = (int) ($res->id ?? 0);
+            if (!$rid) continue;
+
+            $ridKey = (string)$rid;
+
+            $mcc = $this->mccsApc[$iidKey][$ridKey] ?? null;
+            $compOrInt = $this->compositionsApc[$iidKey][$ridKey] ?? null;
+
+            if (is_numeric($mcc) || is_numeric($compOrInt)) {
+                $hasNote = true;
+                break;
+            }
+        }
+
+        if ($hasNote) $names[] = $compNom;
+    }
+
+    $names = array_values(array_unique($names));
+    sort($names, SORT_NATURAL | SORT_FLAG_CASE);
+
+    $this->notesCompetenceOptions = $names;
 }
 
 
@@ -113,7 +298,7 @@ public function closeAbsenceClasseModal()
             ->find($this->classe);
 
         $this->loadApprenants();
-        $this->resetSelection();
+        $this->resetSelection();  
     }
 
  
@@ -129,7 +314,14 @@ public function closeAbsenceClasseModal()
         $this->resetSelection();
     }
 
-   
+   public function goEvaluationSomative()
+{
+    session()->put('evaluation_classe_id', $this->classe);
+    session()->put('evaluation_annee_academique_id', $this->annee_academique_id);
+
+    return redirect()->route('evaluation.sommative.page');
+}
+
     public function updatedAnneeAcademiqueId()
     {
         
@@ -200,9 +392,11 @@ public function closeAbsenceClasseModal()
             return;
         }
     }
+$query = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
+    ->with(['ressources' => function ($q) use ($classe) {
+        $q->where('classe_id', $classe->id);
+    }]);
 
-    $query = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
-        ->with('ressources'); // ✅ plus de critères
 
     if ($user->hasRole('formateur')) {
         $query->whereIn('id', $competenceIds);
@@ -286,7 +480,7 @@ public function closeAbsenceClasseModal()
 
     
 
-   public function openApcClasseModal()
+public function openApcClasseModal()
 {
     if (!$this->classe || !$this->annee_academique_id) {
         session()->flash('error', 'Veuillez choisir une classe et une année académique.');
@@ -302,40 +496,46 @@ public function closeAbsenceClasseModal()
         ->orderBy('id')
         ->get();
 
-    // 2) Compétences assignées au formateur
     $competenceIds = DB::table('classe_formateur_competence')
         ->where('classe_id', $this->classe)
         ->where('formateur_id', $user->id)
         ->pluck('competence_id')
         ->toArray();
 
+    
+    $this->showApcClasseModal = true;
+
     if (empty($competenceIds)) {
         session()->flash('error', 'Aucune compétence ne vous est assignée dans cette classe.');
+
+        // On vide les collections pour éviter erreurs
+        $this->competencesGenerales = collect();
+        $this->competencesParticulieres = collect();
+
         return;
     }
 
-    
+    $classeId = $this->classe;
+
     $competences = Competence::query()
         ->whereIn('id', $competenceIds)
-        ->with('ressources')
+        ->with(['ressources' => function ($q) use ($classeId) {
+            $q->where('classe_id', $classeId);
+        }])
         ->get();
 
     $this->competencesGenerales = $competences->where('type', 'generale')->values();
     $this->competencesParticulieres = $competences->where('type', 'particuliere')->values();
 
-  
     $this->mccsApc = [];
     $this->compositionsApc = [];
     $this->acquisApc = [];
 
-    
-    $this->showApcClasseModal = true;
-
-    
     if (!empty($this->apcSemestre)) {
         $this->loadApcMccAndCompositions();
     }
 }
+
 
 
     public function closeApcClasseModal()
@@ -343,18 +543,36 @@ public function closeAbsenceClasseModal()
         $this->showApcClasseModal = false;
     }
 
-    public function updatedApcSemestre($value)
+  public function updatedApcSemestre($value)
 {
-    if (!$this->showApcClasseModal) return;
+    if (!$this->showApcClasseModal && !$this->showNotesModal) return;
 
-    // reset si vide
     if (!$value) {
         $this->mccsApc = [];
+        $this->compositionsApc = [];
         return;
     }
+$classeId = $this->classe;
+    $user = auth()->user();
 
+    $competenceIds = DB::table('classe_formateur_competence')
+        ->where('classe_id', $classeId)
+        ->where('formateur_id', $user->id)
+        ->pluck('competence_id')
+        ->toArray();
+
+    $competences = Competence::query()
+        ->whereIn('id', $competenceIds)
+        ->with(['ressources' => function ($q) use ($classeId) {
+            $q->where('classe_id', $classeId);
+        }])
+        ->get();
+
+    $this->competencesGenerales = $competences->where('type', 'generale')->values();
+    $this->competencesParticulieres = $competences->where('type', 'particuliere')->values();
     $this->loadApcMccAndCompositions();
 }
+
 
 
 private function loadApcMccAndCompositions()
@@ -429,27 +647,18 @@ private function loadApcMccAndCompositions()
 
    
     $evalTable = (new Evalute)->getTable();
+    $ev = Evalute::query()
+    ->where('semestre', (int) $this->apcSemestre)
+   
+    ->whereIn('inscription_id', $inscriptionIds)
+    ->whereIn('ressource_id', $ressourceIds);
 
-    $ev = Evalute::query()->where('semestre', (int) $this->apcSemestre);
+$evals = $ev->get(['inscription_id','ressource_id','composition']);
 
-    if (Schema::hasColumn($evalTable, 'classe_id')) {
-        $ev->where('classe_id', (int) $this->classe);
-    }
-    if (Schema::hasColumn($evalTable, 'inscription_id')) {
-        $ev->whereIn('inscription_id', $inscriptionIds);
-    }
-    if (Schema::hasColumn($evalTable, 'ressource_id')) {
-        $ev->whereIn('ressource_id', $ressourceIds);
-    }
+foreach ($evals as $e) {
+    $this->compositionsApc[$e->inscription_id][$e->ressource_id] = $e->composition;
+}
 
-    $evals = $ev->get();
-
-    foreach ($evals as $e) {
-        if (!isset($e->inscription_id) || !isset($e->ressource_id)) continue;
-
-        $this->compositionsApc[$e->inscription_id][$e->ressource_id] = $e->composition ?? null;
-        $this->acquisApc[$e->inscription_id][$e->ressource_id] = (bool)($e->acquis ?? false);
-    }
 }
 
 public function saveApcClasse()
@@ -529,7 +738,6 @@ public function saveApcClasse()
         }
     }
 
-    // ✅ précharger les evalutes existants (pour ne PAS écraser une ancienne composition générale)
     $existing = Evalute::query()
         ->where('semestre', (int)$this->apcSemestre)
         ->whereIn('inscription_id', $inscriptionIds)
