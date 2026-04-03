@@ -51,5 +51,9 @@ class Competence extends Model
 {
     return $this->hasMany(Critere::class);
 }
+   public function ressources()
+    {
+        return $this->hasMany(Ressource::class, 'competence_id');
+    }
 
 }

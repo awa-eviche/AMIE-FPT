@@ -26,7 +26,18 @@
         width: 100%;
         border-collapse: collapse;
     }
-
+ .title-band{
+      width: 100%;
+      background-color: #d9d9d9;
+      border: 1px solid #000;
+      padding: 6px 10px;
+      margin: 6px 0 10px 0;
+      font-size: 18px;   
+      font-weight: 700;
+      text-align: center;
+      color: #000;
+    }
+    
     .head {
         display: block;
     }
@@ -77,7 +88,7 @@
     </p>
 
     <h2 style="font-size:16px; margin:8px 0 2px 0; font-weight:bold;">
-        Ministère de la Formation Professionnelle et Technique
+        Ministère de l'Emploi de la Formation Professionnelle et Technique
     </h2>
 
     <div style="width:20%; border-bottom:2px solid #000; margin:8px auto;"></div>
@@ -100,7 +111,7 @@
     </p>
 
     <p style="margin:2px 0; font-size:13px;">
-        Semestre <strong class="bold-exo">[SEMESTRE]</strong>
+        Semestre <strong class="bold-exo">1</strong>
     </p>
     <p style="margin:2px 0; font-size:13px;">
        Année académique : <strong class="bold-exo">[ANNEESCOLAIRE]</strong>
@@ -110,20 +121,9 @@
 
 </header>
 
-<div style="
-    width:100%;
-    background-color: grey;
-    border:1px solid #000;
-    /* padding:8px 12px;
-    margin:10px 0 15px 0; */
-    font-size:24px;
-    font-weight:bold;
-    text-align:center;
-    color:black; 
-">
-    <span class="bold-exo"> Relevé de notes </span>
-   
-</div>
+  <div class="title-band">
+    <span class="bold-exo">Relevé de notes</span>
+  </div>
 
 
 
@@ -143,10 +143,12 @@
     <!-- <tr>
       <td colspan="3" class="section-title">RESSOURCES</td>
     </tr> -->
-    <tr>
-      <td class="border-td bg-grey text-light bold-exo text-center">Ressource</td>
-      <td class="border-td bg-grey text-light bold-exo text-center">Note /20</td>
-      <td class="border-td bg-grey text-light bold-exo text-center">Appréciation</td>
+    <tr style="background-color: #d9d9d9;">
+        <td class="border-td bg-grey text-light bold text-center"style="background-color: #d9d9d9; font-weight: bold;">Compétence</td>
+      <td class="border-td bg-grey text-light bold text-center"style="background-color: #d9d9d9; font-weight: bold;">Discipline</td>
+      <td class="border-td bg-grey text-light bold text-center"style="background-color: #d9d9d9; font-weight: bold;">MCC</td>
+      <td class="border-td bg-grey text-light bold text-center"style="background-color: #d9d9d9; font-weight: bold;">Intégration</td>
+      <td class="border-td bg-grey text-light bold text-center"style="background-color: #d9d9d9; font-weight: bold;">Appréciation</td>
     </tr>
    
     [BODYRESSOURCE]
@@ -155,30 +157,19 @@
 
 
  <table class="full-table" cellspacing="0" style="margin-top: 2rem;">
+  <tr style="background-color: #d9d9d9;">
+    <td class="border-td bg-grey bold-exo centered"style="background-color: #d9d9d9; font-weight: bold;">Compétence</td>
+    <td class="border-td bg-grey bold-exo centered"style="background-color: #d9d9d9; font-weight: bold;">Discipline</td>
+    <td class="border-td bg-grey bold-exo centered"style="background-color: #d9d9d9; font-weight: bold;">MCC</td>
+    <td class="border-td bg-grey bold-exo centered"style="background-color: #d9d9d9; font-weight: bold;">Intégration</td>
+    <td class="border-td bg-grey bold-exo centered"style="background-color: #d9d9d9; font-weight: bold;">Appréciation</td>
+  </tr>
 
-    <tr>
-        <td class="border-td bg-grey text-light bold-exo text-center" rowspan="2">Compétence</td>
-        <td class="border-td bg-grey text-light bold-exo text-center" rowspan="2">Élément</td>
-        <td class="border-td bg-grey text-light bold-exo text-center" rowspan="2">Seuil de réussite</td>
-
-        <td class="border-td bg-grey text-light bold-exo text-center" colspan="2">
-            DÉCISION
-        </td>
-
-        <td class="border-td bg-grey text-light bold-exo center" rowspan="2">Appréciation</td>
-    </tr>
-
-    <tr>
-        <td class="border-td bg-grey text-light bold-exo text-center">ACQUIS</td>
-        <td class="border-td bg-grey text-light bold-exo text-center">NON ACQUIS</td>
-    </tr>
-
-    [BODYCOMP]
-
+  [BODYCOMP]
 </table>
 
 
-
+ 
 
 <table class="full-table" style="margin-top: 20px;" cellspacing="0">
     <tr>
@@ -186,12 +177,12 @@
         <td style="width: 50%; vertical-align: top;">
             <table class="full-table" cellspacing="0">
                 <tr>
-                    <td class="border-td bg-grey bold-exo">Absences</td>
+                    <td class="border-td bg-grey bold-exo"style="background-color: #d9d9d9; font-weight: bold;">Absences</td>
                     <td class="border-td" align="center">[NB_ABSENCES]</td>
                 </tr>
              
                 <tr>
-                    <td class="border-td bg-grey bold-exo">Retards</td>
+                    <td class="border-td bg-grey bold-exo"style="background-color: #d9d9d9; font-weight: bold;">Retards</td>
                     <td class="border-td" align="center">[NB_RETARDS]</td>
                 </tr>
             </table>
@@ -201,16 +192,16 @@
         <td style="width: 50%; vertical-align: top;">
             <table class="full-table" cellspacing="0">
                 <tr>
-                    <td class="border-td bg-grey bold-exo">Travail satisfaisant</td>
+                    <td class="border-td bg-grey bold-exo"style="background-color: #d9d9d9; font-weight: bold;">Travail satisfaisant</td>
                     <td class="border-td"></td>
                 </tr>
              
                 <tr>
-                    <td class="border-td bg-grey bold-exo">Doit redoubler d'effort</td>
+                    <td class="border-td bg-grey bold-exo"style="background-color: #d9d9d9; font-weight: bold;">Doit redoubler d'effort</td>
                     <td class="border-td"></td>
                 </tr>
                 <tr>
-                    <td class="border-td bg-grey bold-exo">Passable</td>
+                    <td class="border-td bg-grey bold-exo"style="background-color: #d9d9d9; font-weight: bold;">Passable</td>
                     <td class="border-td"></td>
                 </tr>
             </table>

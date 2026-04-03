@@ -25,7 +25,7 @@
     $user = auth()->user();
 @endphp
 
-@if($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') )
+@if($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude') )
             <a href="{{route('classe.create')}}" class="px-3 rounded-md py-3 flex text-white text-xs font-bold text-center bg-orange-400 items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
                     <g id="ic-receipt-24px 1" clip-path="url(#clip0_705_6988)">
@@ -88,9 +88,6 @@
         </div>
     </div>
 
-
-
-
     <div class="w-full bg-transparent rounded-lg shadow-xs p-0 flex flex-wrap">
 
         @forelse ($classes as $classe)
@@ -118,21 +115,54 @@
                 <hr>
                 <div class="mt-4">
                     <div class="flex justify-between items-center mt-3">
-                        <a href="{{route('classe.edit',$classe->id)}}" class="flex items-center px-1 rounded-md py-1 border flex text-orange-600 text-sm text-center bg-white border-orange-600 hover:bg-orange-600 hover:text-white">
+
+                        @php
+                         $user = auth()->user();
+                         @endphp
+
+               @if (!$user->hasAnyRole(['apprenant', 'formateur']))
+     <a href="{{route('classe.edit',$classe->id)}}" class="flex items-center px-1 rounded-md py-1 border flex text-orange-600 text-sm text-center bg-white border-orange-600 hover:bg-orange-600 hover:text-white">
                             <i class="fa fa-edit"></i>
                             <span class="mx-2">Modifier</span>
                         </a>
+                        @endif
                         @if(!$classe->statut)
                         <a href="{{ route('classe.validate', $classe->id) }}" class="flex items-center px-1 rounded-md py-1 border flex text-purple-600 text-sm text-center bg-white border-purple-600 hover:bg-purple-600 hover:text-white">
                             <i class="fa fa-check"></i>
                             <span class="mx-2">Lancer</span>
                         </a>
                         @endif
+                        @if ($user->hasAnyRole(['apprenant', 'formateur','chef_de_travaux','chef_etablissement']))
+                        <a href="#" class="flex items-center px-1 rounded-md py-1 border flex text-orange-600 text-sm text-center bg-white border-orange-600 hover:bg-orange-600 hover:text-white disabled">
+                            <i class="fa fa-edit"></i>
+                            <span class="mx-2">Accéder à mes cours E-jang</span>
+                        </a>
+                        @endif
                         <a href="{{route('classe.show',$classe->id)}}" class="flex items-center px-1 rounded-md py-1 border flex text-green-600 text-sm text-center bg-white border-green-600 hover:bg-green-600 hover:text-white">
                             <i class="fa fa-eye"></i>
                             <span class="mx-2">Détails</span>
-                        </a>
-                    </div>
+     </a>
+      @if ($user->hasRole('apprenant'))
+    @if ($classe->modalite === 'PPO')
+        <a href="#" 
+           onclick="ouvrirModalDevoirsPPO({{ auth()->user()->inscription_id }})" 
+           class="flex items-center px-1 rounded-md py-1 border text-blue-600 text-sm text-center bg-white border-blue-600 hover:bg-blue-600 hover:text-white">
+            <i class="fa fa-check"></i>
+            <span class="mx-2">Voir mes devoirs</span>
+        </a>
+    @elseif ($classe->modalite === 'APC')
+        <a href="#" 
+           onclick="ouvrirModalDevoirsAPC({{ auth()->user()->inscription_id }})" 
+           class="flex items-center px-1 rounded-md py-1 border text-blue-600 text-sm text-center bg-white border-blue-600 hover:bg-blue-600 hover:text-white">
+            <i class="fa fa-check"></i>
+            <span class="mx-2">Voir mes devoirs</span>
+        </a>
+    @endif
+   @endif
+   @if(auth()->user()->hasRole('apprenant'))
+      @include('livewire.classe.devoirPPO')
+   @endif
+     </div>
                 </div>
             </div>
         </div>
@@ -141,8 +171,7 @@
             <h3 class="font-bold text-xl py-4 text-center">Aucune donnée disponible</h3>
         </div>
         @endforelse
-
-    </div>
+      </div>
 
 
     <div class="flex justify-start items-center mt-5">
@@ -158,4 +187,8 @@
             </svg>
         </button>
     </div>
+    @if(auth()->user()->hasRole('apprenant'))
+    @include('livewire.classe.devoirAPC')
+   @endif
 </div>
+

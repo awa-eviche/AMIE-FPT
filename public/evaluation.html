@@ -1,160 +1,205 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <title>Bulletin de note</title>
-    <style>
-        body {
-            font-family: "ExoRegular", sans-serif !important;
-            margin: 10px;
-            padding: 0;
-            font-size: 12px;
-            box-sizing: border-box;
-        }
-        .bold-exo {
-            font-family: ExoBold, sans-serif !important;
-            font-weight: bold;
-        }
-        .border-td {
-            border: 1px solid black;
-            padding: 4px;
-        }
-        .bg-grey {
-            background-color: grey;
-            color: black;
-        }
-        .full-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .centered {
-            text-align: center;
-        }
-        .dotted-line {
-            width: 15%;
-            height: 1px;
-            border-bottom: 1px dotted black;
-            margin: 5px auto;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 10px;
-            font-size: 10px;
-        }
-        .half-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-    </style>
-</head>
-<body>
-    <!-- En-tête -->
-    <div class="centered">
-        <strong>MINISTERE DE l'EMPLOI DE LA FORMATION PROFESSIONNELLE ET TECHNIQUE</strong>
-    </div>
-    <div class="dotted-line"></div>
-    <div class="centered">
-        <strong class="bold-exo">[EFPT]</strong><br>
-        <strong>TEL :</strong> <strong class="bold-exo">[EFPTTEL]</strong>
-    </div>
-    <div class="dotted-line"></div>
-    <div class="centered">
-        Classe : <strong class="bold-exo">[CLASSE]</strong>
-    </div>
-    <div class="dotted-line"></div>
-    <div class="border-td bg-grey bold-exo centered">
-        Relevé de Notes - Semestre <strong>[SEMESTRE]</strong><br>
-        Année Scolaire : <strong>[ANNEESCOLAIRE]</strong>
-    </div>
-    <div>
-        <strong class="bold-exo">Prénom & Nom :</strong> <span>[USER]</span><br>
-        <strong class="bold-exo">Date et Lieu de Naissance :</strong> <span>[DATENAISSANCE]</span> à <span>[LIEUNAISSANCE]</span><br>
-        <strong class="bold-exo">Téléphone :</strong> <span>[TEL]</span><br>
-        
-        <strong class="bold-exo">Matricule :</strong> <span>[MATRICULE]</span>
-    </div>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <title>Bulletin de note</title>
 
-    <!-- Tableau des matières -->
-    <table class="full-table" cellspacing="0" style="margin-top: 10px;">
-        <tr>
-            <td class="border-td bg-grey bold-exo">Matières</td>
-            <td class="border-td bg-grey bold-exo">Coefficient</td>
-            <td class="border-td bg-grey bold-exo">Contrôle continu</td>
-            <td class="border-td bg-grey bold-exo">Composition</td>
-            <td class="border-td bg-grey bold-exo">Moyenne</td>
-            <td class="border-td bg-grey bold-exo">Appréciation</td>
-        </tr>
-        [BODY]
-       <tr>
-    <td colspan="2" class="border-td bg-grey bold-exo" style="text-align: left;">
-        Moyenne Semestrielle : [MOYENNE]
-    </td>
-    <td colspan="2" class="border-td bg-grey bold-exo" style="text-align: center;">
-        Rang : [RANG]
-    </td>
-    <td colspan="2" class="border-td bg-grey bold-exo" style="text-align: right;">
-        Moyenne de la classe : [MOYENNE_CLASSE]
-    </td>
-</tr>
+  <style>
+  
+    @page { size: A4 portrait; margin: 6mm 8mm; }
 
-       
+    body{
+      font-family: "DejaVu Sans", sans-serif !important; /* accents OK dompdf */
+      margin: 0;
+      padding: 0;
+      font-size: 10.5px; /* compact */
+      line-height: 1.2;
+      box-sizing: border-box;
+    }
 
+    .bold-exo{
+      font-family: "DejaVu Sans", sans-serif !important;
+      font-weight: 700 !important;
+    }
 
-    </table>
-       [TABLE_MOYENNES]
+    /* Tables */
+    .full-table, .half-table{
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed; /* évite débordements */
+    }
 
-    <!-- Bloc Absences + Appréciation dans une seule table -->
-    <table class="full-table" cellspacing="0" style="margin-top: 10px;">
-        <tr>
-            <!-- Colonne Absences -->
-            <td style="width: 50%; vertical-align: top;">
-                <table class="half-table" cellspacing="0">
-                    <tr>
-                        <td class="border-td bg-grey bold-exo">Absences</td>
-                        <td class="border-td">[NB_ABSENCES]</td>
-                    </tr>
-                   
-                    <tr>
-                        <td class="border-td bg-grey bold-exo">Retards</td>
-                        <td class="border-td">[NB_RETARDS]</td>
-                    </tr>
-                </table>
-            </td>
+    .border-td{
+      border: 1px solid #000;
+      padding: 2px;            /* compact */
+      vertical-align: top;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
 
-            <!-- Colonne Appréciation -->
-            <td style="width: 50%; vertical-align: top;">
-                <table class="half-table" cellspacing="0">
-                    
-                     <tr>
-                        <td class="border-td bg-grey bold-exo">Travail satisfaisant</td>
-                        <td class="border-td"></td>
-                    </tr>
-                     <tr>
-                        <td class="border-td bg-grey bold-exo">Admise en classe supérieur</td>
-                        <td class="border-td"></td>
-                    </tr>
-                    <tr>
-                        <td class="border-td bg-grey bold-exo">Doit redoubler</td>
-                        <td class="border-td"></td>
-                    </tr>
-                     <tr>
-                        <td class="border-td bg-grey bold-exo">Passable</td>
-                        <td class="border-td"></td>
-                    </tr>
-                   
-                </table>
-            </td>
-        </tr>
-    </table>
+    .bg-grey{
+      background-color: #d9d9d9;
+      color: #000;
+    }
 
-    <!-- Signatures -->
-    <table class="full-table" style="margin-top: 15px;">
-        <tr>
-            <td class="bold-exo" style="text-align: left;">Le [DATE]</td>
-            <td class="bold-exo" style="text-align: right;">Le Chef d'Établissement</td>
-        </tr>
-    </table>
+    .centered{ text-align: center; white-space: nowrap; }
+
+    
+    table, tr, td { page-break-inside: avoid; }
+
+    /* Header compact */
+    h1,h2,p{ margin: 2px 0; padding: 0; }
+
+    .sep-solid{
+      width: 22%;
+      border-bottom: 2px solid #000;
+      margin: 4px auto;
+    }
+    .sep-dash{
+      width: 22%;
+      border-bottom: 2px dashed #000;
+      margin: 4px auto;
+    }
+
+    .title-band{
+      width: 100%;
+      background-color: #d9d9d9;
+      border: 1px solid #000;
+      padding: 6px 10px;
+      margin: 6px 0 10px 0;
+      font-size: 18px;   
+      font-weight: 700;
+      text-align: center;
+      color: #000;
+    }
+
+    .infos{
+      margin-top: 4px;
+      margin-bottom: 6px;
+    }
 
    
+    .table-matieres{
+      max-height: 430px;
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header style="text-align:center; margin-bottom:8px;">
+    <img src="[LOGO]" style="width:45px; height:auto; margin-bottom:4px;" alt="Logo">
+
+    <h1 style="font-size:18px; font-weight:bold;">République du Sénégal</h1>
+
+    <p style="font-size:12px;"><em>Un Peuple – Un But – Une Foi</em></p>
+
+    <h2 style="font-size:13px; font-weight:bold;">
+      Ministère de l'Emploi et de la Formation Professionnelle et Technique
+    </h2>
+
+    <div class="sep-solid"></div>
+
+    <p style="font-size:12px;">
+      <strong class="bold-exo">[EFPT]</strong><br>
+      <strong>Tél :</strong> <strong class="bold-exo">[EFPTTEL]</strong>
+      &nbsp;&nbsp;
+      <strong>Email :</strong> <strong class="bold-exo">[EFPTMAIL]</strong>
+    </p>
+
+    <div class="sep-dash"></div>
+
+    <p style="font-size:12px;">
+      Classe : <strong class="bold-exo">[CLASSE]</strong>
+      &nbsp; • &nbsp;
+      Semestre <strong class="bold-exo">[SEMESTRE]</strong>
+      &nbsp; • &nbsp;
+      Année académique : <strong class="bold-exo">[ANNEESCOLAIRE]</strong>
+    </p>
+
+    <div class="sep-dash"></div>
+  </header>
+
+  <div class="title-band">
+    <span class="bold-exo">Bulletin de notes</span>
+  </div>
+
+  <div class="infos">
+    <strong class="bold-exo">Prénom & Nom :</strong> <span class="bold-exo">[USER]</span><br>
+    <strong class="bold-exo">Date et lieu de naissance :</strong> <span class="bold-exo">[DATENAISSANCE]</span>
+    à <span class="bold-exo">[LIEUNAISSANCE]</span><br>
+    <strong class="bold-exo">Téléphone :</strong> <span class="bold-exo">[TEL]</span>
+    &nbsp; • &nbsp;
+    <strong class="bold-exo">Matricule :</strong> <span class="bold-exo">[MATRICULE]</span>
+  </div>
+
+  <!-- ✅ Tableau matières (contenu compact + contenu dans une zone) -->
+  <div class="table-matieres">
+    <table class="full-table" cellspacing="0">
+      <tr>
+        <td class="border-td bg-grey bold-exo">Matières</td>
+        <td class="border-td bg-grey bold-exo centered">Coef</td>
+        <td class="border-td bg-grey bold-exo centered">CC</td>
+        <td class="border-td bg-grey bold-exo centered">Comp</td>
+        <td class="border-td bg-grey bold-exo centered">Moy</td>
+        <td class="border-td bg-grey bold-exo centered">Appréciation</td>
+      </tr>
+
+      [BODY]
+
+      <tr>
+        <td colspan="2" class="border-td bg-grey bold-exo" style="text-align:left;">
+          Moyenne : [MOYENNE]
+        </td>
+        <td colspan="2" class="border-td bg-grey bold-exo" style="text-align:center;">
+          Rang : [RANG]
+        </td>
+        <td colspan="2" class="border-td bg-grey bold-exo" style="text-align:right;">
+          Classe : [MOYENNE_CLASSE]
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ✅ Tableau moyennes (uniquement S2) -->
+  [TABLE_MOYENNES]
+
+  <!-- ✅ Absences / Retards + Appréciations -->
+  <table class="full-table" cellspacing="0" style="margin-top:8px;">
+    <tr>
+      <td style="width:50%; vertical-align:top;">
+        <table class="half-table" cellspacing="0">
+          <tr>
+            <td class="border-td bg-grey bold-exo">Absences </td>
+            <td class="border-td">[NB_ABSENCES]</td>
+          </tr>
+          <tr>
+            <td class="border-td bg-grey bold-exo">Retards </td>
+            <td class="border-td">[NB_RETARDS]</td>
+          </tr>
+        </table>
+      </td>
+
+      <td style="width:50%; vertical-align:top;">
+        <table class="half-table" cellspacing="0">
+          <tr><td class="border-td bg-grey bold-exo">Travail satisfaisant</td><td class="border-td"></td></tr>
+          <tr><td class="border-td bg-grey bold-exo">Admis(e) en classe supérieure</td><td class="border-td"></td></tr>
+          <tr><td class="border-td bg-grey bold-exo">Doit redoubler</td><td class="border-td"></td></tr>
+          <tr><td class="border-td bg-grey bold-exo">Passable</td><td class="border-td"></td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Signatures -->
+  <table class="full-table" style="margin-top:10px;">
+    <tr>
+      <td class="bold-exo" style="text-align:left;">Le [DATE]</td>
+      <td class="bold-exo" style="text-align:right;">Le Chef d'Établissement</td>
+    </tr>
+  </table>
+
 </body>
 </html>

@@ -52,10 +52,10 @@ public function niveauEtude()
 }
 
 
-public function ressource()
-{
-    return $this->hasOne(Ressource::class,'element_competence_id');
-}
+// public function ressource()
+// {
+//     return $this->hasOne(Ressource::class,'element_competence_id');
+// }
 
 
 }

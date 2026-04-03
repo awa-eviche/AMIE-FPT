@@ -53,7 +53,10 @@ use App\Http\Controllers\IndicateurController;
 use App\Http\Controllers\SuiviIndicateurController;
 use App\Http\Controllers\TypeIndicateurController;
 use App\Http\Controllers\FaqController;
+use App\Http\Controllers\DevoirAPCController;
+use App\Http\Controllers\DevoirController;
 use App\Http\Controllers\ActualiteController;
+use App\Http\Controllers\EvaluationSomativeController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ClasseMatiereFormateurController;
 /*
@@ -66,7 +69,8 @@ use App\Http\Controllers\ClasseMatiereFormateurController;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
-
+Route::get('/evaluation-sommative', [EvaluationSomativeController::class, 'index'])
+    ->name('evaluation.sommative.page');
 Route::get('/absences/create/{inscription}', [AbsenceController::class, 'create'])->name('absences.create');
 Route::post('/absences/store', [AbsenceController::class, 'store'])->name('absences.store');
 Route::get('/absences/{inscription_id}', [AbsenceController::class, 'show'])->name('absences.show');
@@ -96,6 +100,9 @@ Route::middleware([
 
 Route::get('/classe/{classe}/bulletins/pdf', [InscriptionController::class, 'generateClassePdf'])
     ->name('classe.bulletins.pdf');
+
+Route::get('/classe/{classe}/sommation/pdf', [EvaluationSomativeController::class, 'generateClassePdf'])
+    ->name('classe.sommation.pdf');
 
     // Route::resource('demande', DemandeController::class);
     Route::group(['prefix' => 'demande', 'as' => 'demande.'], function () {
@@ -142,8 +149,6 @@ Route::get('/classe/{classe}/bulletins/pdf', [InscriptionController::class, 'gen
     Route::get('/niveauetudeetablissement/{id}/view', [NiveauEtudeEtablissementController::class, 'detailProgrammeFormation'])->name('program.view');
     Route::get('/niveauetudeetablissement/{id}/{decision}/{idEtablissement}/treatment', [NiveauEtudeEtablissementController::class, 'validateProgramFormation'])->name('program.validate');
     Route::get('/niveauetudeetablissement/{id}/{idEtablissement}/remove', [NiveauEtudeEtablissementController::class, 'removeProgramFormation'])->name('program.logic.remove');
-
-
 
 
     // Route::resource('notifications', NotificationController::class);
@@ -383,3 +388,52 @@ Route::get(
  Route::get('/users', [UserController::class, 'index'])->name('users.index');
 Route::get('/etablissement/{id}/classes', [ClasseController::class, 'byEtablissement'])
     ->name('classes.byEtablissement');
+Route::delete('/ressource/{id}', [RessourceController::class, 'destroy'])
+    ->name('ressource.destroy');
+Route::post('/devoir-apc', [DevoirAPCController::class, 'store'])->name('devoirAPC.store');
+Route::put('/devoir-apc/{id}', [DevoirAPCController::class, 'update'])->name('devoirAPC.update');
+Route::delete('/devoir-apc/{id}', [DevoirAPCController::class, 'destroy'])->name('devoirAPC.destroy');
+
+    Route::get('/devoirAPC/ressource/{ressource}',
+    [DevoirAPCController::class, 'indexByRessource']
+)->name('devoirAPC.byRessource');
+
+
+Route::get('/devoirAPC/ressource/{ressource}', 
+    [DevoirAPCController::class, 'listeParRessource']
+)->name('devoirAPC.liste');
+// Modification d'une note spécifique (par apprenant)
+Route::put('/devoirAPC/{devoir}', [DevoirAPCController::class, 'update'])
+    ->name('devoirAPC.update');
+
+// Route pour afficher le formulaire de modification
+Route::get('/devoirAPC/{devoir}/edit', [DevoirAPCController::class, 'edit'])
+    ->name('devoirAPC.edit');
+
+// Route pour supprimer un devoir (par libellé)
+Route::delete('/devoirAPC/{id}', [DevoirAPCController::class, 'destroy'])
+    ->name('devoirAPC.destroy');
+Route::post('/devoirPPO', [DevoirController::class, 'store'])->name('devoirPPO.store');
+
+
+Route::put('/devoirPPO/{id}', [DevoirController::class, 'update'])->name('devoirPPO.update');
+Route::delete('/devoirPPO/{id}', [DevoirController::class, 'destroy'])->name('devoirPPO.destroy');
+
+// (optionnel)
+Route::get('/devoirPPO/{id}/edit', [DevoirController::class, 'edit'])->name('devoirPPO.edit');
+Route::get('/devoirPPO/matiere/{matiereId}', [DevoirController::class, 'listeParMatiere']);
+
+// routes/web.php
+
+Route::get('/devoirs/ppo/{inscriptionId}', [DevoirController::class, 'parInscriptionPPO']);
+Route::get('/devoirs/apc/{inscriptionId}', [DevoirAPCController::class, 'parInscriptionAPC'])->name('devoirs.apc');
+Route::get('/mes-notes/{inscriptionId}', [EvaluationController::class, 'mesNotes'])->name('mes.notes');
+Route::get('/bulletin/{id}/{semestre}', function($id, $semestre) {
+    session()->put('selectedsemestre', $semestre);
+    return app(\App\Http\Controllers\EvaluationController::class)->generatePDF($id);
+})->name('inscription.pdf');
+Route::get('/mes-notes-apc/{inscriptionId}', [InscriptionController::class, 'mesNotesAPC'])->name('mes.notes.apc');
+Route::get('/bulletin-apc/{id}/{semestre}', function($id, $semestre) {
+    session()->put('selectedsemestre1', $semestre);
+    return app(\App\Http\Controllers\InscriptionController::class)->generateCompetencePdf($id);
+})->name('inscription.pdf.apc');

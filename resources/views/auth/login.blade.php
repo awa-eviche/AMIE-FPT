@@ -359,9 +359,9 @@
                     @csrf
                     
                     <div class="input-group">
-                        <label for="email" class="input-label">Adresse email</label>
-                        <input id="email" class="input-field" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" placeholder="votre@email.com">
-                    </div>
+                        <label for="email" class="input-label">Adresse email ou matricule apprenant</label>
+                        <!-- <input id="email" class="input-field" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" placeholder="votre@email.com"> -->
+<input type="text" name="email" placeholder="Email ou Matricule" value="{{ old('email') }}"  required class="input-field">                   </div>
                     
                     <div class="input-group">
                         <label for="password" class="input-label">Mot de passe</label>

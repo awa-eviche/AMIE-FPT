@@ -10,11 +10,11 @@ return [
         'chef_de_travaux' => 'chef_de_travaux',
         'formateur' => 'formateur',
         'intendant' => 'intendant',
-        'apprenant' => 'appprenant',
         'ia' => 'ia',
         'ief' => 'ief',
         'de' => 'de',
         'censeur' => 'censeur',
+        'apprenant' => 'apprenant',
     ],
     'keys' => [
         'statut_juridique' => 'statut_juridique',

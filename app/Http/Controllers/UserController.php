@@ -161,10 +161,10 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
         }
            
         //Logs
-        $this->logUserRepository->store(['action' => UserAction::AddUser, 'model' => Model::User, 'new_object' => json_encode($user)]);
-        Mail::to($user->email)->send(new UserCreated($user));
+        // $this->logUserRepository->store(['action' => UserAction::AddUser, 'model' => Model::User, 'new_object' => json_encode($user)]);
+        // Mail::to($user->email)->send(new UserCreated($user));
 
-        $user->markEmailAsVerified();
+        // $user->markEmailAsVerified();
         DB::commit();
         return \redirect()->route('users.index')->withMessage("L'utilisateur " . $user->identite . " a été créé.");
     }

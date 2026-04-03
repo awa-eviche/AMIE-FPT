@@ -12,6 +12,7 @@ use App\Models\Entreprise;
 use App\Models\NiveauEtude;
 use App\Models\Metier;
 use App\Models\Filiere;
+use App\Models\Devoir;
 use App\Models\FiliereEtablissement;
 use App\Models\Inscription;
 use App\Models\Matiere;
@@ -142,7 +143,7 @@ class ClasseController extends Controller
 
 
   
-     public function show(Request $request, Classe $classe)
+ public function show(Request $request, Classe $classe)
 {
    
     $anneeAcademiques = AnneeAcademique::orderByDesc('id')->get();
@@ -191,23 +192,22 @@ class ClasseController extends Controller
         ->get();
 
    
-    $assignations = DB::table('classe_formateur_competence')
-        ->join('competences', 'classe_formateur_competence.competence_id', '=', 'competences.id')
-        ->join('users', 'classe_formateur_competence.formateur_id', '=', 'users.id')
-        ->where('classe_formateur_competence.classe_id', $classe->id)
-        ->select(
-            'users.nom as formateur_nom',
-            'users.prenom as formateur_prenom',
-            'competences.nom as competence_nom',
-            'competences.type as competence_type',
-            'classe_formateur_competence.formateur_id',
-            'classe_formateur_competence.competence_id'
-        )
-        ->get();
-
-
-
- 
+   $assignations = DB::table('classe_formateur_competence as cfc')
+    ->join('competences as comp', 'comp.id', '=', 'cfc.competence_id')
+    ->join('users as u', 'u.id', '=', 'cfc.formateur_id')
+    ->where('cfc.classe_id', $classe->id)
+    ->select([
+        'cfc.id as assign_id',          
+        'cfc.classe_id',
+        'cfc.formateur_id',
+        'cfc.competence_id',
+        'comp.nom as competence_nom',
+        'comp.type as competence_type',
+        'u.nom as formateur_nom',
+        'u.prenom as formateur_prenom',
+    ])
+    ->orderBy('cfc.id', 'asc')          
+    ->get();
     foreach ($assignations as $a) {
         if ($a->competence_type === 'generale') {
             $a->elements = ElementCompetence::where('competence_id', $a->competence_id)
@@ -218,10 +218,12 @@ class ClasseController extends Controller
         }
     }
 }
-
-        
+      
     }
-
+$inscriptionsAll = Inscription::with('apprenant')
+    ->where('classe_id', $classe->id)
+    ->when(request('annee_academique_id'), fn($q) => $q->where('annee_academique_id', request('annee_academique_id')))
+    ->get();
    
     $formateurs = DB::table('formateur_etablissement')
         ->join('personnel_etablissements', 'formateur_etablissement.personnel_etablissement_id', '=', 'personnel_etablissements.id')
@@ -236,6 +238,20 @@ class ClasseController extends Controller
     foreach ($inscriptions as $inscription) {
         $usersWithEnterprises[] = ['user' => $inscription];
     }
+    $inscriptionIds = Inscription::where('classe_id', $classe->id)->pluck('id');
+
+// Compteur devoirs par matière (tous devoirs)
+$devoirCountByMatiere = Devoir::whereIn('inscription_id', $inscriptionIds)
+    ->selectRaw('matiere_id, COUNT(*) as cnt')
+    ->groupBy('matiere_id')
+    ->pluck('cnt', 'matiere_id');
+
+// si tu veux l'utiliser aussi côté non-formateur uniquement quand notes existent :
+$devoirCountRenseigneByMatiere = Devoir::whereIn('inscription_id', $inscriptionIds)
+    ->whereNotNull('note')
+    ->selectRaw('matiere_id, COUNT(*) as cnt')
+    ->groupBy('matiere_id')
+    ->pluck('cnt', 'matiere_id');
     return view('classe.show', [
         'usersWithEnterprises'      => $usersWithEnterprises,
         'matieres'                  => $matieres,
@@ -246,6 +262,9 @@ class ClasseController extends Controller
         'inscriptions'              => $inscriptions,
         'anneeAcademiques'          => $anneeAcademiques,
         'selectedAnneeAcademiqueId' => $anneeAcademiqueId,
+        'inscriptionsAll'              => $inscriptionsAll,
+        'devoirCountByMatiere'   => $devoirCountByMatiere,
+        'devoirCountRenseigneByMatiere' => $devoirCountRenseigneByMatiere,
     ]);
 }
     

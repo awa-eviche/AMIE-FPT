@@ -9,7 +9,7 @@ class DroitInscription extends Model
 {
     use HasFactory;
 
-    protected $table = 'droit_inscription'; // important si nom non pluriel
+    protected $table = 'droit_inscription'; 
 
     protected $fillable = [
         'inscription_id',
@@ -21,9 +21,6 @@ class DroitInscription extends Model
         'statut' => 'boolean',
     ];
 
-    /**
-     * Relation : un droit d’inscription appartient à une inscription
-     */
     public function inscription()
     {
         return $this->belongsTo(Inscription::class);

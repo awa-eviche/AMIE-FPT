@@ -10,16 +10,12 @@ class Absence extends Model
 
     protected $fillable = [
         'inscription_id',
-        'date_absence',
+        'nombre_heure_absence',
+        'nombre_heure_retard',
         'semestre',
-        'heure_debut',
-        'heure_fin',
-        'duree',
-        'retard',
-        'minutes_retard',
-        'motif',
         'type',
         'justifie',
+        'nonjustifie',
     ];
 
     public function inscription()

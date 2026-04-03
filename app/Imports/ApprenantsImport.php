@@ -17,6 +17,8 @@ use Maatwebsite\Excel\Row;
 use Maatwebsite\Excel\Concerns\OnEachRow;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 use Carbon\Carbon;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 
 class ApprenantsImport implements OnEachRow, WithHeadingRow, SkipsOnError, SkipsOnFailure
 {
@@ -107,14 +109,30 @@ if (isset($data['sexe'])) {
             'etablissement_id' => $this->classe->etablissement_id,
         ]);
 
-        Inscription::create([
+        $inscription = Inscription::create([
             'apprenant_id' => $apprenant->id,
             'classe_id' => $this->classe->id,
             'annee_academique_id' => $this->anneeAcademiqueId,
             'dateInscription' => now(),
         ]);
+       $this->createUserForInscription($inscription, $apprenant);
     }
-
+    private function createUserForInscription(Inscription $inscription, Apprenant $apprenant): void
+    {
+        $exists = User::where('inscription_id', $inscription->id)->exists();
+        if ($exists) {
+            return;
+        }
+ 
+        User::create([
+            'email'          => $apprenant->matricule . '@amie-fpt.local',
+            'prenom'         => $apprenant->prenom,
+            'nom'            => $apprenant->nom,
+            'password'       => Hash::make('password'),
+            'inscription_id' => $inscription->id,
+            'role_id'        => 31,
+        ]);
+    }
     private function toBoolean($value)
     {
         return strtolower(trim($value)) === 'oui' ? 1 : 0;

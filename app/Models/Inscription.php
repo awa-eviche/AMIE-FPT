@@ -42,7 +42,10 @@ class Inscription extends Model
         return $this->belongsTo(Apprenant::class);
     }
 
-   
+    // public function apprenant()
+    // {
+    //     return $this->hasOne(Apprenant::class);
+    // }
     public function classe()
     {
         return $this->belongsTo(Classe::class);

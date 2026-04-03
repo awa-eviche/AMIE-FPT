@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 use App\Models\Apprenant;
 use App\Models\Commune;
-use App\Models\Etablissement; // Cette ligne doit être ici, avec les autres 'use'
+use App\Models\Etablissement; 
 use App\Models\User;
 use App\Models\Classe;
 use App\Models\AnneeAcademique;
@@ -25,9 +25,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\ApprenantsImport;
-
-
-
+use Illuminate\Support\Facades\Hash;
 class ApprenantController extends Controller
 {
     protected $logUserRepository;
@@ -87,11 +85,9 @@ class ApprenantController extends Controller
         ]);
     
         try {
-            // Création de l'apprenant (on enlève annee_academique_id et classe_id)
+            
             $apprenantData = $request->except(['annee_academique_id', 'classe_id']);
             $apprenant = Apprenant::create($apprenantData);
-    
-            // Génération du matricule
             $apprenant->matricule = $this->genererMatricule($request);
             $apprenant->save();
     
@@ -119,7 +115,7 @@ $inscription = Inscription::create([
     // 'createdAt' => Carbon::now(),
      'created_at' => Carbon::now(),
 ]);
-
+app(\App\Http\Controllers\InscriptionController::class)->createUserForInscription($inscription);
 
             // Logging
             $this->logUserRepository->store([
@@ -287,7 +283,7 @@ public function import(Request $request, $classeId)
         'annee_academique_id' => 'required|exists:annee_academiques,id',
     ]);
 
-    // On récupère la classe passée en paramètre
+    
     $classe = Classe::find($classeId);
 
     if (!$classe) {
@@ -295,7 +291,7 @@ public function import(Request $request, $classeId)
     }
 
     try {
-        //Excel::import(new ApprenantsImport($classe), $request->file('file'));
+        
         Excel::import(new ApprenantsImport($classe, $request->annee_academique_id), $request->file('file'));
 
         return redirect()->route('classe.show', $classe->id)->withMessage('Importation réussie des apprenants.');
