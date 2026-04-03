@@ -926,6 +926,9 @@
 @if(
     $user->hasRole('chef_de_travaux') ||
     $user->hasRole('chef_etablissement') ||
+    $user->hasRole('superadmin') ||
+    $user->hasRole('agent') ||
+    $user->hasRole('autorite') ||
     $user->hasRole('directeur_etude')
 )
 
@@ -991,41 +994,51 @@
 
                     {{-- Tableau des apprenants --}}
                     <table class="w-full text-sm">
-                        <thead class="bg-gray-200">
-                            <tr>
-                                <th class="px-2 py-2 text-left">Matricule</th>
-                                <th class="px-2 py-2 text-left">Nom & Prénoms</th>
-                                <th class="px-2 py-2 text-left">Date de naissance</th>
-                                <th class="px-2 py-2 text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y">
-                            @forelse ($usersWithEnterprises as $entry)
-                                <tr>
-                                    <td class="px-2 py-2">{{ $entry['user']->apprenant->matricule ?? '-' }}</td>
-                                    <td class="px-2 py-2">
-                                        {{ $entry['user']->apprenant->nom ?? '-' }}
-                                        {{ $entry['user']->apprenant->prenom ?? '' }}
-                                    </td>
-                                    <td class="px-2 py-2 text-center">
-                                        {{ optional($entry['user']->apprenant)->date_naissance ? \Carbon\Carbon::parse($entry['user']->apprenant->date_naissance)->format('d-m-Y') : '-' }}
-                                    </td>
-                                    <td class="px-2 py-2 text-center">
-                                        <a href="{{ route('inscription.show', $entry['user']->id) }}" class="text-green-600 hover:text-green-800">
-                                            <i class="fa fa-eye"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="4" class="text-center py-4 font-semibold text-gray-500">
-                                        Aucun apprenant inscrit pour cette classe.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-       
-                    </table>
+    <thead class="bg-gray-200">
+        <tr>
+            <th class="px-2 py-2 text-left">Matricule</th>
+            <th class="px-2 py-2 text-left">Nom & Prénoms</th>
+            <th class="px-2 py-2 text-left">Date de naissance</th>
+            <th class="px-2 py-2 text-center">Actions</th>
+        </tr>
+    </thead>
+    <tbody class="bg-white divide-y">
+      @forelse ($usersWithEnterprises as $entry)
+    @php
+        $apprenant = $entry['user']->apprenant;
+        $authInscriptionId = auth()->user()->inscription_id;
+    
+        $canSee = is_null($authInscriptionId) || ($authInscriptionId === $entry['user']->id);
+    @endphp
+
+    @if ($canSee)
+        <tr>
+            <td class="px-2 py-2">{{ $apprenant->matricule ?? '-' }}</td>
+            <td class="px-2 py-2">
+                {{ $apprenant->nom ?? '-' }}
+                {{ $apprenant->prenom ?? '' }}
+            </td>
+            <td class="px-2 py-2 text-center">
+                {{ $apprenant?->date_naissance ? \Carbon\Carbon::parse($apprenant->date_naissance)->format('d-m-Y') : '-' }}
+            </td>
+            <td class="px-2 py-2 text-center">
+    
+                <a href="{{ route('inscription.show', $entry['user']->id) }}" class="text-green-600 hover:text-green-800">
+                    <i class="fa fa-eye"></i>
+                </a>
+
+            </td>
+        </tr>
+    @endif
+@empty
+    <tr>
+        <td colspan="4" class="text-center py-4 font-semibold text-gray-500">
+            Aucun apprenant inscrit pour cette classe.
+        </td>
+    </tr>
+@endforelse
+    </tbody>
+</table>
 
                     {{-- Pagination --}}
                     <div class="mt-4">

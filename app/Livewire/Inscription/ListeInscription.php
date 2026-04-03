@@ -38,7 +38,7 @@ class ListeInscription extends Component
     public $anneeAcademiqueLabel;
  public $annee_academique_id;
     
-    // ✅ Composition (on garde, mais sans Devoir)
+    // âœ… Composition (on garde, mais sans Devoir)
     public $showCompositionModal = false;
     public $compositionMatiereId = null;
     public $compositionSemestre = null;
@@ -56,7 +56,7 @@ public $apprenantsAbsModal = [];
 public function openAbsenceClasseModal()
 {
     if (!$this->classe || !$this->annee_academique_id) {
-        session()->flash('error', 'Veuillez choisir une classe et une année académique.');
+        session()->flash('error', 'Veuillez choisir une classe et une annÃ©e acadÃ©mique.');
         return;
     }
 
@@ -78,9 +78,11 @@ public function closeAbsenceClasseModal()
     {
         
         $user = auth()->user();
-         session()->put('anneeAcademique', $this->anneeAcademique);
-    $this->annee_academique_id = $this->anneeAcademique; 
-        $etabId = $user?->personnel?->etablissement_id;
+  //       session()->put('anneeAcademique', $this->anneeAcademique);
+    //$this->annee_academique_id = $this->anneeAcademique; 
+  $this->anneeAcademique = session()->get('anneeAcademique', '');
+$this->annee_academique_id = $this->anneeAcademique;      
+  $etabId = $user?->personnel?->etablissement_id;
 
         if ($user->hasRole('superadmin')) {
             $this->classes = Classe::where('modalite', 'PPO')->get();
@@ -130,7 +132,7 @@ public function closeAbsenceClasseModal()
 
         $user = auth()->user();
 
-        // ✅ coef vient bien de matieres.coef
+        // âœ… coef vient bien de matieres.coef
         if ($user->hasRole('formateur')) {
             $this->matieres = DB::table('classe_formateur_matiere')
                 ->join('matieres', 'classe_formateur_matiere.matiere_id', '=', 'matieres.id')
@@ -159,8 +161,9 @@ public function closeAbsenceClasseModal()
     {
         session()->put('anneeAcademique', $this->anneeAcademique);
     
-    $this->annee_academique_id = $this->anneeAcademique; // ✅ sync
-        $this->loadApprenants();
+    $this->annee_academique_id = $this->anneeAcademique; // âœ… sync
+      
+  $this->loadApprenants();
     }
 
   
@@ -189,6 +192,12 @@ public function closeAbsenceClasseModal()
         }
     }
 
+    public function deleteAbsence($id)
+{
+    \App\Models\Absence::findOrFail($id)->delete();
+
+    session()->flash('success', 'Absence supprimée avec succès.');
+}
     public function loadCompetences($id)
     {
         $this->selectedApprenant = $id;
@@ -207,23 +216,23 @@ public function closeAbsenceClasseModal()
     public function openCompositionClasseModal(int $matiereId)
 {
     if (!$this->selectedsemestre) {
-        session()->flash('error', 'Veuillez choisir un semestre (1 ou 2) avant d’évaluer.');
+        session()->flash('error', 'Veuillez choisir un semestre (1 ou 2) avant dâ€™Ã©valuer.');
         return;
     }
 
     if (!$this->classe || !$this->anneeAcademique) {
-        session()->flash('error', 'Veuillez choisir une classe et une année académique.');
+        session()->flash('error', 'Veuillez choisir une classe et une annÃ©e acadÃ©mique.');
         return;
     }
 
     $this->compositionMatiereId = $matiereId;
     $this->compositionSemestre  = (int) $this->selectedsemestre;
 
-    // Nom matière
+    // Nom matiÃ¨re
     $m = Matiere::find($matiereId);
     $this->compositionMatiereNom = $m?->nom ?? '';
 
-    // ✅ Charger inscriptions + apprenants (tri par nom/prenom via join)
+    // âœ… Charger inscriptions + apprenants (tri par nom/prenom via join)
     $inscriptions = Inscription::query()
         ->join('apprenants as a', 'a.id', '=', 'inscriptions.apprenant_id')
         ->where('inscriptions.classe_id', $this->classe)
@@ -238,7 +247,7 @@ public function closeAbsenceClasseModal()
 
     $ids = $inscriptions->pluck('id')->all();
 
-    // ✅ 1) MCC depuis les devoirs (selon classe + matière + semestre)
+    // âœ… 1) MCC depuis les devoirs (selon classe + matiÃ¨re + semestre)
     $mccDevoirs = Devoir::query()
         ->where('classe_id', (int) $this->classe)
         ->where('matiere_id', (int) $this->compositionMatiereId)
@@ -250,7 +259,7 @@ public function closeAbsenceClasseModal()
         ->pluck('mcc', 'inscription_id')
         ->toArray();
 
-    // ✅ 2) Si Evaluation.note_cc existe déjà, elle prend le dessus
+    // âœ… 2) Si Evaluation.note_cc existe dÃ©jÃ , elle prend le dessus
     $mccEval = Evaluation::query()
         ->whereIn('inscription_id', $ids)
         ->where('matiere_id', (int) $this->compositionMatiereId)
@@ -259,10 +268,10 @@ public function closeAbsenceClasseModal()
         ->pluck('note_cc', 'inscription_id')
         ->toArray();
 
-    // ✅ Résultat final (on garde TON nom de variable)
+    // âœ… RÃ©sultat final (on garde TON nom de variable)
     $this->compositionMcc = $mccEval + $mccDevoirs;
 
-    // ✅ Notes composition déjà saisies (si existantes)
+    // âœ… Notes composition dÃ©jÃ  saisies (si existantes)
     $this->compositionNotes = Evaluation::query()
         ->whereIn('inscription_id', $ids)
         ->where('matiere_id', (int) $this->compositionMatiereId)
@@ -270,20 +279,20 @@ public function closeAbsenceClasseModal()
         ->pluck('note_composition', 'inscription_id')
         ->toArray();
 
-    // ✅ Verrouillage si au moins une composition existe déjà
-    $this->compositionLocked = Evaluation::query()
-        ->whereIn('inscription_id', $ids)
-        ->where('matiere_id', (int) $this->compositionMatiereId)
-        ->where('semestre', (int) $this->compositionSemestre)
-        ->whereNotNull('note_composition')
-        ->exists();
+    // âœ… Verrouillage si au moins une composition existe dÃ©jÃ 
+    // $this->compositionLocked = Evaluation::query()
+    //     ->whereIn('inscription_id', $ids)
+    //     ->where('matiere_id', (int) $this->compositionMatiereId)
+    //     ->where('semestre', (int) $this->compositionSemestre)
+    //     ->whereNotNull('note_composition')
+    //     ->exists();
 
-    if ($this->compositionLocked) {
-        session()->flash(
-            'error',
-            'Composition déjà enregistrée pour cette classe, cette matière et ce semestre. Modification bloquée.'
-        );
-    }
+    // if ($this->compositionLocked) {
+    //     session()->flash(
+    //         'error',
+    //         'Composition dÃ©jÃ  enregistrÃ©e pour cette classe, cette matiÃ¨re et ce semestre. Modification bloquÃ©e.'
+    //     );
+    // }
 
     $this->showCompositionModal = true;
 }
@@ -297,12 +306,12 @@ public function closeAbsenceClasseModal()
     public function saveCompositionClasse()
     {
         if (!$this->compositionMatiereId || !$this->compositionSemestre) {
-            session()->flash('error', 'Matière/Semestre manquant.');
+            session()->flash('error', 'MatiÃ¨re/Semestre manquant.');
             return;
         }
 
         if (!$this->classe || !$this->anneeAcademique) {
-            session()->flash('error', 'Classe/Année académique manquante.');
+            session()->flash('error', 'Classe/AnnÃ©e acadÃ©mique manquante.');
             return;
         }
 
@@ -315,18 +324,6 @@ public function closeAbsenceClasseModal()
         $matiereId = (int) $this->compositionMatiereId;
         $semestre  = (int) $this->compositionSemestre;
 
-        $exists = Evaluation::query()
-            ->whereIn('inscription_id', $ids)
-            ->where('matiere_id', $matiereId)
-            ->where('semestre', $semestre)
-            ->whereNotNull('note_composition')
-            ->exists();
-
-        if ($exists) {
-            session()->flash('error', 'Composition déjà enregistrée pour ce semestre. Modification bloquée.');
-            $this->compositionLocked = true;
-            return;
-        }
 
         DB::transaction(function () use ($ids, $matiereId, $semestre) {
             $rows = [];
@@ -341,7 +338,7 @@ public function closeAbsenceClasseModal()
                     'inscription_id'   => $inscriptionId,
                     'matiere_id'       => $matiereId,
                     'semestre'         => $semestre,
-                    'note_cc'          => $this->compositionMcc[$inscriptionId] ?? null, // ✅ note_cc existante
+                    'note_cc'          => $this->compositionMcc[$inscriptionId] ?? null, // âœ… note_cc existante
                     'note_composition' => (float) $noteComp,
                 ];
             }
@@ -353,16 +350,16 @@ public function closeAbsenceClasseModal()
             );
         });
 
-        session()->flash('success', 'Notes de composition enregistrées avec succès.');
+        session()->flash('success', 'Notes de composition enregistrÃ©es avec succÃ¨s.');
         $this->showCompositionModal = false;
     }
 
     public function render()
     {
-        // ✅ Toujours disponible pour afficher toute la classe
+        // âœ… Toujours disponible pour afficher toute la classe
         $matieres = $this->matieres;
 
-        // ✅ Index évaluations pour TOUS les apprenants (classe/année + semestre choisi)
+        // âœ… Index Ã©valuations pour TOUS les apprenants (classe/annÃ©e + semestre choisi)
         $evaluIndex = collect();
 
         if ($this->classe && $this->anneeAcademique && count($this->apprenants)) {
@@ -382,7 +379,7 @@ public function closeAbsenceClasseModal()
                 ->map(fn($g) => $g->keyBy('matiere_id'));
         }
 
-        // ✅ Détail apprenant sélectionné (ta logique)
+        // âœ… DÃ©tail apprenant sÃ©lectionnÃ© (ta logique)
         $inscriptionId = null;
         $evalu = null;
 
@@ -402,7 +399,7 @@ public function closeAbsenceClasseModal()
             }
         }
 
-        // absences inchangé chez toi
+        // absences inchangÃ© chez toi
         if ($this->selectedApprenant) {
             $absences = \App\Models\Absence::where('inscription_id', $this->selectedApprenant)
                 
@@ -421,7 +418,7 @@ public function closeAbsenceClasseModal()
             'anneeAcademiqueLabel' => $this->anneeAcademiqueLabel,
             'classes' => $this->classes,
             'absences' => $absences,
-            'evaluIndex' => $evaluIndex, // ✅ nouveau
+            'evaluIndex' => $evaluIndex, 
              'anneeAcademiques'     => $this->anneeAcademiques,
             'annee_academique_id'  => $this->annee_academique_id,
         ]);

@@ -10,8 +10,24 @@
                 <span class="font-medium">Succès !</span> {{ session('success') }}
             </div>
         </div>
-    </div>
+    </div>'
 @endif
+
+ 
+  @if (session('error'))
+    <div class="mb-4">
+        <div class="flex items-center p-4 mb-4 text-sm text-red-800 border border-red-300 rounded-lg bg-red-50 shadow-sm dark:bg-gray-800 dark:text-red-300 dark:border-red-800" role="alert">
+            <svg class="flex-shrink-0 inline w-5 h-5 mr-2" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2A1 1 0 1 1 7.707 9.293L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"/>
+            </svg>
+            <span class="sr-only">Error</span>
+            <div>
+                <span class="font-medium">Erreur !</span> {{ session('error') }}
+            </div>
+        </div>
+    </div> 
+@endif
+
     <div class="flex items-center px-4">
         <div class="flex-1">
             <h2 class="font-bold text-maquette-black text-xl py-4">
@@ -116,12 +132,20 @@
                 <div class="sm:w-1/2 p-4 border bg-gray border shadow rounded" style="min-height:50vh">
         
     @include('livewire.param._apc_classe_modal')
+     
  @php
     $user = auth()->user();
 @endphp
-
+<label for="selectedsemestre1" class="text-sm font-bold text-gray-700 mr-2">Semestre :</label>
+                            <select wire:model.live="selectedsemestre1" id="selectedsemestre1" name="semestre"
+                                class="border border-gray-300 rounded shadow-sm text-sm">
+                                <option value="">Tous les semestres</option>
+                                <option value="1">Premier semestre</option>
+                                <option value="2">Deuxième semestre</option>
+                            </select> 
 @if ($user->hasRole('formateur'))
 <div class="flex justify-end mb-3">
+  
     <button type="button"
         wire:click="openApcClasseModal"
         class="text-white bg-blue-600 text-sm rounded-md shadow-md px-4 py-2 hover:bg-blue-700">
@@ -168,8 +192,12 @@
                                         </td>
                                     </tr>
                                 @endforelse
+
                             </tbody>
                         </table>
+                        <div class="mt-4">
+                    
+                      </div>
                     </div>
      
                 </div>
@@ -216,13 +244,7 @@
 
                         
                         <div class="flex items-center justify-end mb-3">
-                            <label for="selectedsemestre1" class="text-sm font-bold text-gray-700 mr-2">Semestre :</label>
-                            <select wire:model.live="selectedsemestre1" id="selectedsemestre1" name="semestre"
-                                class="border border-gray-300 rounded shadow-sm text-sm">
-                                <option value="">Tous les semestres</option>
-                                <option value="1">Premier semestre</option>
-                                <option value="2">Deuxième semestre</option>
-                            </select>                      
+                                                
                 @php
     $user = auth()->user();
 @endphp
@@ -452,12 +474,25 @@
                                     </td>
                                    
     <td class="px-3 py-2 border text-center">
-    <button 
-        class="bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 rounded text-xs shadow"
-        onclick="openEditAbsenceModal({{ $abs->id }}, '{{ $abs->semestre }}', '{{ $abs->type }}', '{{ $abs->nombre_heure_absence }}', '{{ $abs->nombre_heure_retard }}',  {{ $abs->justifie ? 1 : 0 }})">
-        <i class="fa fa-edit"></i> Modifier
-    </button>
-    
+ <button class='bg-blue-800 hover:bg-blue-900 text-white px-3 py-1 rounded text-xs shadow'
+data-update-url="{{ route('absences.update',$abs->id) }}"
+onclick="openEditAbsenceModal(
+{{ $abs->id }},
+'{{ $abs->semestre }}',
+'{{ $abs->type }}',
+'{{ $abs->nombre_heure_absence }}',
+'{{ $abs->nombre_heure_retard }}',
+'{{ $abs->justifie }}',
+this.dataset.updateUrl
+)">
+Modifier
+</button>
+    <button
+    wire:click="deleteAbsence({{ $abs->id }})"
+    onclick="confirm('Voulez-vous vraiment supprimer cette absence ?') || event.stopImmediatePropagation()"
+    class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs shadow">
+    <i class="fa fa-trash"></i> Supprimer
+</button>
 </td>
 
 
@@ -492,7 +527,7 @@
         @csrf
          @method('PUT')
 
-  <!-- IMPORTANT : doit avoir name="id" ou edit_absence_id pour script -->
+  
   <input type="hidden" id="edit_absence_id" name="absence_id">
 
  

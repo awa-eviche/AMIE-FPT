@@ -39,7 +39,7 @@
             </select>
 
             <!-- Select Année académique -->
-            <select wire:model="anneeAcademique" wire:change="$refresh" class="border border-gray-300 p-2 rounded text-sm w-1/2">
+            <select wire:model="anneeAcademique"  class="border border-gray-300 p-2 rounded text-sm w-1/2">
                 <option value="">Sélectionner l’année académique</option>
                 @foreach ($anneeAcademiques as $a)
                     <option value="{{ $a->id }}">{{ $a->code }}</option>
@@ -120,6 +120,7 @@
                                     @endforelse
                                 </tbody>
                             </table>
+        
                         </div>
                     </div>
 
@@ -177,20 +178,26 @@
 
                                 </div>
         @if ($user->hasRole('formateur'))
-@foreach($matieres as $matiere)
-  <tr>
-    <!-- <td>{{ $matiere->nom }}</td> -->
+<div class="w-full overflow-x-auto">
 
-    <td class="text-right">
-     <button type="button"
-        wire:click="openCompositionClasseModal({{ $matiere->id }})"
-        class="bg-indigo-600 text-white text-xs px-5 py-3 rounded hover:bg-indigo-700">
-  <i class="fa fa-edit"></i>&nbsp;Notes {{ $matiere->nom }}
-</button>
+    <div class="flex gap-4 p-2 min-w-max">
 
-    </td>
-  </tr>
-@endforeach
+        @foreach($matieres as $matiere)
+
+            <button type="button"
+                wire:click="openCompositionClasseModal({{ $matiere->id }})"
+                class="bg-indigo-600 text-white text-xs px-4 py-2 rounded hover:bg-indigo-700 whitespace-nowrap flex items-center gap-1">
+
+                <i class="fa fa-edit"></i>
+                Notes {{ $matiere->nom }}
+
+            </button>
+
+        @endforeach
+
+    </div>
+
+</div>
       @endif                              
 
  @php
@@ -433,7 +440,12 @@
   <i class="fa fa-edit"></i> Modifier
 </button>
 
-
+<button
+    wire:click="deleteAbsence({{ $abs->id }})"
+    onclick="confirm('Voulez-vous vraiment supprimer cette absence ?') || event.stopImmediatePropagation()"
+    class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs shadow">
+    <i class="fa fa-trash"></i> Supprimer
+</button>
     
 </td>
 
@@ -566,7 +578,7 @@
 
     $canDelete = $canHistory; // même règle que l'historique
 @endphp
-                              <table class="w-full mb-3">
+ <table class="w-full mb-3">
     <thead>
         <tr class="text-xs font-black tracking-wide text-left text-maquette-gris font-bold uppercase border-b">
             <th class="p-2 border text-center text-gray-800">Matière</th>

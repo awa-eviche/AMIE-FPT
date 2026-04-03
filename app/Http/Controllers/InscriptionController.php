@@ -18,6 +18,8 @@ use App\Enums\Model;
 use Dompdf\Dompdf;
 use Illuminate\Support\Facades\File;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 class InscriptionController extends Controller
 {
     protected $logUserRepository;
@@ -98,6 +100,7 @@ class InscriptionController extends Controller
 
 
         $inscription = Inscription::create($request->all());
+        $this->createUserForInscription($inscription);
         $this->logUserRepository->store(['action' => UserAction::AddInscription, 'model' => Model::Inscription, 'new_object' => json_encode($inscription)]);
 
 
@@ -133,7 +136,30 @@ class InscriptionController extends Controller
         ]);
     }
     
+private function createUserForInscription($inscription)
+{
+    $exists = User::where('inscription_id', $inscription->id)->exists();
 
+    if ($exists) {
+        return;
+    }
+
+    // 🔥 CORRECTION ICI
+    $apprenant = \App\Models\Apprenant::find($inscription->apprenant_id);
+
+    if (!$apprenant) {
+        return; // sécurité
+    }
+
+    User::create([
+        'email' => $apprenant->matricule . '@amie-fpt.local',
+        'prenom' => $apprenant->prenom,
+        'nom' => $apprenant->nom,
+        'password' => \Illuminate\Support\Facades\Hash::make('password'),
+        'inscription_id' => $inscription->id,
+        'role_id' => 31,
+    ]);
+}
    
     public function edit(Inscription $inscription)
     {
@@ -247,8 +273,6 @@ class InscriptionController extends Controller
             $body .= '
             <tr style="page-break-before: avoid;">
             ';
-
-            //Afficher la ligne des critères
             foreach ($competences as $key => $competence) {
                 foreach ($competence->elementCompetences as $ec) {
                     foreach ($ec->criteres as $critereKey => $critere) {
@@ -364,337 +388,78 @@ class InscriptionController extends Controller
 
     }
 
-// public function generateCompetencePdfAncien(string $id)
-// {
-//     $semestre = session()->get('selectedsemestre1');
-
-//     $inscription = Inscription::with(
-//         'apprenant',
-//         'classe.niveau_etude',
-//         'classe.annee_academique',
-//         'classe.etablissement'
-//     )->findOrFail($id);
-
-//     // Charger toutes les évaluations avec relations
-//     $evaluations = Evalute::with('critere.elementCompetence.competence')
-//         ->where('inscription_id', $inscription->id)
-//         ->when($semestre, fn($query) => $query->where('semestre', $semestre))
-//         ->get()
-//         ->keyBy('critere_id');
-
-//     $competencesGenerales = Competence::where('niveau_etude_id', $inscription->classe->niveau_etude_id)
-//         ->where('type', 'generale')
-//         ->with('elementCompetences.criteres')
-//         ->get();
-
-//     $competencesParticulieres = Competence::where('niveau_etude_id', $inscription->classe->niveau_etude_id)
-//         ->where('type', 'particuliere')
-//         ->with('elementCompetences.criteres')
-//         ->get();
-
-//     // Génération du tableau
-//     $generateTable = function($competencesType, $evaluations) {
-//         $html = '';
-
-//         foreach ($competencesType as $competence) {
-//             // Premier critère unique par compétence
-//             $critere = $competence->elementCompetences
-//                                   ->flatMap->criteres
-//                                   ->unique('id')
-//                                   ->first();
-
-//             if ($critere) {
-//                 $evaluation = $evaluations[$critere->id] ?? null;
-
-//                 $note = $evaluation?->note ?? null;
-//                 $date = $evaluation?->date ? date('d-m-Y', strtotime($evaluation->date)) : '-';
-
-//                 // 👉 Attribution automatique des observations
-//                 $obs = '-';
-//                 if ($note !== null) {
-//                     if ($note >= 0 && $note <= 10) {
-//                         $obs = 'Passable';
-//                     } elseif ($note >= 12 && $note <= 13) {
-//                         $obs = 'Assez bien';
-//                     } elseif ($note >= 14 && $note <= 16) {
-//                         $obs = 'Bien';
-//                     } elseif ($note >= 17 && $note <= 18) {
-//                         $obs = 'Très bien';
-//                     }
-//                 }
-
-//                 $html .= '<tr>';
-//                 $html .= '<td class="border-td">'.htmlspecialchars($competence->nom).'</td>';
-//                 $html .= '<td class="border-td">'.htmlspecialchars($critere->libelle).'</td>';
-//                 $html .= '<td class="border-td" align="center">'.($note ?? '-').'</td>';
-//                 $html .= '<td class="border-td" align="center">'.$date.'</td>';
-//                 $html .= '<td class="border-td">'.htmlspecialchars($obs).'</td>';
-//                 $html .= '</tr>';
-//             }
-//         }
-
-//         return $html;
-//     };
-
-//     $tableGenerale = '
-//     <tr>
-//         <td colspan="6" class="bold-exo" 
-//             style="background-color:#e0e0e0; text-align:center;">
-//             Compétences Générales
-//         </td>
-//     </tr>'
-//     . $generateTable($competencesGenerales, $evaluations);
-
-//     $tableParticulier = '
-//     <tr>
-//         <td colspan="6" class="bold-exo" 
-//             style="background-color:#e0e0e0; text-align:center;">
-//             Compétences Particulières
-//         </td>
-//     </tr>'
-//     . $generateTable($competencesParticulieres, $evaluations);
-
-//     // Injection dans le template
-//     $template = file_get_contents('competence.html');
-//     $template = str_replace('[BODY]', $tableGenerale . $tableParticulier, $template);
-
-//     setlocale(LC_TIME, 'fr_FR.UTF-8');
-//     $date = strftime('%e %B %Y');
-//     $template = str_replace('[DATE]', $date, $template);
-//     $template = str_replace('[USER]', $inscription->apprenant->nom . ' ' . $inscription->apprenant->prenom, $template);
-//     $template = str_replace('[DATENAISSANCE]', $inscription->apprenant->date_naissance, $template);
-//     $template = str_replace('[LIEUNAISSANCE]', $inscription->apprenant->lieu_naissance, $template);
-//     $template = str_replace('[TEL]', $inscription->apprenant->telephone, $template);
-//     $template = str_replace('[EMAIL]', $inscription->apprenant->email, $template);
-//     $template = str_replace('[SEMESTRE]', $semestre ? ($semestre == 1 ? '1' : '2') : 'Tous les semestres', $template);
-//     $template = str_replace('[MATRICULE]', $inscription->apprenant->matricule, $template);
-//     $template = str_replace('[CLASSE]', $inscription->classe->libelle ?? '', $template);
-//     $template = str_replace('[ANNEE]', $inscription->classe->niveau_etude->nom ?? '', $template);
-//     $template = str_replace('[ANNEESCOLAIRE]', $inscription->classe->annee_academique->code ?? '', $template);
-//     $template = str_replace('[EFPT]', $inscription->classe->etablissement->nom ?? '', $template);
-//     $template = str_replace('[EFPTTEL]', $inscription->classe->etablissement->telephone ?? '', $template);
-
-//     $dompdf = new Dompdf();
-//     $dompdf->getOptions()->set('isRemoteEnabled', true);
-//     $dompdf->loadHTML($template);
-//     $dompdf->setPaper('A4', 'portrait');
-//     $dompdf->render();
-
-//     return response($dompdf->output(), 200)
-//         ->header('Content-Type', 'application/pdf')
-//         ->header('Content-Disposition', 'inline; filename="Carnet_de_Competence.pdf"');
-// }
-
-
-// public function generateClassePdfAncien(string $classeId)
-// {
-//     $semestre = request('semestre'); 
-
-//     $classe = Classe::with(['etablissement', 'niveau_etude', 'annee_academique'])
-//         ->findOrFail($classeId);
-
-  
-//     $inscriptions = Inscription::with('apprenant')
-//         ->where('classe_id', $classe->id)
-//         ->get();
-
-//     $competencesGenerales = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
-//         ->where('type', 'generale')
-//         ->with(['elementCompetences.criteres'])
-//         ->orderBy('id')
-//         ->get();
-
-//     $competencesParticulieres = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
-//         ->where('type', 'particuliere')
-//         ->with(['elementCompetences.criteres'])
-//         ->orderBy('id')
-//         ->get();
-
-//     $htmlGlobal = '';
-//     $total = $inscriptions->count();
-//     $index = 0;
-
-//     foreach ($inscriptions as $inscription) {
-//         $index++;
-//         $templatePath = resource_path('views/pdf/competence.html');
-//         $template = is_file($templatePath) ? file_get_contents($templatePath) : file_get_contents('competence.html');
-//  $evaluations = \App\Models\Evalute::with('critere.elementCompetence.competence')
-//             ->where('inscription_id', $inscription->id)
-//             ->when($semestre, fn($q) => $q->where('semestre', $semestre))
-//             ->get()
-//             ->keyBy('critere_id'); 
-//         $generateTable = function ($titreSection, $competences, $evaluations) {
-//             $html = '
-//             <tr>
-//                 <td colspan="6" class="bold-exo" style="background-color:#e0e0e0; text-align:center;">'
-//                 . htmlspecialchars($titreSection) .
-//                 '</td>
-//             </tr>';
-
-//             foreach ($competences as $competence) {
-//                 $ecList = $competence->elementCompetences ?? collect();
-//                 $ecCount = $ecList->count();
-
-//                 if ($ecCount === 0) {
-//                     $html .= '
-//                     <tr>
-//                         <td class="border-td">'.htmlspecialchars(($competence->code ?? '').' '.($competence->nom ?? $competence->libelle ?? '')).'</td>
-//                         <td class="border-td" colspan="5" style="text-align:center;">Aucun élément de compétence</td>
-//                     </tr>';
-//                     continue;
-//                 }
-//                 $firstEc = true;
-//                 foreach ($ecList as $ec) {
-//                     $criteres = $ec->criteres ?? collect();
-//                     $notes = [];
-//                     $latestDate = null;
-
-//                     foreach ($criteres as $critere) {
-//                         if (isset($evaluations[$critere->id])) {
-//                             $ev = $evaluations[$critere->id];
-
-//                             if ($ev->note !== null) {
-//                                 $notes[] = $ev->note;
-//                             }
-
-//                             if (!empty($ev->date)) {
-//                                 $d = strtotime($ev->date);
-//                                 if ($latestDate === null || $d > $latestDate) {
-//                                     $latestDate = $d;
-//                                 }
-//                             }
-//                         }
-//                     }
-
-                   
-//                     $noteAgg = '-';
-//                     if (count($notes) > 0) {
-//                         $noteAgg = round(array_sum($notes) / count($notes), 2);
-//                     }
-
-                   
-//                     $obs = '-';
-//                     if ($noteAgg !== '-' && is_numeric($noteAgg)) {
-//                         if ($noteAgg < 10)        $obs = 'Passable';
-//                         elseif ($noteAgg < 12)    $obs = 'Assez bien';
-//                         elseif ($noteAgg < 15)    $obs = 'Bien';
-//                         else                      $obs = 'Très bien';
-//                     }
-
-//                     $dateStr = $latestDate ? date('d/m/Y', $latestDate) : '-';
-
-//                     $seuil = $ec->seuil ?? '70%';
-
-//                     $html .= '<tr>';
-
-                    
-//                     if ($firstEc) {
-//                         $html .= '
-//                         <td class="border-td" rowspan="'.intval($ecCount).'">'
-//                         . htmlspecialchars(($competence->code ?? '').' '.($competence->nom ?? $competence->libelle ?? '')) .
-//                         '</td>';
-//                         $firstEc = false;
-//                     }
-
-                 
-//                     $html .= '
-//                         <td class="border-td">'
-//                         . htmlspecialchars(trim(($ec->code ?? '').' '.(($ec->nom ?? $ec->libelle ?? '')))) .
-//                         '</td>';
-
-                  
-//                     $html .= '
-//                         <td class="border-td" align="left">'.$seuil.'</td>
-//                         <td class="border-td" align="center">'.$noteAgg.'</td>
-//                         <td class="border-td" align="center">'.$dateStr.'</td>
-//                         <td class="border-td">'.htmlspecialchars($obs).'</td>
-//                     </tr>';
-//                 }
-//             }
-
-//             return $html;
-//         };
-
-       
-//         $body = $generateTable('Compétences Générales', $competencesGenerales, $evaluations)
-//               . $generateTable('Compétences Particulières', $competencesParticulieres, $evaluations);
-
-     
-//         $template = str_replace('[BODY]', $body, $template);
-
-       
-//         try {
-//             $dateNow = \Carbon\Carbon::now()->locale('fr')->isoFormat('D MMMM YYYY');
-//         } catch (\Throwable $e) {
-//             setlocale(LC_TIME, 'fr_FR.UTF-8');
-//             $dateNow = strftime('%e %B %Y');
-//         }
-
-//         $template = str_replace('[DATE]', $dateNow, $template);
-//         $template = str_replace('[USER]', trim(($inscription->apprenant->nom ?? '').' '.($inscription->apprenant->prenom ?? '')), $template);
-//         $template = str_replace('[DATENAISSANCE]', $inscription->apprenant->date_naissance ?? '-', $template);
-//         $template = str_replace('[LIEUNAISSANCE]', $inscription->apprenant->lieu_naissance ?? '-', $template);
-//         $template = str_replace('[TEL]', $inscription->apprenant->telephone ?? '-', $template);
-//         $template = str_replace('[EMAIL]', $inscription->apprenant->email ?? '-', $template);
-//         $template = str_replace('[SEMESTRE]', $semestre ? "Semestre $semestre" : "Tous les semestres", $template);
-//         $template = str_replace('[MATRICULE]', $inscription->apprenant->matricule ?? '-', $template);
-//         $template = str_replace('[CLASSE]', $classe->libelle ?? '-', $template);
-//         $template = str_replace('[ANNEE]', $classe->niveau_etude->nom ?? '-', $template);
-//         $template = str_replace('[ANNEESCOLAIRE]', $inscription->anneeAcademique->code ?? '', $template);
-//         $template = str_replace('[EFPT]', $classe->etablissement->nom ?? '-', $template);
-//         $template = str_replace('[EFPTTEL]', $classe->etablissement->telephone ?? '-', $template);
-
-        
-//         $htmlGlobal .= $template;
-
-//         if ($index < $total) {
-//             $htmlGlobal .= '<div style="page-break-after: always;"></div>';
-//         }
-//     }
-
-    
-//     $pdf = Pdf::loadHTML($htmlGlobal)->setPaper('a4', 'portrait');
-//     return $pdf->stream('Bulletins_Classe_'.$classe->libelle.'.pdf');
-// }
-
 
 public function generateCompetencePdf(string $id)
 {
-    $semestre = session()->get('selectedsemestre1'); // peut être null
-    $semestreInt = $semestre ? (int) $semestre : null;
+ $semestre = session()->get('selectedsemestre1');
+$semestreInt = $semestre ? (int) $semestre : null;
 
-    // ✅ Charger l'apprenant et sa classe
     $inscription = Inscription::with([
         'apprenant',
         'classe.niveau_etude',
         'classe.etablissement',
-        'anneeAcademique', // si relation existe
+        'anneeAcademique',
     ])->findOrFail($id);
 
-    // ✅ MODIF ICI : on récupère l’ID de la classe (pour filtrer les ressources)
     $classeId = (int) $inscription->classe_id;
-
     $niveauId = (int) $inscription->classe->niveau_etude_id;
 
-    // ✅ MODIF ICI : filtrer les ressources par classe_id
+  
+
     $competencesGenerales = Competence::query()
         ->where('niveau_etude_id', $niveauId)
         ->where('type', 'generale')
+        ->whereHas('ressources', function ($q) use ($classeId) {
+            $q->where('classe_id', $classeId)
+              ->whereNotNull('formateur_id'); // ✅ filtre ajouté
+        })
         ->with(['ressources' => function ($q) use ($classeId) {
-            $q->where('classe_id', $classeId);
+            $q->where('classe_id', $classeId)
+              ->whereNotNull('formateur_id'); // ✅ filtre ajouté
         }])
         ->orderBy('nom')
         ->get();
 
-    // ✅ MODIF ICI : filtrer les ressources par classe_id
+    $competencesGenerales = $competencesGenerales
+        ->groupBy('nom')
+        ->map(function ($group) {
+            $first = $group->first();
+            $first->ressources = $group
+                ->flatMap(fn($c) => $c->ressources)
+                ->unique('id')
+                ->values();
+            return $first;
+        })
+        ->values();
+
+  
+
     $competencesParticulieres = Competence::query()
         ->where('niveau_etude_id', $niveauId)
         ->where('type', 'particuliere')
+        ->whereHas('ressources', function ($q) use ($classeId) {
+            $q->where('classe_id', $classeId)
+              ->whereNotNull('formateur_id'); // ✅ filtre ajouté
+        })
         ->with(['ressources' => function ($q) use ($classeId) {
-            $q->where('classe_id', $classeId);
+            $q->where('classe_id', $classeId)
+              ->whereNotNull('formateur_id'); // ✅ filtre ajouté
         }])
         ->orderBy('nom')
         ->get();
+
+    $competencesParticulieres = $competencesParticulieres
+        ->groupBy('nom')
+        ->map(function ($group) {
+            $first = $group->first();
+            $first->ressources = $group
+                ->flatMap(fn($c) => $c->ressources)
+                ->unique('id')
+                ->values();
+            return $first;
+        })
+        ->values();
+
 
     // ✅ Toutes les ressources concernées (déjà filtrées par classe)
     $ressourceIds = $competencesGenerales
@@ -749,11 +514,7 @@ public function generateCompetencePdf(string $id)
         return 'Très bien';
     };
 
-    /**
-     * =========================================================
-     * ✅ HTML COMPETENCES GENERALES (rowspan + fallback MCC)
-     * =========================================================
-     */
+  
     $htmlGenerales = '';
 
     foreach ($competencesGenerales as $comp) {
@@ -817,11 +578,7 @@ public function generateCompetencePdf(string $id)
         </tr>";
     }
 
-    /**
-     * =========================================================
-     * ✅ HTML COMPETENCES PARTICULIERES
-     * =========================================================
-     */
+   
     $htmlParticulieres = '';
 
     foreach ($competencesParticulieres as $comp) {
@@ -930,9 +687,9 @@ public function generateCompetencePdf(string $id)
     $template = str_replace('[NB_ABSENCES]', $fmt($hAbsTotal), $template);
     $template = str_replace('[NB_RETARDS]',  $fmt($hRetTotal), $template);
 
-    setlocale(LC_TIME, 'fr_FR.UTF-8', 'fr_FR', 'fr');
-    $dateNow = strftime('%e %B %Y');
-    $dateNow = trim($dateNow);
+   
+       
+       $dateNow = \Carbon\Carbon::now()->format('d/m/Y');
 
     $anneeScolaire = $inscription->anneeAcademique->code
         ?? ($inscription->classe->annee_academique->code ?? '');
@@ -971,7 +728,8 @@ public function generateCompetencePdf(string $id)
 
 public function generateClassePdf(string $classe_id)
 {
-    $semestre = session()->get('selectedsemestre1'); // peut être null
+  $semestre = session()->get('selectedsemestre1');
+ 
     $semestreInt = $semestre ? (int) $semestre : null;
 
     $classe = Classe::with([
@@ -982,48 +740,70 @@ public function generateClassePdf(string $classe_id)
     ])->findOrFail($classe_id);
 
     $niveauId = (int) $classe->niveau_etude_id;
-
-    // ✅ MODIF ICI : on se base sur la classe (PAS $inscription)
     $classeId = (int) $classe->id;
-
-   
     $competencesGenerales = Competence::query()
         ->where('niveau_etude_id', $niveauId)
         ->where('type', 'generale')
+        ->whereHas('ressources', function ($q) use ($classeId) {
+            $q->where(function ($query) use ($classeId) {
+                $query->where('classe_id', $classeId)
+                      ->orWhereNull('classe_id');
+            })
+            ->whereNotNull('formateur_id');
+        })
         ->with('ressources')
         ->orderBy('nom')
         ->get();
-
     $competencesParticulieres = Competence::query()
         ->where('niveau_etude_id', $niveauId)
         ->where('type', 'particuliere')
+        ->whereHas('ressources', function ($q) use ($classeId) {
+            $q->where(function ($query) use ($classeId) {
+                $query->where('classe_id', $classeId)
+                      ->orWhereNull('classe_id');
+            })
+            ->whereNotNull('formateur_id');
+        })
         ->with('ressources')
         ->orderBy('nom')
         ->get();
 
-    // ✅ MODIF ICI : filtrer les ressources par classe (supporte classe_id OU pivot->classe_id)
+   
+
     $filterRessourcesByClasse = function ($competences) use ($classeId) {
         foreach ($competences as $comp) {
+
             $ressources = collect($comp->ressources ?? []);
+
             $filtered = $ressources
                 ->filter(function ($res) use ($classeId) {
+
                     $direct = (int) ($res->classe_id ?? 0);
                     $pivot  = (int) ($res->pivot->classe_id ?? 0);
-                    return $direct === $classeId || $pivot === $classeId;
+
+                    return (
+                        ($direct === $classeId || $pivot === $classeId)
+                        && !is_null($res->formateur_id)
+                    );
                 })
                 ->unique('id')
                 ->values();
 
-            // important : on remplace la relation pour le PDF
             $comp->setRelation('ressources', $filtered);
         }
+
         return $competences;
     };
 
     $competencesGenerales = $filterRessourcesByClasse($competencesGenerales);
     $competencesParticulieres = $filterRessourcesByClasse($competencesParticulieres);
 
-    // ✅ Toutes les ressources concernées (déjà filtrées par classe)
+    /*
+    =========================================================
+    RESTE DE LA LOGIQUE IDENTIQUE
+    =========================================================
+    */
+
     $ressourceIds = $competencesGenerales
         ->merge($competencesParticulieres)
         ->flatMap(fn ($c) => ($c->ressources ?? collect())->pluck('id'))
@@ -1205,7 +985,7 @@ public function generateClassePdf(string $classe_id)
                 $resId = (int) $res->id;
 
                 $mcc = $mccMap[$inscId][$resId] ?? null;
-                $integration = $evalMap[$inscId][$resId] ?? null; // pas de fallback ici
+                $integration = $evalMap[$inscId][$resId] ?? null; 
 
                 $mccTxt = is_numeric($mcc) ? number_format((float)$mcc, 2) : '-';
                 $intTxt = is_numeric($integration) ? number_format((float)$integration, 2) : '-';
@@ -1236,8 +1016,6 @@ public function generateClassePdf(string $classe_id)
                 <td colspan='5' class='border-td' align='center'>Aucune compétence particulière</td>
             </tr>";
         }
-
-        // ✅ ABSENCES / RETARDS
         $absencesSemestre = Absence::where('inscription_id', (int) $inscription->id)
             ->when($semestreInt, fn($q) => $q->where('semestre', (int) $semestreInt))
             ->get();
@@ -1258,14 +1036,13 @@ public function generateClassePdf(string $classe_id)
         $hRetTotal = $hRetJust + $hRetNon;
 
         // ✅ Date FR
-        setlocale(LC_TIME, 'fr_FR.UTF-8', 'fr_FR', 'fr');
-        $dateNow = trim(strftime('%e %B %Y'));
+        // setlocale(LC_TIME, 'fr_FR.UTF-8', 'fr_FR', 'fr');
+        
+       $dateNow = \Carbon\Carbon::now()->format('d/m/Y');
 
-        // ✅ Année scolaire (garde ta logique)
+
         $anneeScolaire = $inscription->anneeAcademique->code
             ?? ($classe->annee_academique->code ?? '');
-
-        // ✅ Remplacements page
         $page = $templateRaw;
         $page = str_replace('[BODYRESSOURCE]', $htmlGenerales, $page);
         $page = str_replace('[BODYCOMP]', $htmlParticulieres, $page);
@@ -1294,8 +1071,6 @@ public function generateClassePdf(string $classe_id)
 
         $bulletins .= $page . '<div style="page-break-after: always;"></div>';
     }
-
-    // ✅ Dompdf unique pour toute la classe
     $dompdf = new Dompdf();
     $dompdf->getOptions()->set('isRemoteEnabled', true);
     $dompdf->loadHtml($bulletins);
@@ -1311,9 +1086,6 @@ public function generateClassePdf(string $classe_id)
 public function suspendre($id)
 {
     $inscription = Inscription::findOrFail($id);
-
-    // On suppose qu’il y a un champ "statut" dans la table inscriptions
-    // (exemples : 'active', 'suspendu', 'termine', etc.)
     $nouveauStatut = $inscription->statut === 'suspendu' ? 'active' : 'suspendu';
     $inscription->update(['statut' => $nouveauStatut]);
 
@@ -1329,9 +1101,6 @@ public function suspendre($id)
 }
 
 
-/**
- * Marquer un apprenant comme ayant abandonné ou le réactiver.
- */
 public function abandonner($id)
 {
     $inscription = Inscription::findOrFail($id);
@@ -1356,7 +1125,102 @@ public function abandonner($id)
     return redirect()->back()->withMessage($message);
 }
 
+public function mesNotesAPC($inscriptionId)
+{
+    $inscription = \App\Models\Inscription::with([
+        'apprenant',
+        'classe.etablissement',
+        'classe.niveau_etude',
+        'anneeAcademique'
+    ])->findOrFail($inscriptionId);
 
+    $classeId = (int) $inscription->classe_id;
+    $niveauId = (int) $inscription->classe->niveau_etude_id;
+
+    // Compétences générales — même logique que generateCompetencePdf
+    $competencesGenerales = \App\Models\Competence::query()
+        ->where('niveau_etude_id', $niveauId)
+        ->where('type', 'generale')
+        ->whereHas('ressources', function ($q) use ($classeId) {
+            $q->where('classe_id', $classeId)->whereNotNull('formateur_id');
+        })
+        ->with(['ressources' => function ($q) use ($classeId) {
+            $q->where('classe_id', $classeId)->whereNotNull('formateur_id');
+        }])
+        ->orderBy('nom')
+        ->get()
+        ->groupBy('nom')
+        ->map(function ($group) {
+            $first = $group->first();
+            $first->ressources = $group->flatMap(fn($c) => $c->ressources)->unique('id')->values();
+            return $first;
+        })
+        ->values();
+
+    // Compétences particulières
+    $competencesParticulieres = \App\Models\Competence::query()
+        ->where('niveau_etude_id', $niveauId)
+        ->where('type', 'particuliere')
+        ->whereHas('ressources', function ($q) use ($classeId) {
+            $q->where('classe_id', $classeId)->whereNotNull('formateur_id');
+        })
+        ->with(['ressources' => function ($q) use ($classeId) {
+            $q->where('classe_id', $classeId)->whereNotNull('formateur_id');
+        }])
+        ->orderBy('nom')
+        ->get()
+        ->groupBy('nom')
+        ->map(function ($group) {
+            $first = $group->first();
+            $first->ressources = $group->flatMap(fn($c) => $c->ressources)->unique('id')->values();
+            return $first;
+        })
+        ->values();
+
+    // Toutes les ressources
+    $ressourceIds = $competencesGenerales
+        ->merge($competencesParticulieres)
+        ->flatMap(fn($c) => ($c->ressources ?? collect())->pluck('id'))
+        ->filter()->unique()->values()->all();
+
+    // MCC depuis DevoirAPC
+    $mccByRessource = \App\Models\DevoirAPC::query()
+        ->where('inscription_id', $inscriptionId)
+        ->whereIn('ressource_id', $ressourceIds)
+        ->whereNotNull('note')
+        ->selectRaw('ressource_id, semestre, ROUND(AVG(note),2) as mcc')
+        ->groupBy('ressource_id', 'semestre')
+        ->get()
+        ->groupBy('semestre')
+        ->map(fn($rows) => $rows->keyBy('ressource_id'));
+
+    // Intégrations (composition) depuis Evalute
+    $evalByRessource = \App\Models\Evalute::query()
+        ->where('inscription_id', $inscriptionId)
+        ->whereIn('ressource_id', $ressourceIds)
+        ->get()
+        ->groupBy('semestre')
+        ->map(fn($rows) => $rows->keyBy('ressource_id'));
+
+    $obsFromNote = function ($note) {
+        if (!is_numeric($note)) return '-';
+        $note = (float) $note;
+        if ($note < 10) return 'Insuffisant';
+        if ($note < 12) return 'Passable';
+        if ($note < 14) return 'Assez bien';
+        if ($note < 16) return 'Bien';
+        return 'Très bien';
+    };
+
+    return view('apprenant.mes-notes-apc', compact(
+        'inscription',
+        'competencesGenerales',
+        'competencesParticulieres',
+        'mccByRessource',
+        'evalByRessource',
+        'obsFromNote'
+    ));
+}
 
 
 }

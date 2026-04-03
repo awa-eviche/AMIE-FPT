@@ -47,73 +47,149 @@ class CompetenceController extends Controller
     /**
      * Store a newly created resource in storage.
      */
+// public function store(Request $request)
+// {
+//     $request->validate([
+//         'code' => 'required|string|max:255',
+//         'nom' => [
+//             'required',
+//             'string',
+//             'max:255',
+//             function ($attribute, $value, $fail) use ($request) {
+//                 $normalized = Str::of($value)
+//                     ->lower()
+//                     ->squish()
+//                     ->ascii()
+//                     ->value();
+
+//                 $niveauIds = (array) $request->niveau_etude_id;
+
+//                 foreach ($niveauIds as $niveauId) {
+//                     $niveau = NiveauEtude::find($niveauId);
+//                     if (!$niveau) {
+//                         $fail("Niveau d'étude invalide (id: $niveauId).");
+//                         continue;
+//                     }
+
+//                     $niveauNom = Str::of($niveau->nom)
+//                         ->lower()
+//                         ->squish()
+//                         ->ascii()
+//                         ->value();
+
+//                     $exists = Competence::where('niveau_etude_id', $niveauId)
+//                         ->get()
+//                         ->contains(function ($competence) use ($normalized) {
+//                             $existingNormalized = Str::of($competence->nom)
+//                                 ->lower()
+//                                 ->squish()
+//                                 ->ascii()
+//                                 ->value();
+//                             return $existingNormalized === $normalized;
+//                         });
+
+//                     if ($exists) {
+//                         $fail("La compétence '$value' existe déjà dans le niveau d'étude '{$niveau->nom}'.");
+//                     }
+//                 }
+//             },
+//         ],
+//         'type' => 'required|in:generale,particuliere',
+//         'niveau_etude_id' => 'required|array',
+//         'niveau_etude_id.*' => 'exists:niveau_etudes,id', // ✅ correction ici
+//         'description' => 'required|string',
+//         'metier_id' => 'required|exists:metiers,id',
+//     ]);
+
+//     foreach ($request->niveau_etude_id as $niveauId) {
+//         Competence::create([
+//             'code' => $request->code,
+//             'nom' => $request->nom,
+//             'type' => $request->type,
+//             'description' => $request->description,
+//             'metier_id' => $request->metier_id,
+//             'niveau_etude_id' => $niveauId,
+//         ]);
+//     }
+
+//     return redirect()->route('competence.index')
+//         ->withMessage('Compétence créée avec succès pour les niveaux sélectionnés.');
+// }
 public function store(Request $request)
 {
+
     $request->validate([
-        'code' => 'required|string|max:255',
-        'nom' => [
-            'required',
-            'string',
-            'max:255',
-            function ($attribute, $value, $fail) use ($request) {
-                $normalized = Str::of($value)
-                    ->lower()
-                    ->squish()
-                    ->ascii()
-                    ->value();
+        'code' => 'required|array',
+        'code.*' => 'required|string|max:255',
 
-                $niveauIds = (array) $request->niveau_etude_id;
+        'nom' => 'required|array',
+        'nom.*' => 'required|string|max:255',
 
-                foreach ($niveauIds as $niveauId) {
-                    $niveau = NiveauEtude::find($niveauId);
-                    if (!$niveau) {
-                        $fail("Niveau d'étude invalide (id: $niveauId).");
-                        continue;
-                    }
+        'type' => 'required|array',
+        'type.*' => 'required|in:generale,particuliere',
 
-                    $niveauNom = Str::of($niveau->nom)
+        'niveau_etude_id' => 'required|array',
+        'niveau_etude_id.*' => 'exists:niveau_etudes,id',
+
+        'description' => 'required|string',
+        'metier_id' => 'required|exists:metiers,id',
+    ]);
+
+
+    foreach ($request->code as $index => $code) {
+
+        $nom = $request->nom[$index];
+        $type = $request->type[$index];
+
+        $normalized = Str::of($nom)
+            ->lower()
+            ->squish()
+            ->ascii()
+            ->value();
+
+        foreach ($request->niveau_etude_id as $niveauId) {
+
+            $niveau = NiveauEtude::find($niveauId);
+
+            if (!$niveau) {
+                continue;
+            }
+
+            $exists = Competence::where('niveau_etude_id', $niveauId)
+                ->get()
+                ->contains(function ($competence) use ($normalized) {
+
+                    $existingNormalized = Str::of($competence->nom)
                         ->lower()
                         ->squish()
                         ->ascii()
                         ->value();
 
-                    $exists = Competence::where('niveau_etude_id', $niveauId)
-                        ->get()
-                        ->contains(function ($competence) use ($normalized) {
-                            $existingNormalized = Str::of($competence->nom)
-                                ->lower()
-                                ->squish()
-                                ->ascii()
-                                ->value();
-                            return $existingNormalized === $normalized;
-                        });
+                    return $existingNormalized === $normalized;
+                });
 
-                    if ($exists) {
-                        $fail("La compétence '$value' existe déjà dans le niveau d'étude '{$niveau->nom}'.");
-                    }
-                }
-            },
-        ],
-        'type' => 'required|in:generale,particuliere',
-        'niveau_etude_id' => 'required|array',
-        'niveau_etude_id.*' => 'exists:niveau_etudes,id', // ✅ correction ici
-        'description' => 'required|string',
-        'metier_id' => 'required|exists:metiers,id',
-    ]);
+            if ($exists) {
+                return back()->withErrors([
+                    'nom' => "La compétence '$nom' existe déjà dans le niveau d'étude '{$niveau->nom}'."
+                ])->withInput();
+            }
 
-    foreach ($request->niveau_etude_id as $niveauId) {
-        Competence::create([
-            'code' => $request->code,
-            'nom' => $request->nom,
-            'type' => $request->type,
-            'description' => $request->description,
-            'metier_id' => $request->metier_id,
-            'niveau_etude_id' => $niveauId,
-        ]);
+            Competence::create([
+                'code' => $code,
+                'nom' => $nom,
+                'type' => $type,
+                'description' => $request->description,
+                'metier_id' => $request->metier_id,
+                'niveau_etude_id' => $niveauId,
+            ]);
+
+        }
+
     }
 
     return redirect()->route('competence.index')
-        ->withMessage('Compétence créée avec succès pour les niveaux sélectionnés.');
+        ->withMessage('Compétences créées avec succès.');
+
 }
 
 

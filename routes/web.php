@@ -151,8 +151,6 @@ Route::get('/classe/{classe}/sommation/pdf', [EvaluationSomativeController::clas
     Route::get('/niveauetudeetablissement/{id}/{idEtablissement}/remove', [NiveauEtudeEtablissementController::class, 'removeProgramFormation'])->name('program.logic.remove');
 
 
-
-
     // Route::resource('notifications', NotificationController::class);
     Route::prefix('notifications')->group(function () {
         Route::get('/', [NotificationController::class, 'index'])->name('notifications.index');
@@ -424,3 +422,18 @@ Route::delete('/devoirPPO/{id}', [DevoirController::class, 'destroy'])->name('de
 // (optionnel)
 Route::get('/devoirPPO/{id}/edit', [DevoirController::class, 'edit'])->name('devoirPPO.edit');
 Route::get('/devoirPPO/matiere/{matiereId}', [DevoirController::class, 'listeParMatiere']);
+
+// routes/web.php
+
+Route::get('/devoirs/ppo/{inscriptionId}', [DevoirController::class, 'parInscriptionPPO']);
+Route::get('/devoirs/apc/{inscriptionId}', [DevoirAPCController::class, 'parInscriptionAPC'])->name('devoirs.apc');
+Route::get('/mes-notes/{inscriptionId}', [EvaluationController::class, 'mesNotes'])->name('mes.notes');
+Route::get('/bulletin/{id}/{semestre}', function($id, $semestre) {
+    session()->put('selectedsemestre', $semestre);
+    return app(\App\Http\Controllers\EvaluationController::class)->generatePDF($id);
+})->name('inscription.pdf');
+Route::get('/mes-notes-apc/{inscriptionId}', [InscriptionController::class, 'mesNotesAPC'])->name('mes.notes.apc');
+Route::get('/bulletin-apc/{id}/{semestre}', function($id, $semestre) {
+    session()->put('selectedsemestre1', $semestre);
+    return app(\App\Http\Controllers\InscriptionController::class)->generateCompetencePdf($id);
+})->name('inscription.pdf.apc');

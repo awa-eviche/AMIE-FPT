@@ -147,7 +147,7 @@ $dateActuelle = strftime("%d %B %Y %H:%M");
                     <i class="menu-icon fa-regular fa-building"></i>
                     </span>
                     <span class="mx-4 text-base font-normal">
-                        Classes
+                        *Classesgggu
                     </span>
                 </a>
             @endif

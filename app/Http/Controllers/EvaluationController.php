@@ -252,7 +252,7 @@ class EvaluationController extends Controller
     public function destroy($evaluationId)
     {
         $evaluation = Evaluation::findOrFail($evaluationId);
-$inscription = $evaluation->inscription;
+        $inscription = $evaluation->inscription;
         $classe = $inscription?->classe;
         $user = auth()->user();
         $personnel = $user->personnel;
@@ -260,7 +260,7 @@ $inscription = $evaluation->inscription;
     if (!(
         $user->hasRole('superadmin') ||
         $user->hasRole('chef_de_travaux') ||
- $user->hasRole('directeur_etude') ||
+        $user->hasRole('directeur_etude') ||
         $user->hasRole('chef_etablissement')
     ))
         {
@@ -277,17 +277,22 @@ public function generatePDF($id)
     $semestre = (int) session()->get('selectedsemestre', 1);
 
     $inscription = Inscription::findOrFail($id);
-
+$classeId = (int) $inscription->classe_id;
     // Matieres de la classe (PPO)
-    $matieres = Matiere::where('niveau_etude_id', $inscription->classe->niveau_etude->id)->get();
+  $matieres = Matiere::where('niveau_etude_id', $inscription->classe->niveau_etude->id)
+    ->whereIn('id', function ($query) use ($classeId) {
+        $query->select('matiere_id')
+              ->from('classe_formateur_matiere')
+              ->where('classe_id', $classeId)
+              ->whereNotNull('formateur_id'); // matière réellement assignée
+    })
+    ->get();
 
     
     $moyenneMatiereFn = function ($note_cc, $note_composition) {
         if ($note_cc === null || $note_composition === null) return null;
         return (((float)$note_cc + (float)$note_composition) / 2);
     };
-
-
     $calculerMoyenneSemestre = function ($insc, int $semestreNum) use ($matieres, $moyenneMatiereFn) {
 
         $evaluations = Evaluation::where('inscription_id', $insc->id)
@@ -425,7 +430,6 @@ $hRetNon = (float) $absencesSemestre->where('type','retard')
     ->filter(fn($r) => (int)$r->justifie === 0 || (int)$r->nonjustifie === 1)
     ->sum('nombre_heure_retard');
 ;
-
 $hAbsTotal = $hAbsJust + $hAbsNon;
 $hRetTotal = $hRetJust + $hRetNon;
 
@@ -561,7 +565,17 @@ public function previewClasseBulletins($classe_id, $semestre)
     $template = str_replace('[LOGO]', $logoBase64, $template);
 
     // ✅ Matières du niveau (coef fiable)
-    $matieres = Matiere::where('niveau_etude_id', $classe->niveau_etude->id)->get();
+// Matières de la classe (PPO)
+$classeId = (int) $classe->id;
+
+$matieres = Matiere::where('niveau_etude_id', $classe->niveau_etude_id)
+    ->whereIn('id', function ($query) use ($classeId) {
+        $query->select('matiere_id')
+            ->from('classe_formateur_matiere')
+            ->where('classe_id', $classeId)
+            ->whereNotNull('formateur_id');
+    })
+    ->get();
 
     // --- moyenne matière ---
     $moyenneMatiereFn = function ($note_cc, $note_composition) {
@@ -834,6 +848,65 @@ private function getAppreciation($note)
     return "Excellent";
 }
 
+public function mesNotes($inscriptionId)
+{
+    $inscription = \App\Models\Inscription::with([
+        'apprenant', 
+        'classe.etablissement', 
+        'classe.niveau_etude', 
+        'anneeAcademique'
+    ])->findOrFail($inscriptionId);
 
+    $classeId = (int) $inscription->classe_id;
+
+    $matieres = \App\Models\Matiere::where('niveau_etude_id', $inscription->classe->niveau_etude->id)
+        ->whereIn('id', function ($query) use ($classeId) {
+            $query->select('matiere_id')
+                  ->from('classe_formateur_matiere')
+                  ->where('classe_id', $classeId)
+                  ->whereNotNull('formateur_id');
+        })
+        ->get()
+        ->keyBy('id');
+
+    $evaluationsRaw = \App\Models\Evaluation::where('inscription_id', $inscriptionId)
+        ->with('matiere')
+        ->whereNotNull('note_composition')
+        ->get();
+
+    $evaluations = $evaluationsRaw->map(function($e) use ($matieres) {
+        $matiere   = $matieres->get($e->matiere_id);
+        $coef      = (float)($matiere?->coef ?? 0);
+        $note_cc   = $e->note_cc !== null ? (float)$e->note_cc : null;
+        $note_comp = $e->note_composition !== null ? (float)$e->note_composition : null;
+
+        $moyenne = ($note_cc !== null && $note_comp !== null)
+            ? round(($note_cc + $note_comp) / 2, 2)
+            : null;
+
+        // Calcul de l'appréciation basé sur la moyenne
+        $appreciation = null;
+        if ($moyenne !== null) {
+            if ($moyenne < 10)           $appreciation = 'Insuffisant';
+            elseif ($moyenne < 12)       $appreciation = 'Passable';
+            elseif ($moyenne < 14)       $appreciation = 'Assez Bien';
+            elseif ($moyenne < 16)       $appreciation = 'Bien';
+            elseif ($moyenne < 18)       $appreciation = 'Bon Travail';
+            else                         $appreciation = 'Très Bon Travail';
+        }
+
+        return [
+            'matiere'          => $e->matiere->nom ?? '-',
+            'coef'             => $coef > 0 ? $coef : '-',
+            'note_cc'          => $note_cc,
+            'note_composition' => $note_comp,
+            'moyenne'          => $moyenne,
+            'appreciation'     => $appreciation,
+            'semestre'         => $e->semestre,
+        ];
+    });
+
+    return view('apprenant.mes-notes', compact('evaluations', 'inscription'));
+}
 
 }

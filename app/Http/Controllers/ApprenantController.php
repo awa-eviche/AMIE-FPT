@@ -25,9 +25,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\ApprenantsImport;
-
-
-
+use Illuminate\Support\Facades\Hash;
 class ApprenantController extends Controller
 {
     protected $logUserRepository;
@@ -117,7 +115,7 @@ $inscription = Inscription::create([
     // 'createdAt' => Carbon::now(),
      'created_at' => Carbon::now(),
 ]);
-
+app(\App\Http\Controllers\InscriptionController::class)->createUserForInscription($inscription);
 
             // Logging
             $this->logUserRepository->store([
@@ -285,7 +283,7 @@ public function import(Request $request, $classeId)
         'annee_academique_id' => 'required|exists:annee_academiques,id',
     ]);
 
-    // On récupère la classe passée en paramètre
+    
     $classe = Classe::find($classeId);
 
     if (!$classe) {
@@ -293,7 +291,7 @@ public function import(Request $request, $classeId)
     }
 
     try {
-        //Excel::import(new ApprenantsImport($classe), $request->file('file'));
+        
         Excel::import(new ApprenantsImport($classe, $request->annee_academique_id), $request->file('file'));
 
         return redirect()->route('classe.show', $classe->id)->withMessage('Importation réussie des apprenants.');

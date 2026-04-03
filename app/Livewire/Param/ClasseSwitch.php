@@ -51,7 +51,7 @@ class ClasseSwitch extends Component
 
 public $showNotesModal = false;
 
-public $notesApprenantId = ''; // ✅ filtre apprenant (inscription_id)
+public $notesApprenantId = ''; // âœ… filtre apprenant (inscription_id)
 
 public $notesCompetenceType = '';
 public $notesCompetenceName = '';
@@ -68,7 +68,7 @@ public $notesCompetenceFilter = null;
 public function openAbsenceClasseModal()
 {
     if (!$this->classe || !$this->annee_academique_id) {
-        session()->flash('error', 'Veuillez choisir une classe et une année académique.');
+        session()->flash('error', 'Veuillez choisir une classe et une annÃ©e acadÃ©mique.');
         return;
     }
 
@@ -89,17 +89,17 @@ public function closeAbsenceClasseModal()
 public function openNotesModal()
 {
     if (!$this->classe || !$this->annee_academique_id) {
-        session()->flash('error', 'Veuillez choisir une classe et une année académique.');
+        session()->flash('error', 'Veuillez choisir une classe et une annÃ©e acadÃ©mique.');
         return;
     }
 
     $this->apcSemestre = $this->apcSemestre ?: session()->get('selectedsemestre1');
     if (!$this->apcSemestre) {
-        session()->flash('error', 'Veuillez sélectionner un semestre.');
+        session()->flash('error', 'Veuillez sÃ©lectionner un semestre.');
         return;
     }
 
-    // ✅ reset filtre apprenant
+    // âœ… reset filtre apprenant
     $this->notesApprenantId = '';
 
     // 1) Apprenants
@@ -112,16 +112,17 @@ public function openNotesModal()
     $niveauId = Classe::whereKey($this->classe)->value('niveau_etude_id');
     $user = auth()->user();
 
-    // 2) Compétences (formateur => uniquement ses compétences / non-formateur => toutes)
+    // 2) CompÃ©tences (formateur => uniquement ses compÃ©tences / non-formateur => toutes)
  $classeId = $this->classe;
 
 $competencesQuery = Competence::query()
     ->where('niveau_etude_id', $niveauId)
-    ->with(['ressources' => function ($q) use ($classeId) {
-        $q->where('classe_id', $classeId);
-    }]);
+  
 
-
+   ->with(['ressources' => function ($q) use ($classeId, $user) {
+    $q->where('classe_id', $classeId)
+      ->where('formateur_id', $user->id);
+}]);
 
     if ($user && $user->hasRole('formateur')) {
         $competenceIds = DB::table('classe_formateur_competence')
@@ -131,7 +132,7 @@ $competencesQuery = Competence::query()
             ->toArray();
 
         if (empty($competenceIds)) {
-            session()->flash('error', 'Aucune compétence ne vous est assignée dans cette classe.');
+            session()->flash('error', 'Aucune compÃ©tence ne vous est assignÃ©e dans cette classe.');
             return;
         }
 
@@ -143,7 +144,7 @@ $competencesQuery = Competence::query()
     $this->competencesGenerales = $competences->where('type', 'generale')->values();
     $this->competencesParticulieres = $competences->where('type', 'particuliere')->values();
 
-    // ✅ charge les notes (tes fonctions existantes)
+    // âœ… charge les notes (tes fonctions existantes)
     $this->loadApcMccAndCompositions();
 
     $this->showNotesModal = true;
@@ -153,7 +154,7 @@ public function closeNotesModal()
 {
     $this->showNotesModal = false;
 
-    // ✅ reset filtre
+    // âœ… reset filtre
     $this->notesApprenantId = '';
     // dans openNotesModal()
 
@@ -450,7 +451,7 @@ $query = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
         ];
     }
 
-    // 2) ✅ MCC = moyenne des notes (devoir_apcs)
+    // 2) âœ… MCC = moyenne des notes (devoir_apcs)
     $mccRows = DevoirAPC::query()
         
         ->where('semestre', $semestre)
@@ -483,10 +484,17 @@ $query = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
 public function openApcClasseModal()
 {
     if (!$this->classe || !$this->annee_academique_id) {
-        session()->flash('error', 'Veuillez choisir une classe et une année académique.');
+        session()->flash('error', 'Veuillez choisir une classe et une annÃ©e acadÃ©mique.');
         return;
     }
 
+     if (!$this->selectedsemestre1) {
+        session()->flash(
+            'error',
+            'Veuillez choisir le semestre pour Ã©valuer.'
+        );
+        return; 
+    }
     $user = auth()->user();
 
     // 1) Apprenants
@@ -506,9 +514,9 @@ public function openApcClasseModal()
     $this->showApcClasseModal = true;
 
     if (empty($competenceIds)) {
-        session()->flash('error', 'Aucune compétence ne vous est assignée dans cette classe.');
+        session()->flash('error', 'Aucune compÃ©tence ne vous est assignÃ©e dans cette classe.');
 
-        // On vide les collections pour éviter erreurs
+        // On vide les collections pour Ã©viter erreurs
         $this->competencesGenerales = collect();
         $this->competencesParticulieres = collect();
 
@@ -517,12 +525,16 @@ public function openApcClasseModal()
 
     $classeId = $this->classe;
 
-    $competences = Competence::query()
-        ->whereIn('id', $competenceIds)
-        ->with(['ressources' => function ($q) use ($classeId) {
-            $q->where('classe_id', $classeId);
-        }])
-        ->get();
+  $competences = Competence::query()
+    ->whereIn('id', $competenceIds)
+    ->whereHas('ressources', function ($q) use ($classeId) {
+        $q->where('classe_id', $classeId);
+    })
+   ->with(['ressources' => function ($q) use ($classeId, $user) {
+    $q->where('classe_id', $classeId)
+      ->where('formateur_id', $user->id);
+}])
+    ->get();
 
     $this->competencesGenerales = $competences->where('type', 'generale')->values();
     $this->competencesParticulieres = $competences->where('type', 'particuliere')->values();
@@ -561,12 +573,16 @@ $classeId = $this->classe;
         ->pluck('competence_id')
         ->toArray();
 
-    $competences = Competence::query()
-        ->whereIn('id', $competenceIds)
-        ->with(['ressources' => function ($q) use ($classeId) {
-            $q->where('classe_id', $classeId);
-        }])
-        ->get();
+ $competences = Competence::query()
+    ->whereIn('id', $competenceIds)
+    ->whereHas('ressources', function ($q) use ($classeId) {
+        $q->where('classe_id', $classeId);
+    })
+       ->with(['ressources' => function ($q) use ($classeId, $user) {
+    $q->where('classe_id', $classeId)
+      ->where('formateur_id', $user->id);
+}])
+    ->get();
 
     $this->competencesGenerales = $competences->where('type', 'generale')->values();
     $this->competencesParticulieres = $competences->where('type', 'particuliere')->values();
@@ -594,7 +610,7 @@ private function loadApcMccAndCompositions()
         ->values()
         ->all();
 
-    // ✅ reset
+    // âœ… reset
     $this->mccsApc = [];
     $this->compositionsApc = [];
     $this->acquisApc = [];
@@ -634,7 +650,7 @@ private function loadApcMccAndCompositions()
             ->groupBy('apprenant_id', 'ressource_id')
             ->get();
 
-        // mapper apprenant_id -> inscription_id pour garder ton Blade inchangé
+        // mapper apprenant_id -> inscription_id pour garder ton Blade inchangÃ©
         $map = $inscriptions->keyBy('apprenant_id');
 
         foreach ($rows as $r) {
@@ -664,29 +680,34 @@ foreach ($evals as $e) {
 public function saveApcClasse()
 {
     if (!auth()->user()->hasRole('formateur')) {
-        session()->flash('error', 'Action non autorisée.');
+        session()->flash('error', 'Action non autorisÃ©e.');
         return;
     }
 
     if (!$this->classe || !$this->annee_academique_id) {
-        session()->flash('error', 'Veuillez choisir une classe et une année académique.');
+        session()->flash('error', 'Veuillez choisir une classe et une annÃ©e acadÃ©mique.');
         return;
     }
 
     if (!$this->apcSemestre) {
-        session()->flash('error', 'Veuillez sélectionner un semestre.');
+        session()->flash('error', 'Veuillez sÃ©lectionner un semestre.');
         return;
     }
 
-    // Notes possibles (optionnelles)
     $this->validate([
         'compositionsApc' => 'array',
         'compositionsApc.*.*' => 'nullable|numeric|min:0|max:20',
     ]);
 
-    $inscriptionIds = collect($this->apprenantsApcModal)->pluck('id')->filter()->values()->all();
+    $userId = auth()->id();
 
-    // Ressources (par type)
+    $inscriptionIds = collect($this->apprenantsApcModal)
+        ->pluck('id')
+        ->filter()
+        ->values()
+        ->all();
+
+    // ðŸ”¹ Ressources visibles (dÃ©jÃ  filtrÃ©es Ã  lâ€™affichage)
     $generalRessourceIds = collect($this->competencesGenerales)
         ->flatMap(fn($c) => ($c->ressources ?? collect())->pluck('id'))
         ->filter()->unique()->values()->all();
@@ -695,22 +716,55 @@ public function saveApcClasse()
         ->flatMap(fn($c) => ($c->ressources ?? collect())->pluck('id'))
         ->filter()->unique()->values()->all();
 
-    $ressourceIds = collect($generalRessourceIds)->merge($particularRessourceIds)->unique()->values()->all();
+    $ressourceIds = collect($generalRessourceIds)
+        ->merge($particularRessourceIds)
+        ->unique()
+        ->values()
+        ->all();
 
     if (empty($inscriptionIds) || empty($ressourceIds)) {
-        session()->flash('error', 'Aucune donnée à enregistrer.');
+        session()->flash('error', 'Aucune donnÃ©e Ã  enregistrer.');
         return;
     }
 
+    /*
+|--------------------------------------------------------------------------
+| ðŸ”’ VÃ‰RIFIER QUE LE DEVOIR EST CHARGÃ‰ AVANT ENREGISTREMENT
+|--------------------------------------------------------------------------
+*/
+
+$devoirExiste = DevoirAPC::query()
+    ->where('semestre', (int)$this->apcSemestre)
+    ->whereIn('inscription_id', $inscriptionIds)
+    ->whereIn('ressource_id', $ressourceIds)
+    ->whereHas('ressource', function ($q) use ($userId) {
+        $q->where('formateur_id', $userId);
+    })
+    ->exists();
+
+if (!$devoirExiste) {
+    session()->flash(
+        'error',
+        "Aucun devoir chargÃ© pour ce semestre. Enregistrement impossible."
+    );
+    return;
+}
     $generalSet = array_flip($generalRessourceIds);
     $partSet    = array_flip($particularRessourceIds);
 
-    // ✅ MCC AVG(note)
+    /*
+    |--------------------------------------------------------------------------
+    | âœ… MCC (AVG note) FILTRÃ‰ PAR FORMATEUR
+    |--------------------------------------------------------------------------
+    */
+
     $mccRows = DevoirAPC::query()
-        
         ->where('semestre', (int)$this->apcSemestre)
         ->whereIn('inscription_id', $inscriptionIds)
         ->whereIn('ressource_id', $ressourceIds)
+        ->whereHas('ressource', function ($q) use ($userId) {
+            $q->where('formateur_id', $userId);
+        })
         ->whereNotNull('note')
         ->selectRaw('inscription_id, ressource_id, ROUND(AVG(note),2) as mcc')
         ->groupBy('inscription_id', 'ressource_id')
@@ -721,12 +775,19 @@ public function saveApcClasse()
         $mccMap[$r->inscription_id][$r->ressource_id] = (float)$r->mcc;
     }
 
-    // ✅ dernier devoirapc_id
+    /*
+    |--------------------------------------------------------------------------
+    | âœ… Dernier devoirapc_id FILTRÃ‰ PAR FORMATEUR
+    |--------------------------------------------------------------------------
+    */
+
     $devoirs = DevoirAPC::query()
-        
         ->where('semestre', (int)$this->apcSemestre)
         ->whereIn('inscription_id', $inscriptionIds)
         ->whereIn('ressource_id', $ressourceIds)
+        ->whereHas('ressource', function ($q) use ($userId) {
+            $q->where('formateur_id', $userId);
+        })
         ->select('id', 'inscription_id', 'ressource_id')
         ->orderByDesc('id')
         ->get();
@@ -742,7 +803,6 @@ public function saveApcClasse()
         ->where('semestre', (int)$this->apcSemestre)
         ->whereIn('inscription_id', $inscriptionIds)
         ->whereIn('ressource_id', $ressourceIds)
-        
         ->get(['inscription_id', 'ressource_id'])
         ->mapWithKeys(fn($e) => [($e->inscription_id.'-'.$e->ressource_id) => true])
         ->all();
@@ -756,38 +816,49 @@ public function saveApcClasse()
         $existing,
         &$missingMcc
     ) {
+
         foreach ($inscriptionIds as $inscriptionId) {
+
             foreach ($ressourceIds as $ressourceId) {
 
                 $isGeneral = isset($generalSet[$ressourceId]);
                 $isPart    = isset($partSet[$ressourceId]);
+
                 if (!$isGeneral && !$isPart) continue;
 
                 $noteSaisie = $this->compositionsApc[$inscriptionId][$ressourceId] ?? null;
 
-                // ✅ Particulière : si vide => on n'enregistre pas (donc tu peux laisser vide)
                 if ($isPart && ($noteSaisie === '' || $noteSaisie === null)) {
                     continue;
                 }
 
-                $mcc = $mccMap[$inscriptionId][$ressourceId] ?? null;
-                $devoirapcId = $devoirIdMap[$inscriptionId][$ressourceId] ?? null;
-                if (!$devoirapcId) $missingMcc++;
+               $mcc = $mccMap[$inscriptionId][$ressourceId] ?? null;
+$devoirapcId = $devoirIdMap[$inscriptionId][$ressourceId] ?? null;
 
-                // ✅ composition :
-                // - Particulière : note saisie (obligatoire pour enregistrer)
-                // - Générale : si note vide => MCC, MAIS seulement si aucune ligne n'existe déjà
+/*
+|--------------------------------------------------------------------------
+| ðŸ”’ NE PAS ENREGISTRER SI AUCUN DEVOIR Nâ€™EST CHARGÃ‰
+|--------------------------------------------------------------------------
+*/
+if (!$devoirapcId) {
+    $missingMcc++;
+    continue; // â›” STOP ici â†’ aucune composition enregistrÃ©e
+}
+
                 if ($isPart) {
                     $composition = (float)$noteSaisie;
                 } else {
+
                     if ($noteSaisie === '' || $noteSaisie === null) {
-                        // si existe déjà, on n'écrase pas
+
                         $key = $inscriptionId.'-'.$ressourceId;
+
                         if (isset($existing[$key])) continue;
 
-                        // sinon on met MCC (si dispo)
                         if ($mcc === null) continue;
+
                         $composition = (float)$mcc;
+
                     } else {
                         $composition = (float)$noteSaisie;
                     }
@@ -798,7 +869,6 @@ public function saveApcClasse()
                         'inscription_id' => (int)$inscriptionId,
                         'ressource_id'   => (int)$ressourceId,
                         'semestre'       => (int)$this->apcSemestre,
-                      
                     ],
                     [
                         'devoirapc_id' => $devoirapcId,
@@ -809,11 +879,13 @@ public function saveApcClasse()
         }
     });
 
-    if ($missingMcc > 0) {
-        session()->flash('error', "Enregistré: $missingMcc ligne(s) sans devoirapc_id (aucun DevoirAPC trouvé).");
-    } else {
-        session()->flash('success', 'Évaluations APC enregistrées avec succès.');
-    }
+    
+
+        session()->flash(
+            'success',
+            'Ã‰valuations APC enregistrÃ©es avec succÃ¨s.'
+        );
+    
 
     $this->showApcClasseModal = false;
 
@@ -821,7 +893,12 @@ public function saveApcClasse()
         $this->loadApcMccAndCompositions();
     }
 }
+    public function deleteAbsence($id)
+{
+    \App\Models\Absence::findOrFail($id)->delete();
 
+    session()->flash('success', 'Absence supprimée avec succès.');
+}
     public function render()
     {
         $absences = collect();

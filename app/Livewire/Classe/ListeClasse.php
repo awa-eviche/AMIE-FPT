@@ -122,7 +122,11 @@ class ListeClasse extends Component
         $qry = Classe::query();
 
         // 🔹 Filtrage selon le rôle utilisateur
-        if ($user->hasRole('formateur') && $user->personnel) {
+        
+          if ($user->hasRole('apprenant') && $user->inscription) {
+        $qry->where('id', $user->inscription->classe_id);
+    }
+        elseif ($user->hasRole('formateur') && $user->personnel) {
             $qry->whereHas('formateurs', function ($query) use ($user) {
                 $query->where('personnel_etablissement_id', $user->personnel->id);
             });

@@ -52,6 +52,8 @@ class User extends Authenticatable
         "canal_notification",
         "userable_type",
         "userable_id",
+        "inscription_id",
+
         'profile_photo_path',
         'role_id',
         'sexe',
@@ -68,7 +70,21 @@ class User extends Authenticatable
     // {
     //     return $this->hasMany(Reunion::class, 'charge_suivi_id');
     // }
-
+   public function inscription()
+    {
+        return $this->belongsTo(Inscription::class, 'inscription_id');
+    }
+public function apprenant()
+{
+    return $this->hasOneThrough(
+        Apprenant::class,    // modèle final
+        Inscription::class,  // modèle intermédiaire
+        'apprenant_id',      // clé étrangère sur Inscription qui pointe sur Apprenant
+        'id',                // clé primaire de Apprenant
+        'inscription_id',    // clé locale sur User qui pointe sur Inscription
+        'id'                 // clé primaire de Inscription
+        );
+}
     public function agent()
     {
         return $this->hasOne(Agent::class, 'id', 'userable_id')->where('userable_type', 'App\Models\Agent');

@@ -200,4 +200,25 @@ class DevoirController extends Controller
 
         return $mcc;
     }
+
+// DevoirController
+public function parInscriptionPPO($inscriptionId)
+{
+    $devoirs = Devoir::where('inscription_id', $inscriptionId)
+        ->with('matiere')
+        ->orderBy('created_at', 'asc')
+        ->get()
+        ->map(function ($d) {
+            return [
+                'matiere'  => $d->matiere->nom ?? 'Non définie',
+                'note'     => $d->note,
+                'mcc'      => $d->mcc,
+                'semestre' => $d->semestre,
+            ];
+        });
+
+    return response()->json($devoirs);
+}
+
+
 }

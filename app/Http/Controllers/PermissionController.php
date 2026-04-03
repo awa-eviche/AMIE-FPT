@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Http\Controllers;
-
 use App\Http\Requests\PermissionRequest;
 use App\Repositories\PermissionRepository;
 

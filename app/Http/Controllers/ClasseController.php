@@ -143,7 +143,7 @@ class ClasseController extends Controller
 
 
   
-     public function show(Request $request, Classe $classe)
+ public function show(Request $request, Classe $classe)
 {
    
     $anneeAcademiques = AnneeAcademique::orderByDesc('id')->get();
@@ -208,11 +208,6 @@ class ClasseController extends Controller
     ])
     ->orderBy('cfc.id', 'asc')          
     ->get();
-
-
-
-
- 
     foreach ($assignations as $a) {
         if ($a->competence_type === 'generale') {
             $a->elements = ElementCompetence::where('competence_id', $a->competence_id)
@@ -223,8 +218,7 @@ class ClasseController extends Controller
         }
     }
 }
-
-        
+      
     }
 $inscriptionsAll = Inscription::with('apprenant')
     ->where('classe_id', $classe->id)

@@ -178,6 +178,26 @@ private function recalculerMCC($inscription_id, $ressource_id, $semestre)
         ]
     );
 }
+public function parInscriptionAPC($inscriptionId)
+{
+    $devoirs = DevoirAPC::where('inscription_id', $inscriptionId)
+        ->with('ressource') // ✅ CHANGEMENT ICI
+        ->orderBy('created_at', 'asc')
+        ->get()
+        ->groupBy(fn($d) => $d->ressource->nom ?? 'Non définie') // ✅ groupement par ressource
+        ->flatMap(function ($items) {
+            return $items->take(3); // max 3 devoirs
+        })
+        ->map(fn($d) => [
+            'ressource' => $d->ressource->nom ?? '-', // ✅ principal
+            'note'      => $d->note,
+            'mcc'       => $d->mcc,
+            'semestre'  => $d->semestre,
+        ])
+        ->values();
+
+    return response()->json($devoirs);
+}
 
 
 }

@@ -56,6 +56,8 @@
                 </a>
             @endif
 
+
+            
             {{-- @if(auth()->user()->can('visualiser_apprenant') and !auth()->user()->hasRole(config('constants.roles.superadmin')))
                 <a class="element_sidebar {{ request()->is('apprenant*') ? 'element_sidebar_acitf' : '' }}" href="{{route('apprenant.index')}}">
                     <span class="text-left">
@@ -69,7 +71,7 @@
             @endif --}}
 
             {{-- @if(auth()->user()->can('visualiser_classe_matiere') and !auth()->user()->hasRole(config('constants.roles.superadmin'))) --}}
-            @if(auth()->user()->can('visualiser_classe_matiere'))
+           @if(auth()->user()->can('visualiser_classe_matiere')) 
             <div x-data="{ open: {{ request()->is('classe*') ? 'true' : 'false' }} }">
     <p type="button" class="element_sidebar relative {{ request()->is('classe*') ? 'element_sidebar_acitf' : '' }}" @click="open = !open">
         <span class="text-left">
@@ -115,7 +117,37 @@
             @endif
 
 
-          
+         @if(auth()->user()->hasRole(config('constants.roles.apprenant')))
+    @php
+        $inscriptionId = auth()->user()->inscription_id;
+        $modalite = null;
+        if ($inscriptionId) {
+            $modalite = \App\Models\Inscription::with('classe')
+                ->find($inscriptionId)
+                ?->classe
+                ?->modalite;
+        }
+    @endphp
+
+    @if($modalite === 'PPO')
+        <a class="element_sidebar {{ request()->is('mes-notes*') ? 'element_sidebar_acitf' : '' }}"
+           href="{{ route('mes.notes', $inscriptionId) }}">
+            <span class="text-left">
+                <i class="menu-icon fa-solid fa-chart-line"></i>
+            </span>
+            <span class="mx-4 text-base font-normal">Mes relevés de notes</span>
+        </a>
+
+    @elseif($modalite === 'APC')
+        <a class="element_sidebar {{ request()->is('mes-notes-apc*') ? 'element_sidebar_acitf' : '' }}"
+           href="{{ route('mes.notes.apc', $inscriptionId) }}">
+            <span class="text-left">
+                <i class="menu-icon fa-solid fa-chart-line"></i>
+            </span>
+            <span class="mx-4 text-base font-normal">Mes relevés de notes</span>
+        </a>
+    @endif
+@endif
 
 
             
@@ -160,18 +192,9 @@
                      Note APC
                     </span>
                 </a>   
-   
 </div>
-
 </div>
             @endif
-
-
-         
-           
-            
-         
-
               @if(auth()->check() && (
     auth()->user()->hasRole('chef_etablissement') ||
     auth()->user()->hasRole('assistante')
@@ -407,13 +430,8 @@
                             <span class="mx-4 text-base font-normal">
                                 Type Survey
                             </span>
-                        </a>
-                   
-                        
+                        </a>                
                     @endcan
-                   
-
-                 
                         <a class="element_sidebar {{ request()->is('referentiel/*') ? 'sous_menu_sidebar_actif' : '' }}" href="{{route('competence.index')}}">
                             <span class="text-left">
                                 <i class="menu-icon fa-solid fa-road"></i>
