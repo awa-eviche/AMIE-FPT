@@ -66,4 +66,10 @@ public function competences()
             'etablissement_id'
         );
     }  
+
+
+    public function referentiels()
+{
+    return $this->belongsToMany(Referentiel::class, 'niveau_referentiel');
+}
 }

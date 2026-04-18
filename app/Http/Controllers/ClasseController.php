@@ -25,6 +25,8 @@ use App\Models\PersonnelEtablissement;
 use App\Enums\Model;
 use Illuminate\Support\Facades\DB;
 use PDF;
+use App\Models\Referentiel;
+
 
 
 class ClasseController extends Controller
@@ -410,6 +412,21 @@ $devoirCountRenseigneByMatiere = Devoir::whereIn('inscription_id', $inscriptionI
     }
 
 
+  
+    
+    public function referentiels(Classe $classe)
+    {
+        $metierId = $classe->niveau_etude->metier_id;
+        $niveauId = $classe->niveau_etude_id;
+    
+        $referentiels = Referentiel::where('metier_id', $metierId)
+            ->whereHas('niveaux', function ($query) use ($niveauId) {
+                $query->where('niveau_etude_id', $niveauId);
+            })
+            ->get();
+    
+        return view('classe.referentiels', compact('classe', 'referentiels'));
+    }
 
 
 

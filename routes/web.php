@@ -13,6 +13,7 @@ use App\Http\Controllers\parametrage\SecteurController;
 use App\Http\Controllers\parametrage\FiliereController;
 use App\Http\Controllers\parametrage\MetierController;
 use App\Http\Controllers\parametrage\NiveauEtudeController;
+use App\Http\Controllers\parametrage\ReferentielController;
 use App\Http\Controllers\parametrage\MatiereController;
 use App\Http\Controllers\parametrage\CompetenceController;
 use App\Http\Controllers\parametrage\ElementCompetenceController;
@@ -215,6 +216,7 @@ Route::get('/classe/{classe}/sommation/pdf', [EvaluationSomativeController::clas
             Route::resource('filiere', FiliereController::class);
             Route::resource('metier', MetierController::class);
             Route::resource('niveauetude', NiveauEtudeController::class);
+            Route::resource('referentiel', ReferentielController::class);
             Route::resource('matiere', MatiereController::class);
             Route::resource('competence', CompetenceController::class);
             Route::resource('elementcompetence', ElementCompetenceController::class);
@@ -225,6 +227,8 @@ Route::get('/classe/{classe}/sommation/pdf', [EvaluationSomativeController::clas
             Route::resource('liste', ListeController::class);
             Route::resource('anneeacademique', AnneeAcademiqueController::class);
             Route::resource('typeIndicateur', TypeIndicateurController::class);
+            
+            
         });
 
     Route::resource('indicateur', IndicateurController::class);
@@ -437,3 +441,8 @@ Route::get('/bulletin-apc/{id}/{semestre}', function($id, $semestre) {
     session()->put('selectedsemestre1', $semestre);
     return app(\App\Http\Controllers\InscriptionController::class)->generateCompetencePdf($id);
 })->name('inscription.pdf.apc');
+
+Route::get('/get-niveaux/{metier}', [ReferentielController::class, 'getNiveaux']);
+
+Route::get('/classe/{classe}/referentiels', [ClasseController::class, 'referentiels'])
+    ->name('classe.referentiels');

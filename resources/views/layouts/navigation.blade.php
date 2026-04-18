@@ -420,6 +420,17 @@
                                 Niveau
                             </span>
                         </a>
+
+                        <a class="element_sidebar {{ request()->is('referentiel/*') ? 'sous_menu_sidebar_actif' : '' }}" href="{{route('referentiel.index')}}">
+                            <span class="text-left">
+                                <i class="menu-icon fa-solid fa-level-up"></i>
+
+                            </span>
+                            <span class="mx-4 text-base font-normal">
+                                Référentiels
+                            </span>
+                        </a>
+
                     @endcan
                     @if (auth()->user()->hasRole(config('constants.roles.superadmin')))
                         <a class="element_sidebar {{ request()->is('referentiel/*') ? 'sous_menu_sidebar_actif' : '' }}" href="{{route('typeIndicateur.index')}}">

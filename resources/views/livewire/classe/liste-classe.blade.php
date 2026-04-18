@@ -120,18 +120,17 @@
                          $user = auth()->user();
                          @endphp
 
-               @if (!$user->hasAnyRole(['apprenant', 'formateur']))
-     <a href="{{route('classe.edit',$classe->id)}}" class="flex items-center px-1 rounded-md py-1 border flex text-orange-600 text-sm text-center bg-white border-orange-600 hover:bg-orange-600 hover:text-white">
-                            <i class="fa fa-edit"></i>
-                            <span class="mx-2">Modifier</span>
-                        </a>
-                        @endif
+            
                         @if(!$classe->statut)
                         <a href="{{ route('classe.validate', $classe->id) }}" class="flex items-center px-1 rounded-md py-1 border flex text-purple-600 text-sm text-center bg-white border-purple-600 hover:bg-purple-600 hover:text-white">
                             <i class="fa fa-check"></i>
                             <span class="mx-2">Lancer</span>
                         </a>
                         @endif
+                        <a href="{{ route('classe.referentiels', $classe->id) }}" class="flex items-center px-1 rounded-md py-1 border flex text-purple-600 text-sm text-center bg-white border-purple-600 hover:bg-purple-600 hover:text-white">
+                        <i class="fa fa-check"></i>
+                        <span class="mx-2"> Voir référentiels</span>
+                         </a>
                         @if ($user->hasAnyRole(['apprenant', 'formateur','chef_de_travaux','chef_etablissement']))
                         <a href="#" class="flex items-center px-1 rounded-md py-1 border flex text-orange-600 text-sm text-center bg-white border-orange-600 hover:bg-orange-600 hover:text-white disabled">
                             <i class="fa fa-edit"></i>
