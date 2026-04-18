@@ -28,8 +28,6 @@ class InscriptionController extends Controller
     {
         $this->middleware('auth');
         $this->logUserRepository = $logUserRepository;
-       
-
     }
 
     public function index()
