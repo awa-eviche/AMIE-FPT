@@ -275,12 +275,11 @@
                                                                 <tr class="text-xs font-black tracking-wide text-left text-white font-bold uppercase border-b bg-first-orange">
                                                                     <th class="px-4 py-3 text-white border border-black">Compétence</th>
                                                                     <th class="px-4 py-3 text-white border border-black">Element de compétence</th>
-                                                                    <th class="px-4 py-3 text-white border border-black">Critère</th>
+                                                                    <th class="px-4 py-3 text-white border border-black">Critère (seuil de réussite)</th>
+                                                                    <th class="px-4 py-3 text-white border border-black">Note (%)</th>
                                                                     <th class="px-4 py-3 text-white border border-black">Acquis</th>
-                                                                    <!-- <th class="px-4 py-3 text-white border border-black"><abbr title="En Cours d'Acquisition">ECA</abbr></th> -->
                                                                     <th class="px-4 py-3 text-white border border-black">Non acquis</th>
-                                                                
-                                                                    
+                                                                    <th class="px-4 py-3 text-white border border-black">Appréciation</th>
                                                                 </tr>
                                                             </thead>
 
@@ -333,7 +332,16 @@
                                                                             @else
 
                                                                                 @foreach($criteres as $critere)
-                                                                                    <tr>
+                                                                                    @php
+                                                                                        $seuil = $critere->seuilPourcentage();
+                                                                                        $noteExistante = $somativeNoteCritere[$insc->id][$critere->id] ?? null;
+                                                                                    @endphp
+                                                                                    <tr
+                                                                                        x-data="{
+                                                                                            note: {{ $noteExistante !== null ? $noteExistante : 'null' }},
+                                                                                            seuil: {{ $seuil !== null ? $seuil : 'null' }}
+                                                                                        }"
+                                                                                    >
                                                                                         @if(!$printedCompetence)
                                                                                             <td rowspan="{{ $rowspanCompetence }}" class="px-4 py-2 border border-black text-center font-bold">
                                                                                                 {{ $competence->nom ?? '-' }}
@@ -348,24 +356,46 @@
                                                                                             @php $printedElement = true; @endphp
                                                                                         @endif
 
-                                                                                        <td class="px-4 py-2 border border-black">{{ $critere->libelle ?? '-' }}</td>
-
-                                                                                        {{-- radio (2/1/0) --}}
-                                                                                        <td class="px-4 py-2 border border-black text-center">
-                                                                                            <input type="radio"
-                                                                                                   name="statut_{{ $insc->id }}_{{ $critere->id }}"
-                                                                                                   value="2"
-                                                                                                   wire:model.defer="somativeStatut.{{ $insc->id }}.{{ $critere->id }}">
+                                                                                        <td class="px-4 py-2 border border-black">
+                                                                                            {{ $critere->libelle ?? '-' }}
+                                                                                            @if($seuil === null)
+                                                                                                <div class="text-xs text-red-600 font-semibold">Seuil invalide (à corriger dans "Seuil de réussite")</div>
+                                                                                            @endif
                                                                                         </td>
 
+                                                                                        {{-- Note (%) saisie par le formateur --}}
                                                                                         <td class="px-4 py-2 border border-black text-center">
-                                                                                            <input type="radio"
-                                                                                                   name="statut_{{ $insc->id }}_{{ $critere->id }}"
-                                                                                                   value="0"
-                                                                                                   wire:model.defer="somativeStatut.{{ $insc->id }}.{{ $critere->id }}">
+                                                                                            <input type="number" min="0" max="100" step="0.5"
+                                                                                                   class="w-20 border rounded px-2 py-1 text-center"
+                                                                                                   wire:model.defer="somativeNoteCritere.{{ $insc->id }}.{{ $critere->id }}"
+                                                                                                   @input="note = $event.target.value === '' ? null : Number($event.target.value)">
+                                                                                            <span class="text-gray-500">%</span>
                                                                                         </td>
 
-                                                         
+                                                                                        {{-- Acquis / Non acquis : cochés automatiquement (lecture seule),
+                                                                                             calculés en comparant la note (%) au seuil de réussite. La
+                                                                                             valeur réellement enregistrée est calculée côté serveur à
+                                                                                             partir de la note, ces cases ne sont qu'un aperçu visuel. --}}
+                                                                                        <td class="px-4 py-2 border border-black text-center">
+                                                                                            <input type="checkbox" disabled
+                                                                                                   :checked="seuil !== null && note !== null && note !== '' && Number(note) >= seuil">
+                                                                                        </td>
+                                                                                        <td class="px-4 py-2 border border-black text-center">
+                                                                                            <input type="checkbox" disabled
+                                                                                                   :checked="seuil !== null && note !== null && note !== '' && Number(note) < seuil">
+                                                                                        </td>
+
+                                                                                        {{-- Appréciation calculée en direct à partir de la note (%),
+                                                                                             même échelle que le bulletin PDF (correspondance /20 x5). --}}
+                                                                                        <td class="px-4 py-2 border border-black text-center text-xs"
+                                                                                            x-text="note === null || note === '' ? '-' :
+                                                                                                (Number(note) >= 80 ? 'Excellent travail' :
+                                                                                                 Number(note) >= 70 ? 'Bien' :
+                                                                                                 Number(note) >= 60 ? 'Assez bien' :
+                                                                                                 Number(note) >= 50 ? 'Passable' :
+                                                                                                 Number(note) >= 40 ? 'Travail insuffisant' :
+                                                                                                 'Très insuffisant')">
+                                                                                        </td>
                                                                                     </tr>
                                                                                 @endforeach
 

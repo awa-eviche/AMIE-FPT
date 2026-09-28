@@ -12,7 +12,8 @@ class Ressource extends Model
         'nom',
         'competence_id',
         'classe_id',
-        'formateur_id'
+        'formateur_id',
+        'annee_academique_id',
     ];
 
     public function competence()

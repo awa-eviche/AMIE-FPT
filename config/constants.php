@@ -8,6 +8,7 @@ return [
         'chef_etablissement' => 'chef_etablissement',
         'surveillant' => 'surveillant',
         'chef_de_travaux' => 'chef_de_travaux',
+        'directeur_etude' => 'directeur_etude',
         'formateur' => 'formateur',
         'intendant' => 'intendant',
         'ia' => 'ia',
@@ -16,6 +17,15 @@ return [
         'censeur' => 'censeur',
         'apprenant' => 'apprenant',
     ],
+    /*
+     | Les notes (évaluations, compositions PPO et APC) n'ont pas d'année académique
+     | propre : toutes celles présentes en base appartiennent à cette année.
+     | C'est aussi l'année utilisée PAR DÉFAUT (devoirs, ressources, affectations, notes...) tant
+     | qu'aucune autre n'est choisie explicitement (par exemple 2026-2027) : l'année « ouverte »
+     | n'est plus utilisée comme repli.
+     | Les devoirs, eux, portent leur année (annee_academique_id).
+     */
+    'annee_notes' => '2025-2026',
     'keys' => [
         'statut_juridique' => 'statut_juridique',
         'type' => 'type',

@@ -86,6 +86,10 @@
                     {!! Form::text('fonction', null, ['id' => 'fonction', 'class' => $inputClass, 'placeholder' => 'Fonction', 'required' => 'true']) !!}
                 </div>
                 <div class="relative z-0 w-full mb-6 group">
+                    <label for="specialite" class="block mb-2 text-sm font-medium text-regal-black dark:text-regal-black">Spécialité</label>
+                    {!! Form::text('specialite', null, ['id' => 'specialite', 'class' => $inputClass, 'placeholder' => 'Ex : Restauration']) !!}
+                </div>
+                <div class="relative z-0 w-full mb-6 group">
                     <label for="" class="block mb-2 text-sm font-medium text-regal-black dark:text-regal-black">
                         Dernier diplôme académique<span class="text-red-500">*</span>
                     </label>
@@ -135,29 +139,33 @@
 
 @push('myJS')
 <script>
-    $(document).ready(
+    const iaRoleIds = @json($iaRoleIds ?? []);
+    const iefRoleIds = @json($iefRoleIds ?? []);
+
+    function refreshInspectionFields() {
+        var selectedRole = String($('#roles').val() || '');
+
+        if (iefRoleIds.includes(selectedRole)) {
+            $('#iasGroup').show();
+            $('#iefsGroup').show();
+        } else if (iaRoleIds.includes(selectedRole)) {
+            $('#iasGroup').show();
+            $('#iefsGroup').hide();
+        } else {
+            $('#iasGroup').hide();
+            $('#iefsGroup').hide();
+        }
+    }
+
+    $(document).ready(function() {
 
         $('#roles').change(function() {
-            var selectedRole = $(this).val();
-            if (selectedRole == 11) {
-                $('#iasGroup').show();
-                $('#iefsGroup').show();
-            } else if (selectedRole == 10) {
-                $('#iasGroup').show();
-                $('#iefsGroup').hide();
-            }
-        }),
+            refreshInspectionFields();
+        });
 
         function executeOnPageLoad() {
             console.log("Executed Page Load");
-            var selectedRole = $('#roles').val();
-            if (selectedRole == 11) {
-                $('#iasGroup').show();
-                $('#iefsGroup').show();
-            } else if (selectedRole == 10) {
-                $('#iasGroup').show();
-                $('#iefsGroup').hide();
-            }
+            refreshInspectionFields();
             // Ajoutez ici d'autres actions à exécuter au chargement de la page si nécessaire
         },
 

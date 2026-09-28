@@ -138,16 +138,13 @@ public function sendAccountAcces($id)
         $etablissement = Etablissement::findOrFail($id);
         $personnelEtablissements = PersonnelEtablissement::where('etablissement_id', $etablissement->id)->get();
 
-        $tmp = [];
-        $password = config('constants.password'); // "password"
-        $tmp['password'] = $password;
+        $password = config('constants.password');
 
         if ($personnelEtablissements->count() === 0) {
-            // Création du nouvel utilisateur
             $user = User::create([
-                'email' => $etablissement->email,
-                'nom'   => $etablissement->nom,
-                'password' => Hash::make($password), // HASH OBLIGATOIRE
+                'email'    => $etablissement->email,
+                'nom'      => $etablissement->nom,
+                'password' => Hash::make($password),
             ]);
 
             PersonnelEtablissement::create([
@@ -157,34 +154,23 @@ public function sendAccountAcces($id)
                 'etablissement_id' => $etablissement->id,
             ]);
 
-            $tmp['email'] = $user->email;
-            $tmp['nom']   = $user->nom;
-
             $user->assignRole(config('constants.roles.chef_etablissement'));
             $user->markEmailAsVerified();
         } else {
-            // Mise à jour du mot de passe et de l'email existant
             $personnel = $personnelEtablissements->first();
             $user = User::findOrFail($personnel->user_id)->fresh();
 
             $user->update([
-                'email'    => $etablissement->email,
-                'password' => Hash::make($password), // HASH OBLIGATOIRE
+                'password' => Hash::make($password),
             ]);
-
-            $tmp['email'] = $user->email;
-            $tmp['nom']   = $user->nom ?? "Responsable d’établissement";
         }
 
-        // Envoi du mail avec mot de passe en clair
-        Mail::to($user->email)->send(new CodeAccesEtablissementGenerated($tmp));
-
         DB::commit();
-        return redirect()->route('etablissement.show', $id)->withMessage('Les accès ont été bien envoyés.');
+        return redirect()->route('etablissement.show', $id)->withMessage('Les accès ont été réinitialisés avec succès (mot de passe : password).');
     } catch (\Exception $e) {
         DB::rollback();
-        Log::error("Erreur lors de l'envoi des accès : " . $e->getMessage());
-        return redirect()->route('etablissement.show', $id)->withErrors('Une erreur est survenue.');
+        Log::error("Erreur lors de la réinitialisation des accès : " . $e->getMessage());
+        return redirect()->route('etablissement.show', $id)->withErrors('Une erreur est survenue lors de la réinitialisation.');
     }
 }
          
@@ -286,7 +272,8 @@ public function sendAccountAcces($id)
             'boitePostale',
             'type',
             'statutJuridique',
-            "statut"
+            "statut",
+            "type_planning"
         ]));
 
         return redirect()->route('etablissement.index')

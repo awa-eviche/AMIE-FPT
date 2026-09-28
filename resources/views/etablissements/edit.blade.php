@@ -174,7 +174,17 @@
                                         @endforeach
                                         @endif
                                     </select>
+                                </div>
 
+                                <div class="w-full sm:w-1/2 px-2 pb-5">
+                                    <x-label for="type_planning">
+                                        Type de planning <span class="text-red-500">*</span>
+                                    </x-label>
+                                    <select class="shadow appearance-none border-2 border-gray-300 rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="type_planning" name="type_planning">
+                                        <option value="hebdomadaire" {{ ($etablissement->type_planning ?? 'hebdomadaire') === 'hebdomadaire' ? 'selected' : '' }}>Hebdomadaire</option>
+                                        <option value="semestriel" {{ ($etablissement->type_planning ?? '') === 'semestriel' ? 'selected' : '' }}>Semestriel</option>
+                                    </select>
+                                    <p class="text-xs text-gray-500 mt-1">Détermine si les emplois du temps sont organisés par semaine ou par semestre.</p>
                                 </div>
 
                             </div>

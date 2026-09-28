@@ -78,10 +78,10 @@ public function closeAbsenceClasseModal()
     {
         
         $user = auth()->user();
-  //       session()->put('anneeAcademique', $this->anneeAcademique);
-    //$this->annee_academique_id = $this->anneeAcademique; 
-  $this->anneeAcademique = session()->get('anneeAcademique', '');
-$this->annee_academique_id = $this->anneeAcademique;      
+  // Année académique mémorisée en session, partagée avec les autres pages
+  // (assignations, gestion des notes APC, ...).
+  $this->anneeAcademique = \App\Services\AnneeDesNotes::choisie();
+$this->annee_academique_id = $this->anneeAcademique;
   $etabId = $user?->personnel?->etablissement_id;
 
         if ($user->hasRole('superadmin')) {
@@ -106,7 +106,8 @@ $this->annee_academique_id = $this->anneeAcademique;
 
         $this->selectedsemestre = session()->get('selectedsemestre', '');
         $this->classe = session()->get('currentClasse', '');
-        $this->anneeAcademique = session()->get('anneeAcademique', '');
+        $this->anneeAcademique = \App\Services\AnneeDesNotes::choisie();
+        $this->annee_academique_id = $this->anneeAcademique;
 
         $this->currentClasse = $this->classe ? Classe::with('formateurs')->find($this->classe) : null;
         $this->selectedApprenant = session()->get('selectedApprenant');
@@ -138,6 +139,7 @@ $this->annee_academique_id = $this->anneeAcademique;
                 ->join('matieres', 'classe_formateur_matiere.matiere_id', '=', 'matieres.id')
                 ->where('classe_formateur_matiere.classe_id', $this->currentClasse->id)
                 ->where('classe_formateur_matiere.formateur_id', $user->id)
+                ->when($this->annee_academique_id, fn ($q) => $q->where('classe_formateur_matiere.annee_academique_id', $this->annee_academique_id))
                 ->select('matieres.id', 'matieres.nom', 'matieres.coef')
                 ->get();
         } else {
@@ -159,10 +161,10 @@ $this->annee_academique_id = $this->anneeAcademique;
 
     public function updatedAnneeAcademique()
     {
-        session()->put('anneeAcademique', $this->anneeAcademique);
-    
+        session()->put('annee_academique_id', $this->anneeAcademique);
+
     $this->annee_academique_id = $this->anneeAcademique; // âœ… sync
-      
+
   $this->loadApprenants();
     }
 
@@ -269,7 +271,8 @@ $this->annee_academique_id = $this->anneeAcademique;
         ->toArray();
 
     // âœ… RÃ©sultat final (on garde TON nom de variable)
-    $this->compositionMcc = $mccEval + $mccDevoirs;
+    // La moyenne des devoirs (recalculée à jour) prime sur l'ancien note_cc figé en base
+    $this->compositionMcc = $mccDevoirs + $mccEval;
 
     // âœ… Notes composition dÃ©jÃ  saisies (si existantes)
     $this->compositionNotes = Evaluation::query()
@@ -325,35 +328,98 @@ $this->annee_academique_id = $this->anneeAcademique;
         $semestre  = (int) $this->compositionSemestre;
 
 
-        DB::transaction(function () use ($ids, $matiereId, $semestre) {
-            $rows = [];
+      $anneeId = (int) ($this->annee_academique_id ?: $this->anneeAcademique);
 
-            foreach ($this->compositionApprenants as $ins) {
-                $inscriptionId = (int) $ins->id;
-                $noteComp = $this->compositionNotes[$inscriptionId] ?? null;
+      DB::transaction(function () use ($ids, $matiereId, $semestre, $anneeId) {
 
-                if ($noteComp === '' || $noteComp === null) continue;
+    $rows = [];
 
-                $rows[] = [
-                    'inscription_id'   => $inscriptionId,
-                    'matiere_id'       => $matiereId,
-                    'semestre'         => $semestre,
-                    'note_cc'          => $this->compositionMcc[$inscriptionId] ?? null, // âœ… note_cc existante
-                    'note_composition' => (float) $noteComp,
-                ];
-            }
+    foreach ($this->compositionApprenants as $ins) {
+        $inscriptionId = (int) $ins->id;
+        $noteComp = $this->compositionNotes[$inscriptionId] ?? null;
 
-            Evaluation::upsert(
-                $rows,
-                ['inscription_id','matiere_id','semestre'],
-                ['note_cc','note_composition']
-            );
-        });
+        if (!isset($this->compositionMcc[$inscriptionId])) {
+            continue;
+        }
+
+        if ($noteComp === '' || $noteComp === null) continue;
+
+        $rows[] = [
+            'inscription_id'   => $inscriptionId,
+            'matiere_id'       => $matiereId,
+            'semestre'         => $semestre,
+            'note_cc'          => $this->compositionMcc[$inscriptionId],
+            'note_composition' => (float) $noteComp,
+        ] + \App\Services\AnneeDesNotes::attributs('evaluations', $anneeId);
+    }
+
+    if (!$rows) {
+        return;
+    }
+
+    // La table n'a pas d'index d'unicité sur (inscription, matière, semestre) : un upsert y insérait
+    // une nouvelle ligne à chaque enregistrement. On met à jour toutes les lignes existantes de la clé
+    // (cela aligne aussi les doublons déjà présents) et on ne crée que si aucune n'existe.
+    foreach ($rows as $row) {
+        $cle = \Illuminate\Support\Arr::only($row, ['inscription_id', 'matiere_id', 'semestre']);
+        $valeurs = \Illuminate\Support\Arr::except($row, array_keys($cle));
+
+        $existantes = Evaluation::where($cle);
+        if ($existantes->exists()) {
+            $existantes->update($valeurs);
+        } else {
+            Evaluation::create($row);
+        }
+    }
+});
 
         session()->flash('success', 'Notes de composition enregistrÃ©es avec succÃ¨s.');
         $this->showCompositionModal = false;
     }
+public function deleteCompositionNote(int $inscriptionId)
+{
+    Evaluation::where('inscription_id', $inscriptionId)
+        ->where('matiere_id', (int) $this->compositionMatiereId)
+        ->where('semestre', (int) $this->compositionSemestre)
+        ->update(['note_composition' => null]);
 
+    // Recharger les notes dans le modal
+    $ids = collect($this->compositionApprenants)->pluck('id')->all();
+    $this->compositionNotes = Evaluation::query()
+        ->whereIn('inscription_id', $ids)
+        ->where('matiere_id', (int) $this->compositionMatiereId)
+        ->where('semestre', (int) $this->compositionSemestre)
+        ->pluck('note_composition', 'inscription_id')
+        ->toArray();
+
+    session()->flash('success', 'Note de composition supprimée.');
+}
+public function deleteAllCompositionNotes()
+{
+    if (!$this->compositionMatiereId || !$this->compositionSemestre) {
+        session()->flash('error', 'Contexte invalide.');
+        return;
+    }
+
+    $ids = collect($this->compositionApprenants)->pluck('id')->all();
+
+    Evaluation::whereIn('inscription_id', $ids)
+        ->where('matiere_id', (int) $this->compositionMatiereId)
+        ->where('semestre', (int) $this->compositionSemestre)
+        ->whereNotNull('note_composition') // 🔥 important
+        ->update([
+            'note_composition' => null
+        ]);
+
+    // 🔁 Recharger les notes dans le modal
+    $this->compositionNotes = Evaluation::whereIn('inscription_id', $ids)
+        ->where('matiere_id', (int) $this->compositionMatiereId)
+        ->where('semestre', (int) $this->compositionSemestre)
+        ->pluck('note_composition', 'inscription_id')
+        ->toArray();
+
+    session()->flash('success', 'Toutes les notes de composition du semestre ont été supprimées.');
+}
     public function render()
     {
         // âœ… Toujours disponible pour afficher toute la classe

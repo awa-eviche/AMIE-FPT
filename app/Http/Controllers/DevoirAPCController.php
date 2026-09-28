@@ -25,6 +25,10 @@ public function store(Request $request)
             'libelle.unique' => 'Ce libellé existe déjà pour cette ressource et ce semestre.',
         ]);
 
+        $anneeAcademiqueId = $request->input('annee_academique_id')
+            ?? session('annee_academique_id')
+            ?? \App\Services\AnneeDesNotes::anneeParDefaut();
+
         foreach ($request->notes as $inscription_id => $note) {
 
             if ($note === null || $note === '' || !is_numeric($note)) {
@@ -40,7 +44,8 @@ public function store(Request $request)
                     'inscription_id' => (int) $inscription_id,
                 ],
                 [
-                    'note' => (float) $note,
+                    'note'                => (float) $note,
+                    'annee_academique_id' => $anneeAcademiqueId,
                 ]
             );
 
@@ -61,6 +66,10 @@ public function store(Request $request)
 
 public function listeParRessource($ressourceId, Request $request)
 {
+    $anneeAcademiqueId = $request->input('annee_academique_id')
+        ?? session('annee_academique_id')
+        ?? \App\Services\AnneeDesNotes::anneeParDefaut();
+
     $query = DevoirAPC::with('inscription.apprenant')
         ->selectRaw('
             devoirapc.*,
@@ -70,7 +79,8 @@ public function listeParRessource($ressourceId, Request $request)
                 ), 2
             ) as mcc
         ')
-        ->where('ressource_id', $ressourceId);
+        ->where('ressource_id', $ressourceId)
+        ->when($anneeAcademiqueId, fn($q) => $q->where('annee_academique_id', $anneeAcademiqueId));
 
     // Filtre semestre
     if ($request->filled('semestre')) {
@@ -143,11 +153,36 @@ public function listeParRessource($ressourceId, Request $request)
 public function destroy($id, Request $request)
 {
     $devoir = DevoirAPC::findOrFail($id);
+
     $inscription_id = $devoir->inscription_id;
     $ressource_id   = $devoir->ressource_id;
-    $semestre       = $devoir->semestre;
-    $devoir->delete();
-    $this->recalculerMCC($inscription_id, $ressource_id, $semestre);
+    $semestre       = (int) $request->input('semestre', $devoir->semestre);
+    $libelle        = $devoir->libelle;
+
+    // Supprimer tous les devoirs du même libellé pour la ressource et le semestre choisi
+    DevoirAPC::where('libelle', $libelle)
+              ->where('ressource_id', $ressource_id)
+              ->where('semestre', $semestre)
+              ->delete();
+
+    // Recalculer pour tous les apprenants concernés
+    $inscriptionIds = DevoirAPC::where('ressource_id', $ressource_id)
+                               ->where('semestre', $semestre)
+                               ->pluck('inscription_id')
+                               ->unique();
+
+    foreach ($inscriptionIds as $inscId) {
+        $moyenne = DevoirAPC::where('inscription_id', $inscId)
+            ->where('ressource_id', $ressource_id)
+            ->where('semestre', $semestre)
+            ->whereNotNull('note')
+            ->avg('note');
+
+        DevoirAPC::where('inscription_id', $inscId)
+            ->where('ressource_id', $ressource_id)
+            ->where('semestre', $semestre)
+            ->update(['mcc' => $moyenne !== null ? round($moyenne, 2) : null]);
+    }
 
     if ($request->ajax()) {
         return response()->json([
@@ -158,7 +193,6 @@ public function destroy($id, Request $request)
 
     return back()->with('success', 'Devoir supprimé.');
 }
-
 private function recalculerMCC($inscription_id, $ressource_id, $semestre)
 {
     $moyenne = DevoirAPC::where('inscription_id', $inscription_id)

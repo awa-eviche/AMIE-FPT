@@ -64,10 +64,13 @@ class ListeEtablissement extends Component
         $communes = Commune::all();
         $departements = Departement::all();
         $regions = Region::all();
-        $query = Etablissement::where("nom", "like", "%{$this->search}%")
-            ->orWhere('email', 'like', "%{$this->search}%")
-            ->orWhere('sigle', 'like', "%{$this->search}%")
-            ->orWhere('reference', 'like', "%{$this->search}%");
+        $query = Etablissement::with(['commune.departement.region'])
+            ->where(function ($query) {
+                $query->where("nom", "like", "%{$this->search}%")
+                    ->orWhere('email', 'like', "%{$this->search}%")
+                    ->orWhere('sigle', 'like', "%{$this->search}%")
+                    ->orWhere('reference', 'like', "%{$this->search}%");
+            });
 
         $departementList = optional(optional(optional(auth()->user()->inspecteur)->ia)->departements)->pluck('id');
         $this->departementList = $departementList ? $departementList->toArray() : [];
@@ -76,10 +79,14 @@ class ListeEtablissement extends Component
         $this->communeList = $communeList ? $communeList->toArray() : [];
 
 
-        if (auth()->user()->hasRole(config('constants.roles.ia'))) {
-            $query = Etablissement::with(['commune']);
+        if (auth()->user()->hasRole(config('constants.roles.ia')) || $this->isInspecteurSpecialite()) {
             if ($this->selectedCommune) {
                 $query->where("commune_id", $this->selectedCommune);
+                if ($this->departementList) {
+                    $query->whereHas('commune.departement', function ($query) {
+                        $query->whereIn('id', $this->departementList);
+                    });
+                }
             } else {
                 if ($this->departementList) {
                     $query->whereHas('commune.departement', function ($query) {
@@ -155,5 +162,21 @@ class ListeEtablissement extends Component
             "regions" => $regions,
             "count" => $count
         ]);
+    }
+
+    private function isInspecteurSpecialite(): bool
+    {
+        $user = auth()->user();
+
+        if (!$user || !$user->inspecteur || !$user->inspecteur->ia_id) {
+            return false;
+        }
+
+        return $user->roles->contains(function ($role) {
+            $text = strtolower(trim(($role->name ?? '') . ' ' . ($role->code ?? '') . ' ' . ($role->description ?? '')));
+
+            return str_contains($text, 'inspect')
+                && (str_contains($text, 'special') || str_contains($text, 'spécial'));
+        });
     }
 }

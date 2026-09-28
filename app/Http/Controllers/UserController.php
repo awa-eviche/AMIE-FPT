@@ -21,8 +21,10 @@ use App\Models\PersonnelEtablissement;
 use App\Models\Etablissement;
 use App\Models\Ia;
 use App\Models\Ief;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use App\Models\Inspecteur;
+use App\Models\Role;
 use Illuminate\Support\Str;
 use App\Mail\UserResetPassword;
 class UserController extends Controller
@@ -114,7 +116,9 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
     $roles = $this->roleRepository->getList(Auth::user()); 
     $ias = Ia::all();
     $iefs = Ief::all();
-    return view('admin.users.create', compact('roles', 'ias', 'iefs'));
+    $iaRoleIds = $this->getIaRoleIds();
+    $iefRoleIds = $this->getIefRoleIds();
+    return view('admin.users.create', compact('roles', 'ias', 'iefs', 'iaRoleIds', 'iefRoleIds'));
 }
 
 
@@ -142,6 +146,7 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
         if (optional(auth()->user()->personnel)->etablissement_id != null) {
             $personnelEtablissement = PersonnelEtablissement::create(array(
                 'fonction' => $inputs['fonction'] ?? null,
+                'specialite' => $inputs['specialite'] ?? null,
                 'user_id' => $user->id,
                 'interne' => $inputs['interne'] ?? null,
                 'dernierDiplomeAcademique' => $inputs['dernierDiplomeAcademique'] ?? null,
@@ -151,7 +156,7 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
           
         }
 
-        $inputs['ia'] != null || $inputs['ief'] != null ? Inspecteur::create(['ia_id' => $inputs['ia'] ?? null, 'ief_id' => $inputs['ief'] ?? null, 'user_id' => $user->id]) : null;
+        ($inputs['ia'] ?? null) != null || ($inputs['ief'] ?? null) != null ? Inspecteur::create(['ia_id' => $inputs['ia'] ?? null, 'ief_id' => $inputs['ief'] ?? null, 'user_id' => $user->id]) : null;
 
            //Email notification
         if (!$user)
@@ -208,11 +213,18 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
             $user->dernierDiplomeAcademique = $personnelEtablissement->dernierDiplomeAcademique;
             $user->dernierDiplomeProfessionnel = $personnelEtablissement->dernierDiplomeProfessionnel;
             $user->fonction = $personnelEtablissement->fonction;
+            $user->specialite = $personnelEtablissement->specialite;
             $user->interne = $personnelEtablissement->interne;
+        }
+        if ($user->inspecteur) {
+            $user->ia = $user->inspecteur->ia_id;
+            $user->ief = $user->inspecteur->ief_id;
         }
         $ias = Ia::all();
 		$iefs = Ief::all();
-        return view('admin.users.edit', compact('user', 'roles', 'ias', 'iefs'));
+        $iaRoleIds = $this->getIaRoleIds();
+        $iefRoleIds = $this->getIefRoleIds();
+        return view('admin.users.edit', compact('user', 'roles', 'ias', 'iefs', 'iaRoleIds', 'iefRoleIds'));
     }
 
     /**
@@ -232,10 +244,34 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
             $inputs['profile_photo_path'] = $this->uploadUtil->traiterFile($request->file('profile_photo_path'));
             $oldFilename = $user->avatar;
         }
-        $user = $this->userRepository->update($id, $inputs);
+        $userUpdated = $this->userRepository->update($id, $inputs);
 
-        if (!$user)
+        if (!$userUpdated)
             return \redirect()->back()->withErrors("Erreur lors de la modification...");
+
+        if (optional(auth()->user()->personnel)->etablissement_id != null) {
+            PersonnelEtablissement::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'fonction' => $inputs['fonction'] ?? null,
+                    'specialite' => $inputs['specialite'] ?? null,
+                    'interne' => $inputs['interne'] ?? null,
+                    'dernierDiplomeAcademique' => $inputs['dernierDiplomeAcademique'] ?? null,
+                    'dernierDiplomeProfessionnel' => $inputs['dernierDiplomeProfessionnel'] ?? null,
+                    'etablissement_id' => auth()->user()->personnel->etablissement_id
+                ]
+            );
+        }
+
+        if (($inputs['ia'] ?? null) != null || ($inputs['ief'] ?? null) != null || $user->inspecteur) {
+            Inspecteur::updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'ia_id' => $inputs['ia'] ?? null,
+                    'ief_id' => $inputs['ief'] ?? null,
+                ]
+            );
+        }
 
         //Logs
         $this->logUserRepository->store([
@@ -340,22 +376,62 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
         return view('admin.users.show_logs', compact('log'));
     }
 
-    public function resetPassword($id)
-    {
-        $user = $this->userRepository->getById($id);
+    // public function resetPasswordAncien($id)
+    // {
+    //     $user = $this->userRepository->getById($id);
     
-        // Générer un nouveau mot de passe aléatoire
-        $newPassword = Str::random(10);
-        $user->password = bcrypt($newPassword);
-        $user->save();
+    //     // Générer un nouveau mot de passe aléatoire
+    //     $newPassword = Str::random(10);
+    //     $user->password = bcrypt($newPassword);
+    //     $user->save();
     
-        // Envoyer l'email avec le nouveau mot de passe
-        Mail::to($user->email)->send(new UserResetPassword($user, $newPassword));
+    //     // Envoyer l'email avec le nouveau mot de passe
+    //     Mail::to($user->email)->send(new UserResetPassword($user, $newPassword));
     
-        return redirect()->back()->withMessage(
-            "Le mot de passe de " . $user->identite . " a été réinitialisé et envoyé par email."
-        );
+    //     return redirect()->back()->withMessage(
+    //         "Le mot de passe de " . $user->identite . " a été réinitialisé et envoyé par email."
+    //     );
+    // }
+     public function resetPassword($id)
+{
+    $user = $this->userRepository->getById($id);
+    $loggedUser = Auth::user();
+
+    if (
+        $loggedUser->hasRole('chef_etablissement') &&
+        !$loggedUser->hasRole(['superadmin', 'admin'])
+    ) {
+        $chefEtablissementId = $loggedUser->personnel?->etablissement_id;
+        $targetEtablissementId = $user->personnel?->etablissement_id;
+
+        if (!$chefEtablissementId || $chefEtablissementId !== $targetEtablissementId) {
+            abort(403, "Vous ne pouvez réinitialiser que le mot de passe du personnel de votre établissement.");
+        }
+    } elseif (!$loggedUser->hasRole(['superadmin', 'admin', 'chef_etablissement'])) {
+        abort(403, "Action non autorisée.");
     }
+
+    // GÃ©nÃ©rer un nouveau mot de passe alÃ©atoire
+    //$newPassword = Str::random(10);
+    $newPassword = 'password';
+
+    // Mettre Ã  jour le mot de passe en base (sÃ©curisÃ©)
+    $user->password = Hash::make($newPassword);
+    $user->save();
+
+    // Log de l'action
+    $this->logUserRepository->store([
+        'action' => UserAction::UpdateUser,
+        'model' => Model::User,
+        'old_object' => null,
+        'new_object' => json_encode(['reset_password_for' => $user->id])
+    ]);
+
+    return redirect()->back()->withMessage(
+        "Mot de passe de " . $user->identite . " rÃ©initialisÃ© avec succÃ¨s."
+    )->with('new_password', $newPassword);
+}
+
 
     public function activation($id)
     {
@@ -425,6 +501,40 @@ private function redirectAgentToHisView($request)
     return view('admin.users.index', compact('users', 'roleStats'))
         ->with('isDeletable', false)
         ->with('selectedRole', $selectedRole);
+}
+
+private function getIaRoleIds(): array
+{
+    return Role::query()
+        ->where(function ($query) {
+            $query->where('name', config('constants.roles.ia'))
+                ->orWhere('code', config('constants.roles.ia'))
+                ->orWhere(function ($query) {
+                    $query->where(function ($query) {
+                        $query->where('name', 'like', '%inspect%')
+                            ->orWhere('code', 'like', '%inspect%')
+                            ->orWhere('description', 'like', '%Inspect%');
+                    })->where(function ($query) {
+                        $query->where('name', 'like', '%special%')
+                            ->orWhere('code', 'like', '%special%')
+                            ->orWhere('description', 'like', '%special%')
+                            ->orWhere('description', 'like', '%spécial%');
+                    });
+                });
+        })
+        ->pluck('id')
+        ->map(fn ($id) => (string) $id)
+        ->toArray();
+}
+
+private function getIefRoleIds(): array
+{
+    return Role::query()
+        ->where('name', config('constants.roles.ief'))
+        ->orWhere('code', config('constants.roles.ief'))
+        ->pluck('id')
+        ->map(fn ($id) => (string) $id)
+        ->toArray();
 }
 
 

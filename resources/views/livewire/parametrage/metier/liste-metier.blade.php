@@ -12,7 +12,9 @@
 
         <div class="flex">
         
-        <a href="#" class="mx-2 px-5 rounded-md py-0 flex text-orange-400 text-xs font-bold text-center shadow-md bg-white items-center">
+        <a href="{{ route('metier.export.pdf', array_filter(['search' => $search ?? '', 'filiere_id' => $selectedMetierFiliere ?? ''])) }}"
+               target="_blank"
+               class="mx-2 px-5 rounded-md py-0 flex text-orange-400 text-xs font-bold text-center shadow-md bg-white items-center">
                 <span><i class="fa fa-download"></i></span>
                 <span class="mx-2">Télécharger liste</span>
             </a>

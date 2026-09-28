@@ -19,7 +19,8 @@ class Evaluation extends Model
         "note_cc",
         "semestre",
         "appreciation",
-        "note_composition",   
+        "note_composition",
+        "annee_academique_id",
     ];
 
     public function listes(): MorphMany

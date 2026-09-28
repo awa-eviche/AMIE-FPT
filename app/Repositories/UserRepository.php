@@ -78,7 +78,10 @@ class UserRepository extends ResourceRepository
         ->where(function ($q) use ($querySearch) {
             $q->where('nom', 'like', '%' . $querySearch . '%')
               ->orWhere('prenom', 'like', '%' . $querySearch . '%')
-              ->orWhere('email', 'like', '%' . $querySearch . '%');
+              ->orWhere('email', 'like', '%' . $querySearch . '%')
+              ->orWhereHas('personnel', function ($personnelQuery) use ($querySearch) {
+                  $personnelQuery->where('specialite', 'like', '%' . $querySearch . '%');
+              });
         });
     
         if ($idEtablissement) {
@@ -95,8 +98,6 @@ class UserRepository extends ResourceRepository
         return $query->paginate($nb);
     }
     
-
-
 
     public function getDataPaginateByRole($role, $n, $idEtablissement = null)
     {

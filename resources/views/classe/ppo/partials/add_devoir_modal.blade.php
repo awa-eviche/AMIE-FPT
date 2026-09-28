@@ -22,10 +22,8 @@
         <div class="flex items-center gap-3">
           <div>
             <label class="block text-sm font-medium mb-1">Semestre</label>
-            <select name="semestre" required class="rounded border-gray-300 text-sm">
-              <option value="1">Premier semestre</option>
-              <option value="2">Deuxième semestre</option>
-            </select>
+            <span class="text-sm font-semibold text-green-700" id="ppoAddDevoirSemestreLabel">-</span>
+            <input type="hidden" name="semestre" id="ppoAddDevoirSemestreInput">
           </div>
 
           <div class="flex-1">

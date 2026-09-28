@@ -37,6 +37,15 @@ class ApprenantsImport implements OnEachRow, WithHeadingRow, SkipsOnError, Skips
     {
         $rowIndex = $row->getIndex();
         $data = $row->toArray();
+
+        // Ignorer silencieusement les lignes entièrement vides (fin de feuille Excel, etc.)
+        $ligneVide = collect($data)->every(function ($value) {
+            return $value === null || trim((string) $value) === '';
+        });
+        if ($ligneVide) {
+            return;
+        }
+
 if (isset($data['sexe'])) {
             $sexe = strtolower(trim($data['sexe']));
             if (in_array($sexe, ['m', 'masculin'])) {

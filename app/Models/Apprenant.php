@@ -37,8 +37,7 @@ class Apprenant extends Model
         'etablissement_id',
         'isDeleted',
         'commune_id',
-        'sexe',
-       
+        'sexe',  
         'nationalite',
         'matricule',
 

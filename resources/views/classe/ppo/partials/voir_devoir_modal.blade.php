@@ -2,6 +2,7 @@
 <div id="voirDevoirPpoModal"
      class="hidden fixed inset-0 z-50 bg-black/50 bg-opacity-50  overflow-y-auto overflow-x-hidden items-center smd:inset-0 h-[calc(100%-1rem)]  w-100 h-100 mx-auto max-w-full max-h-full">
  
+{{-- Modal confirmation suppression PPO --}}
 
   {{-- wrapper qui prend toute la hauteur --}}
   <div class="min-h-full flex items-start justify-center p-6">
@@ -14,15 +15,12 @@
         <div>
           <h3 class="font-semibold">Liste des devoirs</h3>
           <div id="voirDevoirMatiereName" class="text-xs text-gray-600"></div>
-           <div class="mb-4 flex items-center gap-4">
-            <label class="text-sm font-medium">Filtrer par semestre :</label>
-            <!-- <select id="filtreSemestre" onchange="filtrerParSemestre()" 
-        class="border rounded px-3 py-1 text-sm">
-  <option value="">Tous les semestres</option>
-  <option value="1">Premier semestre</option>
-  <option value="2">Deuxième semestre</option>
-</select> -->
-
+           <div class="mb-4 flex items-center gap-4 flex-wrap">
+            <span class="text-xs text-gray-600">
+                Année académique : <strong>{{ $anneeAcademiques->firstWhere('id', $selectedAnneeAcademiqueId)?->code ?? '-' }}</strong>
+            </span>
+            <label class="text-sm font-medium">Semestre :</label>
+            <span class="text-sm font-semibold text-green-700" id="voirDevoirPpoModalSemestreLabel">-</span>
         </div>
         </div>
       
