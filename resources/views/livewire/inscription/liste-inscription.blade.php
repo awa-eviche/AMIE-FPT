@@ -31,7 +31,7 @@
         </div>
         <div class="flex gap-4 items-center px-4">
             <!-- Select Classe -->
-            <select wire:model="classe" wire:change="$refresh" class="border border-gray-300 p-2 rounded text-sm w-1/2">
+            <select  wire:model.live="classe" class="border border-gray-300 p-2 rounded text-sm w-1/2">
                 <option value="">Sélectionner la classe</option>
                 @foreach ($classes as $c)
                     <option value="{{ $c->id }}">{{ $c->libelle }}</option>
@@ -39,7 +39,7 @@
             </select>
 
             <!-- Select Année académique -->
-            <select wire:model="anneeAcademique"  class="border border-gray-300 p-2 rounded text-sm w-1/2">
+            <select  wire:model.live="anneeAcademique"  class="border border-gray-300 p-2 rounded text-sm w-1/2">
                 <option value="">Sélectionner l’année académique</option>
                 @foreach ($anneeAcademiques as $a)
                     <option value="{{ $a->id }}">{{ $a->code }}</option>

@@ -53,7 +53,7 @@ class ApprenantController extends Controller
         $apprenants = $classe ? Inscription::where('classe_id',session()->get('currentClasse'))->get() : [];
         $communes  = Commune::all();
         $pays  = Pays::all();
-        $anneeAcademiques = \App\Models\AnneeAcademique::all();
+        $anneeAcademiques = \App\Models\AnneeAcademique::where('is_open', true)->get();
 
        
         return view('apprenant.create', [
@@ -69,75 +69,92 @@ class ApprenantController extends Controller
 
     }
 
-    public function store(Request $request)
-    {
-        $request->validate([
-            'prenom' => 'required',
-            'nom' => 'required',
-            'adresse' => 'required',
-            'email' => 'nullable|email|unique:apprenants,email',
-            'commune_id' => 'required',
-            'nationalite' => 'required',
-            'sexe' => 'required',
-            'annee_academique_id' => 'required|exists:annee_academiques,id',
-            'telephone' => 'required',
-            'classe_id' => 'required|exists:classes,id',
-        ]);
-    
-        try {
-            
-            $apprenantData = $request->except(['annee_academique_id', 'classe_id']);
-            $apprenant = Apprenant::create($apprenantData);
-            $apprenant->matricule = $this->genererMatricule($request);
-            $apprenant->save();
-    
-        
-$classeId = session('currentClasse');
-$anneeAcademiqueId = $request->annee_academique_id;
+   public function store(Request $request)
+{
+    $request->validate([
+        'prenom' => 'required',
+        'nom' => 'required',
+        'adresse' => 'required',
+        'email' => 'nullable|email|unique:apprenants,email',
+        'commune_id' => 'required',
+        'nationalite' => 'required',
+        'sexe' => 'required',
+        'annee_academique_id' => 'required|exists:annee_academiques,id',
+'telephone' => 'nullable|string|min:9|max:15|unique:apprenants,telephone',     
+   'classe_id' => 'required|exists:classes,id',
+    ]);
 
-// Vérification de doublon
-$exists = Inscription::where([
-    ['apprenant_id', '=', $apprenant->id],
-    ['classe_id', '=', $classeId],
-    ['annee_academique_id', '=', $anneeAcademiqueId],
-])->exists();
+    DB::beginTransaction();
 
-if ($exists) {
-    return back()->withErrors(['error' => "Cet apprenant est déjà inscrit dans cette classe pour cette année académique."]);
-}
+    try {
 
-// Inscription uniquement si pas de doublon
-$inscription = Inscription::create([
-    'apprenant_id' => $apprenant->id,
-    'classe_id' => $classeId,
-    'annee_academique_id' => $anneeAcademiqueId,
-    'dateInscription' => Carbon::now()->format('Y-m-d'),
-    // 'createdAt' => Carbon::now(),
-     'created_at' => Carbon::now(),
-]);
-app(\App\Http\Controllers\InscriptionController::class)->createUserForInscription($inscription);
+        // ✅ Création apprenant
+        $apprenantData = $request->except(['annee_academique_id', 'classe_id']);
 
-            // Logging
-            $this->logUserRepository->store([
-                'action' => UserAction::AddApprenant,
-                'model' => Model::Apprenant,
-                'new_object' => json_encode($apprenant)
+        $apprenant = Apprenant::create($apprenantData);
+
+        // Générer matricule
+        $apprenant->matricule = $this->genererMatricule($request);
+        $apprenant->save();
+
+        // ✅ Récupération des valeurs
+        $classeId = $request->classe_id;
+        $anneeAcademiqueId = $request->annee_academique_id;
+
+        // ✅ Vérification doublon inscription
+        $exists = Inscription::where([
+            ['apprenant_id', '=', $apprenant->id],
+            ['classe_id', '=', $classeId],
+            ['annee_academique_id', '=', $anneeAcademiqueId],
+        ])->exists();
+
+        if ($exists) {
+            DB::rollBack();
+            return back()->withErrors([
+                'error' => "Cet apprenant est déjà inscrit dans cette classe pour cette année académique."
             ]);
-            $this->logUserRepository->store([
-                'action' => UserAction::AddInscription,
-                'model' => Model::Inscription,
-                'new_object' => json_encode($inscription)
-            ]);
-    
-            return redirect()->route('classe.show', $request->classe_id)
-                ->withMessage("L'inscription a été faite avec succès.");
-        } 
-        catch (\Exception $e) {
-            Log::error($e);
-            return back()->withInput()->withErrors(['error' => "Une erreur est survenue lors de l'inscription."]);
         }
+
+        // ✅ Création inscription
+        $inscription = Inscription::create([
+            'apprenant_id' => $apprenant->id,
+            'classe_id' => $classeId,
+            'annee_academique_id' => $anneeAcademiqueId,
+            'dateInscription' => Carbon::now()->format('Y-m-d'),
+            'created_at' => Carbon::now(),
+        ]);
+
+        // ✅ Création user lié
+        app(\App\Http\Controllers\InscriptionController::class)
+            ->createUserForInscription($inscription, $apprenant);
+            
+
+        // ✅ Logs
+        $this->logUserRepository->store([
+            'action' => UserAction::AddApprenant,
+            'model' => Model::Apprenant,
+            'new_object' => json_encode($apprenant)
+        ]);
+
+        $this->logUserRepository->store([
+            'action' => UserAction::AddInscription,
+            'model' => Model::Inscription,
+            'new_object' => json_encode($inscription)
+        ]);
+
+        DB::commit();
+
+        return redirect()->route('classe.show', $classeId)
+            ->withMessage("L'inscription a été faite avec succès.");
+
+    } catch (\Exception $e) {
+
+        DB::rollBack();
+
+        dd($e->getMessage()); // 🔥 DEBUG
+
     }
-    
+}
 
     public function edit($id)
     {
@@ -203,31 +220,28 @@ app(\App\Http\Controllers\InscriptionController::class)->createUserForInscriptio
 public function destroy($id)
 {
     $apprenant = Apprenant::findOrFail($id);
-
-    // Récupérer l'inscription liée à l'apprenant
     $inscription = Inscription::where('apprenant_id', $apprenant->id)->first();
-
-    // Récupérer l'ID de la classe pour la redirection
     $classeId = $inscription ? $inscription->classe_id : session('currentClasse');
-
-    // Log de l'action avant suppression
     $this->logUserRepository->store([
         'action' => UserAction::DeleteApprenant,
         'model' => Model::Apprenant,
         'old_object' => json_encode($apprenant)
     ]);
+    if ($inscription) {
+        $user = User::where('inscription_id', $inscription->id)->first();
 
-    // Suppression logique de l'apprenant
-    $apprenant->delete();
-
-    // Suppression physique de l'inscription (si elle existe)
+        if ($user) {
+            $user->delete(); 
+        }
+    }
     if ($inscription) {
         $inscription->delete();
     }
 
-    // Redirection vers la page de la classe
+    $apprenant->delete();
+
     return redirect()->route('classe.show', $classeId)
-                     ->withMessage('L\'apprenant a été supprimé avec succès.');
+                     ->withMessage('L\'apprenant et son compte ont été supprimés avec succès.');
 }
 
 public function genererMatriculeAvantInsertion($request)
@@ -300,49 +314,62 @@ public function import(Request $request, $classeId)
         return back()->withErrors(['file' => $e->getMessage()]);
     }
 }
-// public function genererMatricule($request)
-// {
-//     $annee = date('Y');
-//     $annee2 = substr($annee, -2); // "25" pour 2025
 
-//     // Correction : on récupère bien la valeur du sexe
-//     $sexeInput = strtolower($request->sexe);
+public function genererMatricule($request)
+{
+    $annee = date('Y');
+    $annee2 = substr($annee, -2);
 
-//     $sexe = match ($sexeInput) {
-//         'm', 'masculin', 'homme' => '1',
-//         'f', 'feminin', 'féminin', 'femme' => '2',
-//         default => throw new \Exception("Genre invalide : " . $request->sexe),
-//     };
+    $sexeInput = strtolower($request->sexe);
 
-//     $prefix = $annee2 . $sexe;
+    $sexe = match ($sexeInput) {
+        'm', 'masculin', 'homme' => '1',
+        'f', 'feminin', 'féminin', 'femme' => '2',
+        default => throw new \Exception("Genre invalide"),
+    };
 
-//     // Dernier matricule
-//     $last = Apprenant::where('matricule', 'LIKE', $prefix . '%')
-//         ->orderByDesc('matricule')
-//         ->first();
+    $prefix = $annee2 . $sexe;
 
-//     if ($last) {
-//         $ordreStr = substr($last->matricule, 3, 6);
-//         $ordre = str_pad(((int) $ordreStr) + 1, 6, '0', STR_PAD_LEFT);
-//     } else {
-//         $ordre = '000001';
-//     }
+    // 🔥 prendre le dernier numéro de manière fiable
+    $last = Apprenant::where('matricule', 'like', $prefix . '%')
+        ->orderBy('id', 'desc') // ⚠️ IMPORTANT (pas matricule)
+        ->first();
 
-//     $matriculeBase = $prefix . $ordre;
+    $nextNumber = 1;
 
-//     // Calcul de la lettre checksum
-//     $pairs = $impairs = 0;
-//     foreach (str_split($matriculeBase) as $i => $digit) {
-//         $digit = (int) $digit;
-//         if ($i % 2 == 0) $pairs += $digit;
-//         else $impairs += $digit;
-//     }
+    if ($last) {
+        // extraire uniquement les chiffres après prefix
+        $numericPart = substr($last->matricule, 3, -1); // enlève lettre finale
 
-//     $checksumIndex = abs($pairs - $impairs) % 26;
-//     $lettre = range('A', 'Z')[$checksumIndex];
+        if (is_numeric($numericPart)) {
+            $nextNumber = ((int) $numericPart) + 1;
+        }
+    }
 
-//     return $matriculeBase . $lettre;
-// }
+    $ordre = str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+
+    $base = $prefix . $ordre;
+
+    // checksum simple mais stable
+    $sum = array_sum(str_split(preg_replace('/\D/', '', $base)));
+    $letter = chr(65 + ($sum % 26));
+
+    $matricule = $base . $letter;
+
+    // 🔥 sécurité anti-doublon absolue
+    while (Apprenant::where('matricule', $matricule)->exists()) {
+        $nextNumber++;
+        $ordre = str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+        $base = $prefix . $ordre;
+
+        $sum = array_sum(str_split(preg_replace('/\D/', '', $base)));
+        $letter = chr(65 + ($sum % 26));
+
+        $matricule = $base . $letter;
+    }
+
+    return $matricule;
+}
 
 
 }

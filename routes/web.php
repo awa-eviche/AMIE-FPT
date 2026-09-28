@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DemandeController;
+use App\Http\Controllers\DroitInscriptionController;
 use App\Http\Controllers\EntrepriseController;
 use App\Http\Controllers\FrontAdminController;
 use App\Http\Controllers\FrontController;
@@ -95,9 +97,8 @@ Route::middleware([
     'verified',
 ])->group(function () {
 
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/saisie', [DashboardController::class, 'saisie'])->name('dashboard.saisie');
 
 Route::get('/classe/{classe}/bulletins/pdf', [InscriptionController::class, 'generateClassePdf'])
     ->name('classe.bulletins.pdf');
@@ -134,7 +135,7 @@ Route::get('/classe/{classe}/sommation/pdf', [EvaluationSomativeController::clas
     Route::resource('inscription', InscriptionController::class);
     Route::post('/apprenants/import/{classe}', [App\Http\Controllers\ApprenantController::class, 'import'])->name('apprenant.import');
 
-    Route::resource('evaluation', EvaluationController::class);
+    Route::resource('evaluation', EvaluationController::class)->except(['create', 'store', 'edit', 'update', 'destroy']);
     Route::get('/evaluation/{inscriptionId}/{matiereId}', [EvaluationController::class, 'create'])->name('evaluation.create');
     Route::post('/evaluation/{inscriptionId}', [EvaluationController::class, 'store'])->name('evaluation.store');
     Route::get('/evaluations/{evaluation}/edit', [EvaluationController::class, 'edit'])->name('evaluation.edit');
@@ -213,7 +214,9 @@ Route::get('/classe/{classe}/sommation/pdf', [EvaluationSomativeController::clas
         ->middleware(['permission:gerer_parametrage'])
         ->group(function () {
             Route::resource('secteur', SecteurController::class);
+            Route::get('filiere/export-pdf', [FiliereController::class, 'exportPdf'])->name('filiere.export.pdf');
             Route::resource('filiere', FiliereController::class);
+            Route::get('metier/export-pdf', [MetierController::class, 'exportPdf'])->name('metier.export.pdf');
             Route::resource('metier', MetierController::class);
             Route::resource('niveauetude', NiveauEtudeController::class);
             Route::resource('referentiel', ReferentielController::class);
@@ -350,7 +353,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/materiels', [MaterielController::class, 'index'])->name('materiel.index');
 });
 Route::get('/elementcompetence/multiple/create', ElementCompetenceMultiFixed::class)
-    ->name('elementcompetence.multiple.create');Route::get('/elementcompetence/multiple/create', ElementCompetenceMultiFixed::class)
     ->name('elementcompetence.multiple.create');
 //Route::post('/inscription/{id}/suspendre', [InscriptionController::class, 'suspendre'])->name('inscription.suspendre');
 Route::post('/inscriptions/{id}/abandonner', [InscriptionController::class, 'abandonner'])
@@ -389,7 +391,6 @@ Route::get(
     '/classe/{id}/bulletins/semestre/{semestre}',
     [App\Http\Controllers\EvaluationController::class, 'previewClasseBulletins']
 )->name('evaluation.classe.preview');
- Route::get('/users', [UserController::class, 'index'])->name('users.index');
 Route::get('/etablissement/{id}/classes', [ClasseController::class, 'byEtablissement'])
     ->name('classes.byEtablissement');
 Route::delete('/ressource/{id}', [RessourceController::class, 'destroy'])
@@ -398,17 +399,12 @@ Route::post('/devoir-apc', [DevoirAPCController::class, 'store'])->name('devoirA
 Route::put('/devoir-apc/{id}', [DevoirAPCController::class, 'update'])->name('devoirAPC.update');
 Route::delete('/devoir-apc/{id}', [DevoirAPCController::class, 'destroy'])->name('devoirAPC.destroy');
 
-    Route::get('/devoirAPC/ressource/{ressource}',
-    [DevoirAPCController::class, 'indexByRessource']
-)->name('devoirAPC.byRessource');
-
-
-Route::get('/devoirAPC/ressource/{ressource}', 
+Route::get('/devoirAPC/ressource/{ressource}',
     [DevoirAPCController::class, 'listeParRessource']
 )->name('devoirAPC.liste');
 // Modification d'une note spécifique (par apprenant)
 Route::put('/devoirAPC/{devoir}', [DevoirAPCController::class, 'update'])
-    ->name('devoirAPC.update');
+    ->name('devoirAPC.note.update');
 
 // Route pour afficher le formulaire de modification
 Route::get('/devoirAPC/{devoir}/edit', [DevoirAPCController::class, 'edit'])
@@ -416,7 +412,7 @@ Route::get('/devoirAPC/{devoir}/edit', [DevoirAPCController::class, 'edit'])
 
 // Route pour supprimer un devoir (par libellé)
 Route::delete('/devoirAPC/{id}', [DevoirAPCController::class, 'destroy'])
-    ->name('devoirAPC.destroy');
+    ->name('devoirAPC.note.destroy');
 Route::post('/devoirPPO', [DevoirController::class, 'store'])->name('devoirPPO.store');
 
 
@@ -426,7 +422,7 @@ Route::delete('/devoirPPO/{id}', [DevoirController::class, 'destroy'])->name('de
 // (optionnel)
 Route::get('/devoirPPO/{id}/edit', [DevoirController::class, 'edit'])->name('devoirPPO.edit');
 Route::get('/devoirPPO/matiere/{matiereId}', [DevoirController::class, 'listeParMatiere']);
-
+Route::delete('/devoirPPO/{id}', [DevoirController::class, 'destroy'])->name('devoirPPO.destroy');
 // routes/web.php
 
 Route::get('/devoirs/ppo/{inscriptionId}', [DevoirController::class, 'parInscriptionPPO']);
@@ -446,3 +442,18 @@ Route::get('/get-niveaux/{metier}', [ReferentielController::class, 'getNiveaux']
 
 Route::get('/classe/{classe}/referentiels', [ClasseController::class, 'referentiels'])
     ->name('classe.referentiels');
+   
+
+// Emploi du temps
+Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified'])->group(function () {
+    Route::get('/emploi-du-temps', \App\Livewire\EmploiDuTemps\GestionEmploiDuTemps::class)
+        ->middleware('role:chef_etablissement|chef_de_travaux|de|surveillant')
+        ->name('emploi-du-temps.index');
+    Route::get('/mon-planning', \App\Livewire\EmploiDuTemps\PlanningFormateur::class)
+        ->middleware('role:formateur')
+        ->name('emploi-du-temps.formateur');
+    Route::get('/emploi-du-temps/{id}/pdf', [\App\Http\Controllers\EmploiDuTempsController::class, 'exportPdf'])
+        ->name('emploi-du-temps.pdf');
+    Route::get('/mon-planning/pdf', [\App\Http\Controllers\EmploiDuTempsController::class, 'exportPdfFormateur'])
+        ->name('emploi-du-temps.formateur.pdf');
+});

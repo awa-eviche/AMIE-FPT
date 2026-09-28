@@ -56,7 +56,17 @@
                 </a>
             @endif
 
-
+@if(auth()->user()->hasAnyRole(['chef_etablissement', 'chef_de_travaux', 'directeur_etude', 'surveillant']))
+    <a class="element_sidebar {{ request()->is('classe/admis/selection') ? 'element_sidebar_acitf' : '' }}"
+       href="{{ route('classe.admis.selector') }}">
+        <span class="text-left">
+            <i class="menu-icon fa-solid fa-arrow-up-right-dots"></i>
+        </span>
+        <span class="mx-4 text-base font-normal">
+            Réinscription des apprenants
+        </span>
+    </a>
+@endif
             
             {{-- @if(auth()->user()->can('visualiser_apprenant') and !auth()->user()->hasRole(config('constants.roles.superadmin')))
                 <a class="element_sidebar {{ request()->is('apprenant*') ? 'element_sidebar_acitf' : '' }}" href="{{route('apprenant.index')}}">
@@ -94,21 +104,7 @@
         </a>
 
         {{-- Réinscription des admis --}}
-@php
-    $user = auth()->user();
-@endphp
 
-@if($user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement'))
-    <a class="element_sidebar {{ request()->is('classe/admis/selection') ? 'element_sidebar_acitf' : '' }}"
-       href="{{ route('classe.admis.selector') }}">
-        <span class="text-left">
-            <i class="menu-icon fa-solid fa-arrow-up-right-dots"></i>
-        </span>
-        <span class="mx-4 text-base font-normal">
-            Réinscription des apprenants
-        </span>
-    </a>
-@endif
 
 
     </div>
@@ -280,6 +276,31 @@
                     </span>
                     <span class="mx-4 text-base font-normal">
                         Matériels affectés
+                    </span>
+                </a>
+             @endif
+
+             {{-- Emploi du temps : visible par chef_etablissement, chef_de_travaux, de, surveillant --}}
+             
+@if(auth()->user()->hasAnyRole(['chef_etablissement', 'chef_de_travaux', 'directeur_etude', 'surveillant', 'censeur']))
+           <a class="element_sidebar {{ request()->is('emploi-du-temps*') ? 'element_sidebar_acitf' : '' }}" href="{{ route('emploi-du-temps.index') }}">
+                    <span class="text-left">
+                        <i class="menu-icon fa-regular fa-calendar-days"></i>
+                    </span>
+                    <span class="mx-4 text-base font-normal">
+                        Emplois du temps
+                    </span>
+                </a>
+             @endif 
+
+             {{-- Mon planning : formateur uniquement --}}
+              @if(auth()->user()->hasRole('formateur'))
+                <a class="element_sidebar {{ request()->is('mon-planning*') ? 'element_sidebar_acitf' : '' }}" href="{{ route('emploi-du-temps.formateur') }}">
+                    <span class="text-left">
+                        <i class="menu-icon fa-regular fa-calendar-check"></i>
+                    </span>
+                    <span class="mx-4 text-base font-normal">
+                        Mon planning
                     </span>
                 </a>
              @endif
@@ -737,17 +758,6 @@
         </a>
 
 
-@if($user->hasRole('superadmin'))
-    <a class="element_sidebar {{ request()->is('') ? 'element_sidebar_acitf' : '' }}"
-       href="">
-        <span class="text-left">
-            <i class="menu-icon fa-solid fa-arrow-up-right-dots"></i>
-        </span>
-        <span class="mx-4 text-base font-normal">
-           Prestations
-        </span>
-    </a>
-@endif
 
 
     </div>

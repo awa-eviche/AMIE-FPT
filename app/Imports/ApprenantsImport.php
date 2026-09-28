@@ -37,6 +37,15 @@ class ApprenantsImport implements OnEachRow, WithHeadingRow, SkipsOnError, Skips
     {
         $rowIndex = $row->getIndex();
         $data = $row->toArray();
+
+        // Ignorer silencieusement les lignes entièrement vides (fin de feuille Excel, etc.)
+        $ligneVide = collect($data)->every(function ($value) {
+            return $value === null || trim((string) $value) === '';
+        });
+        if ($ligneVide) {
+            return;
+        }
+
 if (isset($data['sexe'])) {
             $sexe = strtolower(trim($data['sexe']));
             if (in_array($sexe, ['m', 'masculin'])) {
@@ -117,27 +126,31 @@ if (isset($data['sexe'])) {
         ]);
        $this->createUserForInscription($inscription, $apprenant);
     }
-    private function createUserForInscription(Inscription $inscription, Apprenant $apprenant): void
-    {
-        $exists = User::where('inscription_id', $inscription->id)->exists();
-        if ($exists) {
-            return;
-        }
- 
-        User::create([
-            'email'          => $apprenant->matricule . '@amie-fpt.local',
-            'prenom'         => $apprenant->prenom,
-            'nom'            => $apprenant->nom,
-            'password'       => Hash::make('password'),
-            'inscription_id' => $inscription->id,
-            'role_id'        => 31,
-        ]);
+ private function createUserForInscription(Inscription $inscription, Apprenant $apprenant): void
+{
+    $exists = User::where('inscription_id', $inscription->id)->exists();
+    if ($exists) {
+        return;
     }
+
+    $user = User::create([
+        'email'          => $apprenant->matricule . '@amie-fpt.local',
+        'prenom'         => $apprenant->prenom,
+        'nom'            => $apprenant->nom,
+        'password'       => Hash::make('password'),
+        'inscription_id' => $inscription->id,
+        'role_id'        => 31,
+    ]);
+
+    // Assigner le rôle apprenant via Spatie
+    $user->assignRole('apprenant');
+}
+
     private function toBoolean($value)
     {
         return strtolower(trim($value)) === 'oui' ? 1 : 0;
     }
-
+    
      private function convertDate($value, $rowIndex, $fieldName)
 {
     if (empty($value)) {

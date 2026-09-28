@@ -16,6 +16,7 @@ class Absence extends Model
         'type',
         'justifie',
         'nonjustifie',
+        'annee_academique_id',
     ];
 
     public function inscription()

@@ -147,16 +147,28 @@ class ClasseController extends Controller
   
  public function show(Request $request, Classe $classe)
 {
-   
-    $anneeAcademiques = AnneeAcademique::orderByDesc('id')->get();
-    $anneeAcademiqueId = $request->input('annee_academique_id') ?? $anneeAcademiques->first()?->id;
 
-    
+    $anneeAcademiques = AnneeAcademique::orderByDesc('id')->get();
+
+    // Année académique mémorisée en session (partagée avec les autres pages :
+    // gestion des notes, etc.), avec repli sur 2025-2026 (année par défaut), puis l'année ouverte.
+    if ($request->filled('annee_academique_id')) {
+        session()->put('annee_academique_id', $request->input('annee_academique_id'));
+    }
+
+    $anneeAcademiqueId = session('annee_academique_id')
+        ?? \App\Services\AnneeDesNotes::anneeParDefaut()
+        ?? $anneeAcademiques->firstWhere('is_open', true)?->id
+        ?? $anneeAcademiques->first()?->id;
+
+    $selectedSemestre = $request->input('semestre');
+
+
     $inscriptions = Inscription::where('classe_id', $classe->id)
         ->when($anneeAcademiqueId, fn($q) => $q->where('annee_academique_id', $anneeAcademiqueId))
         ->with('apprenant')
         ->paginate(10)
-        ->appends($request->only('annee_academique_id'));
+        ->appends(['annee_academique_id' => $anneeAcademiqueId]);
 
     session()->put('currentClasse', $classe->id);
 
@@ -178,12 +190,18 @@ class ClasseController extends Controller
                 ->join('matieres', 'classe_formateur_matiere.matiere_id', '=', 'matieres.id')
                 ->join('users', 'classe_formateur_matiere.formateur_id', '=', 'users.id')
                 ->where('classe_formateur_matiere.classe_id', $classe->id)
+                ->where('classe_formateur_matiere.annee_academique_id', $anneeAcademiqueId)
+                ->when($selectedSemestre, fn($q) => $q->where(function ($q2) use ($selectedSemestre) {
+                    $q2->where('classe_formateur_matiere.semestre', $selectedSemestre)
+                       ->orWhereNull('classe_formateur_matiere.semestre');
+                }))
                 ->select(
                     'users.nom as formateur_nom',
                     'users.prenom as formateur_prenom',
                     'matieres.nom as matiere_nom',
                     'classe_formateur_matiere.formateur_id',
-                    'classe_formateur_matiere.matiere_id'
+                    'classe_formateur_matiere.matiere_id',
+                    'classe_formateur_matiere.semestre'
                 )
                 ->get();
 
@@ -198,17 +216,23 @@ class ClasseController extends Controller
     ->join('competences as comp', 'comp.id', '=', 'cfc.competence_id')
     ->join('users as u', 'u.id', '=', 'cfc.formateur_id')
     ->where('cfc.classe_id', $classe->id)
+    ->where('cfc.annee_academique_id', $anneeAcademiqueId)
+    ->when($selectedSemestre, fn($q) => $q->where(function ($q2) use ($selectedSemestre) {
+        $q2->where('cfc.semestre', $selectedSemestre)
+           ->orWhereNull('cfc.semestre');
+    }))
     ->select([
-        'cfc.id as assign_id',          
+        'cfc.id as assign_id',
         'cfc.classe_id',
         'cfc.formateur_id',
         'cfc.competence_id',
+        'cfc.semestre',
         'comp.nom as competence_nom',
         'comp.type as competence_type',
         'u.nom as formateur_nom',
         'u.prenom as formateur_prenom',
     ])
-    ->orderBy('cfc.id', 'asc')          
+    ->orderBy('cfc.id', 'asc')
     ->get();
     foreach ($assignations as $a) {
         if ($a->competence_type === 'generale') {
@@ -224,7 +248,7 @@ class ClasseController extends Controller
     }
 $inscriptionsAll = Inscription::with('apprenant')
     ->where('classe_id', $classe->id)
-    ->when(request('annee_academique_id'), fn($q) => $q->where('annee_academique_id', request('annee_academique_id')))
+    ->when($anneeAcademiqueId, fn($q) => $q->where('annee_academique_id', $anneeAcademiqueId))
     ->get();
    
     $formateurs = DB::table('formateur_etablissement')
@@ -240,21 +264,40 @@ $inscriptionsAll = Inscription::with('apprenant')
     foreach ($inscriptions as $inscription) {
         $usersWithEnterprises[] = ['user' => $inscription];
     }
-    $inscriptionIds = Inscription::where('classe_id', $classe->id)->pluck('id');
+    $inscriptionIds = Inscription::where('classe_id', $classe->id)
+        ->when($anneeAcademiqueId, fn($q) => $q->where('annee_academique_id', $anneeAcademiqueId))
+        ->pluck('id');
 
-// Compteur devoirs par matière (tous devoirs)
+// Compteur devoirs par matière (devoirs de l'année académique sélectionnée uniquement)
 $devoirCountByMatiere = Devoir::whereIn('inscription_id', $inscriptionIds)
+    ->when($anneeAcademiqueId, fn($q) => $q->where('annee_academique_id', $anneeAcademiqueId))
     ->selectRaw('matiere_id, COUNT(*) as cnt')
     ->groupBy('matiere_id')
     ->pluck('cnt', 'matiere_id');
 
 // si tu veux l'utiliser aussi côté non-formateur uniquement quand notes existent :
 $devoirCountRenseigneByMatiere = Devoir::whereIn('inscription_id', $inscriptionIds)
+    ->when($anneeAcademiqueId, fn($q) => $q->where('annee_academique_id', $anneeAcademiqueId))
     ->whereNotNull('note')
     ->selectRaw('matiere_id, COUNT(*) as cnt')
     ->groupBy('matiere_id')
     ->pluck('cnt', 'matiere_id');
+// Notes qui seraient supprimées avec une affectation PPO, par matière et semestre (pour la confirmation).
+$notesParMatiereSemestre = [];
+if ($classe->modalite === 'PPO') {
+    foreach (Devoir::where('classe_id', $classe->id)
+        ->when($anneeAcademiqueId, fn($q) => $q->where('annee_academique_id', $anneeAcademiqueId))
+        ->selectRaw('matiere_id, semestre, COUNT(*) as n')->groupBy('matiere_id', 'semestre')->get() as $r) {
+        $notesParMatiereSemestre[$r->matiere_id . '|' . (int) $r->semestre]['devoirs'] = (int) $r->n;
+    }
+    foreach (\App\Models\Evaluation::whereIn('inscription_id', $inscriptionIds)
+        ->selectRaw('matiere_id, semestre, COUNT(*) as n')->groupBy('matiere_id', 'semestre')->get() as $r) {
+        $notesParMatiereSemestre[$r->matiere_id . '|' . (int) $r->semestre]['evaluations'] = (int) $r->n;
+    }
+}
+
     return view('classe.show', [
+        'notesParMatiereSemestre'   => $notesParMatiereSemestre,
         'usersWithEnterprises'      => $usersWithEnterprises,
         'matieres'                  => $matieres,
         'competences'               => $competences,
@@ -264,6 +307,7 @@ $devoirCountRenseigneByMatiere = Devoir::whereIn('inscription_id', $inscriptionI
         'inscriptions'              => $inscriptions,
         'anneeAcademiques'          => $anneeAcademiques,
         'selectedAnneeAcademiqueId' => $anneeAcademiqueId,
+        'selectedSemestre'          => $selectedSemestre,
         'inscriptionsAll'              => $inscriptionsAll,
         'devoirCountByMatiere'   => $devoirCountByMatiere,
         'devoirCountRenseigneByMatiere' => $devoirCountRenseigneByMatiere,

@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\User;
 use Hamcrest\Arrays\IsArray;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 
 class UserRequest extends FormRequest
 {
@@ -15,6 +16,17 @@ class UserRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->filled('specialite')) {
+            $specialite = preg_replace('/\s+/', ' ', trim($this->input('specialite')));
+
+            $this->merge([
+                'specialite' => Str::ucfirst(Str::lower($specialite)),
+            ]);
+        }
     }
 
     /**
@@ -51,14 +63,15 @@ class UserRequest extends FormRequest
                     if (optional(auth()->user()->personnel)->etablissement_id != null) {
                        
                         $rules['fonction'] = 'required|max:225'; 
+                        $rules['specialite'] = 'nullable|max:225';
                         $rules['dernierDiplomeAcademique'] = 'required|max:225'; 
                         $rules['dernierDiplomeProfessionnel'] = 'required|max:225'; 
                     
                     }
                     
-                    $role = Role::query()->whereIn('id', $this->get('roles'))->first();
-                    if(auth()->user()->hasRole(config('constants.roles.superadmin')) && is_array($this->get('roles')) && in_array($role->name, $this->get('roles'))){
-                            $rules['ia'] = 'required';
+                    $role = Role::query()->whereIn('id', $this->get('roles', []))->first();
+                    if ($role && auth()->user()->hasRole(config('constants.roles.superadmin')) && $this->roleRequiresIa($role)) {
+                        $rules['ia'] = 'required';
                     }
     
                     return $rules;
@@ -84,9 +97,15 @@ class UserRequest extends FormRequest
                     if (optional(auth()->user()->personnel)->etablissement_id != null) {
                        
                         $rules['fonction'] = 'required|max:225'; 
+                        $rules['specialite'] = 'nullable|max:225';
                         $rules['dernierDiplomeAcademique'] = 'required|max:225'; 
                         $rules['dernierDiplomeProfessionnel'] = 'required|max:225'; 
                     
+                    }
+
+                    $role = Role::query()->whereIn('id', $this->get('roles', []))->first();
+                    if ($role && auth()->user()->hasRole(config('constants.roles.superadmin')) && $this->roleRequiresIa($role)) {
+                        $rules['ia'] = 'required';
                     }
     
                     return $rules;
@@ -94,5 +113,14 @@ class UserRequest extends FormRequest
             default:
                 break;
         }
+    }
+
+    private function roleRequiresIa(Role $role): bool
+    {
+        $text = Str::lower(trim(($role->name ?? '') . ' ' . ($role->code ?? '') . ' ' . ($role->description ?? '')));
+
+        return $role->name === config('constants.roles.ia')
+            || $role->code === config('constants.roles.ia')
+            || (Str::contains($text, 'inspect') && (Str::contains($text, 'special') || Str::contains($text, 'spécial')));
     }
 }

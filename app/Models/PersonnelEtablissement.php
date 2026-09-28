@@ -12,6 +12,7 @@ class PersonnelEtablissement extends Model
         'fonction',
         'dernierDiplomeAcademique',
         'dernierDiplomeProfessionnel',
+        'specialite',
         'interne',
         'user_id',
         'etablissement_id'

@@ -45,9 +45,6 @@
 
     .centered{ text-align: center; white-space: nowrap; }
 
-    
-    table, tr, td { page-break-inside: avoid; }
-
     /* Header compact */
     h1,h2,p{ margin: 2px 0; padding: 0; }
 
@@ -81,8 +78,11 @@
 
    
     .table-matieres{
-      max-height: 430px;
       overflow: hidden;
+    }
+
+    .bloc-mentions{
+      page-break-inside: avoid;
     }
   </style>
 </head>
@@ -150,14 +150,20 @@
       [BODY]
 
       <tr>
-        <td colspan="2" class="border-td bg-grey bold-exo" style="text-align:left;">
+        <td class="border-td bg-grey bold-exo" style="text-align:left;">
           Moyenne : [MOYENNE]
         </td>
-        <td colspan="2" class="border-td bg-grey bold-exo" style="text-align:center;">
+        <td class="border-td bg-grey bold-exo" style="text-align:center;">
           Rang : [RANG]
         </td>
-        <td colspan="2" class="border-td bg-grey bold-exo" style="text-align:right;">
+        <td class="border-td bg-grey bold-exo" style="text-align:center;">
           Classe : [MOYENNE_CLASSE]
+        </td>
+        <td class="border-td bg-grey bold-exo" style="text-align:center;">
+          Retards : [RET_TOTAL]
+        </td>
+        <td colspan="2" class="border-td bg-grey bold-exo" style="text-align:right;">
+          Absences : [ABS_TOTAL] dont [ABS_JUSTIFIEES] justifiée(s) et [ABS_NON_JUSTIFIEES] non justifiée(s)
         </td>
       </tr>
     </table>
@@ -166,40 +172,29 @@
   <!-- ✅ Tableau moyennes (uniquement S2) -->
   [TABLE_MOYENNES]
 
-  <!-- ✅ Absences / Retards + Appréciations -->
-  <table class="full-table" cellspacing="0" style="margin-top:8px;">
-    <tr>
-      <td style="width:50%; vertical-align:top;">
-        <table class="half-table" cellspacing="0">
-          <tr>
-            <td class="border-td bg-grey bold-exo">Absences </td>
-            <td class="border-td">[NB_ABSENCES]</td>
-          </tr>
-          <tr>
-            <td class="border-td bg-grey bold-exo">Retards </td>
-            <td class="border-td">[NB_RETARDS]</td>
-          </tr>
-        </table>
-      </td>
+  <div class="bloc-mentions">
+    <table class="full-table" cellspacing="0" style="margin-top:4px;">
+      <tr>
+        <td style="width:66%; vertical-align:top; padding:0 4px 0 0;">
+          [BLOC_MENTIONS]
+        </td>
+        <td style="width:34%; vertical-align:top; padding:0 0 0 4px;">
+          <div style="border:1px solid #000;">
+            <div class="bg-grey bold-exo" style="padding:4px 6px; border-bottom:1px solid #000;">Observations du conseil des professeurs</div>
+            <div class="obs-box" style="min-height:70px;"></div>
+          </div>
+        </td>
+      </tr>
+    </table>
 
-      <td style="width:50%; vertical-align:top;">
-        <table class="half-table" cellspacing="0">
-          <tr><td class="border-td bg-grey bold-exo">Travail satisfaisant</td><td class="border-td"></td></tr>
-          <tr><td class="border-td bg-grey bold-exo">Admis(e) en classe supérieure</td><td class="border-td"></td></tr>
-          <tr><td class="border-td bg-grey bold-exo">Doit redoubler</td><td class="border-td"></td></tr>
-          <tr><td class="border-td bg-grey bold-exo">Passable</td><td class="border-td"></td></tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-
-  <!-- Signatures -->
-  <table class="full-table" style="margin-top:10px;">
-    <tr>
-      <td class="bold-exo" style="text-align:left;">Le [DATE]</td>
-      <td class="bold-exo" style="text-align:right;">Le Chef d'Établissement</td>
-    </tr>
-  </table>
+    <!-- Signatures -->
+    <table class="full-table" style="margin-top:10px;">
+      <tr>
+        <td class="bold-exo" style="text-align:left;">Le [DATE]</td>
+        <td class="bold-exo" style="text-align:right;">Le Chef d'Établissement</td>
+      </tr>
+    </table>
+  </div>
 
 </body>
 </html>

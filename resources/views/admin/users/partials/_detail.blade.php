@@ -78,6 +78,12 @@
                                 <span class="text-gray-900">{{ optional($user->personnel)->fonction ?? "Non renseigné"}}</span>
                             </div>
                         </li>
+                        <li class="px-4 py-4 sm:px-6">
+                            <div class="flex items-center">
+                                <strong class="text-md font-medium text-gray-600 mr-3">Spécialité : </strong>
+                                <span class="text-gray-900">{{ optional($user->personnel)->specialite ?? "Non renseigné"}}</span>
+                            </div>
+                        </li>
                         @endif
 
                     </ul>

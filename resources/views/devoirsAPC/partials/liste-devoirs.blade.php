@@ -9,20 +9,31 @@
          style="max-height: calc(100vh - 300px);"
          id="devoirsScrollContainer">
 
-        
         @foreach($groupesDevoirs as $semestre => $groupByLibelle)
 
             @foreach($groupByLibelle as $libelle => $devoirsGroupe)
+                @php $first = $devoirsGroupe->first(); @endphp
+
                 <div class="mb-6 border rounded-lg p-4 bg-gray-50">
 
+                    {{-- HEADER : libellé + badge semestre + bouton supprimer --}}
                     <div class="flex justify-between items-center mb-3">
                         <h4 class="font-bold text-lg text-blue-700">{{ $libelle }}</h4>
 
-                        {{-- (Optionnel) badge semestre à droite aussi --}}
-                        <span class="text-xs px-2 py-1 rounded
-                            {{ (int)$semestre === 1 ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' }}">
-                            Semestre {{ $semestre }}
-                        </span>
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="px-2 py-1 rounded
+                                {{ (int)$semestre === 1 ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' }}">
+                                Semestre {{ $semestre }}
+                            </span>
+
+                            @if(auth()->user()->hasRole('formateur'))
+                                <button type="button"
+                                        onclick="confirmerSuppressionApc({{ $first->id }}, {{ $semestre }}, '{{ addslashes($libelle) }}')"
+                                        class="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 text-xs">
+                                    🗑 Supprimer
+                                </button>
+                            @endif
+                        </div>
                     </div>
 
                     <table class="w-full border text-sm">

@@ -24,9 +24,7 @@ class Classe extends Model
       
         "etablissement_id",
         "statut",
-    
 
-       
     ];
 
     public function listes(): MorphMany

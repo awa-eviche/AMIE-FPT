@@ -16,6 +16,7 @@ class Evalute extends Model
         "semestre",
       
       "composition",
+      "annee_academique_id",
     ];
     public function critere()
     {

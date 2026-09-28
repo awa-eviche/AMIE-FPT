@@ -14,8 +14,18 @@ class Devoir extends Model
         'semestre',
         'mcc',
         'classe_id',
-        
-    ]; 
+        'annee_academique_id',
+    ];
+
+    /** Filet de sécurité : un devoir n'est jamais enregistré sans année académique (année choisie, sinon 2025-2026). */
+    protected static function booted(): void
+    {
+        static::creating(function (self $devoir) {
+            if (! $devoir->annee_academique_id && \App\Services\AnneeDesNotes::aUneColonne('devoirs')) {
+                $devoir->annee_academique_id = \App\Services\AnneeDesNotes::choisie();
+            }
+        });
+    }
 
     public function inscription()
     {

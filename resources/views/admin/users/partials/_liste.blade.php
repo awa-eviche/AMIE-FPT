@@ -10,6 +10,7 @@
                 <th scope="col" class="px-6 py-3 text-center">Prénom</th>
                 <th scope="col" class="px-6 py-3 text-center">Courrier</th>
                 <th scope="col" class="px-6 py-3 text-center">Téléphone</th>
+                <th scope="col" class="px-6 py-3 text-center">Spécialité</th>
                 <th scope="col" class="px-6 py-3 text-center">Interne</th>
               
                 {{--<th scope="col" class="px-6 py-3 text-center">Adresse</th>--}}
@@ -21,7 +22,7 @@
             @if ($users->count() == 0)
             <tr>
 
-                <td @if(optional(optional(Auth()->user()->personnel)->etablissement)->id == null) colspan="8" @else colspan="7" @endif class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-gray-500 text-center hover:border-l-8 border-first-orange">
+                <td @if(optional(optional(Auth()->user()->personnel)->etablissement)->id == null) colspan="9" @else colspan="8" @endif class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-gray-500 text-center hover:border-l-8 border-first-orange">
                     Aucun utilisateur à afficher.
                 </td>
             </tr>
@@ -47,6 +48,9 @@
                 </td>
                 <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-gray-500 text-center">
                     {{ $user->telephone }}
+                </td>
+                <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-gray-500 text-center">
+                    {{ optional($user->personnel)->specialite ?? '-' }}
                 </td>
   
  <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-gray-500 text-center">

@@ -74,6 +74,7 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Inscription::class, 'inscription_id');
     }
+    
 public function apprenant()
 {
     return $this->hasOneThrough(

@@ -5,9 +5,14 @@
 </script>
 <script>
   function openDevoirPpoModal(matiereId) {
+    const sem = typeof getGlobalSemestre === 'function' ? getGlobalSemestre() : '';
+    if (!sem) {
+        alert('Veuillez sélectionner un semestre avant d\'ajouter un devoir.');
+        return;
+    }
+    if (typeof syncGlobalSemestre === 'function') syncGlobalSemestre();
     const input = document.getElementById('devoir_matiere_id');
     const modal = document.getElementById('devoirPpoModal');
-
     if (input) input.value = matiereId;
     if (modal) modal.classList.remove('hidden');
   }
@@ -22,7 +27,8 @@
   function openVoirDevoirPpoModal(matiereId) {
     currentMatiereId = matiereId;
     currentPage = 1;
-    currentSemestre = '';
+    currentSemestre = typeof getGlobalSemestre === 'function' ? getGlobalSemestre() : '';
+    if (typeof syncGlobalSemestre === 'function') syncGlobalSemestre();
 
     const modal = document.getElementById('voirDevoirPpoModal');
     if (modal) modal.classList.remove('hidden');
@@ -190,23 +196,25 @@ function cancelEditNoteInlinePPO() {
   // let currentPage = 1;
 
   function openAddDevoirPpoModal(matiereId) {
+    const sem = typeof getGlobalSemestre === 'function' ? getGlobalSemestre() : '';
+    if (!sem) {
+        alert('Veuillez sélectionner un semestre avant d\'ajouter un devoir.');
+        return;
+    }
+    if (typeof syncGlobalSemestre === 'function') syncGlobalSemestre();
+
     if (matiereId) currentMatiereId = matiereId;
 
-    // Set hidden matiere_id
     const input = document.getElementById('add_devoir_matiere_id');
     if (input && currentMatiereId) input.value = currentMatiereId;
 
-    // Reset champs (pour pouvoir créer plusieurs devoirs)
     const modal = document.getElementById('addDevoirPpoModal');
     if (modal) {
       const libelle = modal.querySelector('input[name="libelle"]');
       if (libelle) libelle.value = '';
-
-      // optionnel: vider notes
       modal.querySelectorAll('input[type="number"][name^="notes["]').forEach(i => i.value = '');
     }
 
-    // Show modal
     document.getElementById('addDevoirPpoModal')?.classList.remove('hidden');
   }
 
@@ -228,6 +236,33 @@ function cancelEditNoteInlinePPO() {
   }
 </script>
 
+<script>function confirmerSuppressionPpo(devoirId, semestre, libelle) {
+    const semestreLabel = semestre == 1 ? 'Premier semestre (S1)' : 'Deuxième semestre (S2)';
 
+    const ok = confirm(`Êtes-vous sûr de vouloir supprimer les notes du devoir "${libelle}" du ${semestreLabel} ?`);
+    if (!ok) return;
+
+    fetch(`/devoirPPO/${devoirId}?semestre=${semestre}`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        if (currentMatiereId) {
+          chargerDevoirs(currentMatiereId, currentSemestre, currentPage);
+        }
+        // ✅ Toast affiché après un court délai pour laisser le DOM se recharger
+        setTimeout(() => showToast('✅ Devoir supprimé avec succès.'), 400);
+      } else {
+        showToast('Erreur lors de la suppression.', 'error');
+      }
+    })
+    .catch(() => showToast('Erreur réseau.', 'error'));
+}</script>
 
 

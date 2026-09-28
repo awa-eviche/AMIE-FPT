@@ -27,6 +27,197 @@ use App\Models\Devoir;
 
 class EvaluationController extends Controller
 {
+    /**
+     * CSS de compaction pour garder le bulletin sur une seule page, quel que
+     * soit le nombre de matières. $scale va de 1.0 (aucune réduction, tailles
+     * d'origine du template) à 0.55 (compaction maximale). Couvre tous les
+     * blocs qui peuvent pousser le contenu sur une 2e page : le tableau des
+     * matières, l'en-tête, le bandeau de titre et le bloc mentions/observations
+     * (qui avaient des tailles figées, jamais réduites auparavant).
+     */
+    private function compactStyleFor(float $scale, string $scope = ''): string
+    {
+        $scale = max(0.55, min(1.0, $scale));
+
+        $bodyFont     = round(10.5 * $scale, 2);
+        $lineHeight   = max(0.95, round(1.2 * $scale, 2));
+        $pad          = max(0.4, round(2 * $scale, 2));
+        $mentionsFont = round(9.5 * $scale, 2);
+        $obsHeight    = max(18, round(70 * $scale));
+        $h1           = round(18 * $scale, 1);
+        $h2           = round(13 * $scale, 1);
+        $pFont        = round(12 * $scale, 1);
+        $titleFont    = max(11, round(18 * $scale, 1));
+
+        // ✅ Si $scope est fourni (ex: ".bulletin-42"), chaque règle est
+        // limitée à ce sous-arbre : indispensable quand plusieurs bulletins
+        // (avec chacun leur propre échelle de compaction) sont regroupés dans
+        // un même document PDF — sinon des règles non préfixées (body,
+        // .border-td...) s'appliqueraient à tout le document et écraseraient
+        // la compaction des autres bulletins.
+        $root = $scope !== '' ? $scope : 'body';
+        $d    = $scope !== '' ? $scope . ' ' : '';
+
+        return "
+            {$root} { font-size: {$bodyFont}px !important; line-height: {$lineHeight} !important; }
+            {$d}.border-td { padding: {$pad}px !important; }
+            {$d}header h1 { font-size: {$h1}px !important; }
+            {$d}header h2 { font-size: {$h2}px !important; }
+            {$d}header p { font-size: {$pFont}px !important; }
+            {$d}header { margin-bottom: 4px !important; }
+            {$d}header h1, {$d}header h2, {$d}header p { margin: 1px 0 !important; }
+            {$d}.sep-solid, {$d}.sep-dash { margin: 2px auto !important; }
+            {$d}.title-band { font-size: {$titleFont}px !important; padding: 3px 8px !important; margin: 3px 0 5px 0 !important; }
+            {$d}.infos { margin-top: 2px !important; margin-bottom: 3px !important; }
+            {$d}.bloc-mentions table { font-size: {$mentionsFont}px !important; margin-top: 2px !important; }
+            {$d}.obs-box { min-height: {$obsHeight}px !important; }
+        ";
+    }
+
+    /**
+     * Injecte la CSS de compaction dans $templateBase (qui contient encore le
+     * marqueur </style> intact) puis rend le PDF ; si le résultat déborde sur
+     * plusieurs pages, recommence avec une compaction plus forte, jusqu'à ce
+     * que tout tienne sur une seule page (ou que la compaction max soit
+     * atteinte). Retourne le HTML final (avec la CSS choisie déjà injectée)
+     * et l'échelle retenue, pour pouvoir la réutiliser sans re-mesurer.
+     *
+     * Si $scope est fourni (ex: ".bulletin-42", pour un bulletin de classe où
+     * plusieurs élèves sont regroupés dans un même document), la mesure est
+     * faite sur la structure EXACTEMENT telle qu'elle sera assemblée dans le
+     * document final (contenu isolé dans un <div class="...">) : mesurer sur
+     * <body> directement puis extraire le fragment donnerait une échelle
+     * légèrement optimiste, le <div> supplémentaire pouvant suffire à faire
+     * déborder un ajustement pile-poil.
+     */
+    private function fitContentOnePage(string $templateBase, \Dompdf\Options $options, string $scope = ''): array
+    {
+        $scale = 1.0;
+        $html  = $templateBase;
+
+        for ($attempt = 0; $attempt < 4; $attempt++) {
+            $html = str_replace('</style>', $this->compactStyleFor($scale, $scope) . '</style>', $templateBase);
+
+            if ($scope !== '') {
+                $scopeClass = ltrim($scope, '.');
+                $wrapped = '<div class="' . $scopeClass . '">' . $this->extractBodyContent($html) . '</div>';
+                $html = $this->injectBodyContent($html, $wrapped);
+            }
+
+            $dompdf = new Dompdf($options);
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+
+            $pages = $dompdf->getCanvas()->get_page_count();
+            if ($pages <= 1 || $scale <= 0.55) {
+                break;
+            }
+
+            $scale = max(0.55, $scale - 0.12 * $pages);
+        }
+
+        return [$html, $scale];
+    }
+
+    /**
+     * Extrait uniquement le contenu de <body>...</body> d'un document HTML
+     * complet. Utilisé pour regrouper plusieurs bulletins dans un seul
+     * document final au lieu de concaténer des <html>/<body> complets (que
+     * Dompdf aplatit en un seul <body>, faisant "fuir" les <style> de l'un
+     * sur les autres).
+     */
+    private function extractBodyContent(string $html): string
+    {
+        $bodyOpenPos = strpos($html, '<body');
+        if ($bodyOpenPos === false) {
+            return $html;
+        }
+        $bodyOpenEnd = strpos($html, '>', $bodyOpenPos) + 1;
+
+        $bodyClosePos = strpos($html, '</body>');
+        if ($bodyClosePos === false) {
+            return substr($html, $bodyOpenEnd);
+        }
+
+        return substr($html, $bodyOpenEnd, $bodyClosePos - $bodyOpenEnd);
+    }
+
+    /**
+     * Remplace le contenu de <body>...</body> de $template par $bodyContent.
+     */
+    private function injectBodyContent(string $template, string $bodyContent): string
+    {
+        $bodyOpenPos = strpos($template, '<body');
+        if ($bodyOpenPos === false) {
+            return $template . $bodyContent;
+        }
+        $bodyOpenEnd = strpos($template, '>', $bodyOpenPos) + 1;
+
+        $bodyClosePos = strpos($template, '</body>');
+        if ($bodyClosePos === false) {
+            return substr($template, 0, $bodyOpenEnd) . $bodyContent;
+        }
+
+        return substr($template, 0, $bodyOpenEnd) . $bodyContent . substr($template, $bodyClosePos);
+    }
+
+    /**
+     * Bloc mentions : la mention (Félicitations...) reste toujours en 1ère position.
+     * En 2e position : mentions de travail (Travail excellent...) au 1er semestre,
+     * décision du conseil (passage/redoublement/exclusion) au 2e semestre.
+     */
+    private function blocMentionsHtml(int $semestre): string
+    {
+        $mention = '
+            <table class="full-table" cellspacing="0" style="font-size:9.5px; white-space:nowrap;">
+                <colgroup><col><col style="width:22px;"></colgroup>
+                <tr><td class="border-td">Félicitations</td><td class="border-td" style="width:22px;"></td></tr>
+                <tr><td class="border-td">Encouragements</td><td class="border-td" style="width:22px;"></td></tr>
+                <tr><td class="border-td">Tableau d\'honneur</td><td class="border-td" style="width:22px;"></td></tr>
+                <tr><td class="border-td">Passable</td><td class="border-td" style="width:22px;"></td></tr>
+                <tr><td class="border-td">Doit redoubler d\'effort</td><td class="border-td" style="width:22px;"></td></tr>
+                <tr><td class="border-td">Avertissement</td><td class="border-td" style="width:22px;"></td></tr>
+                <tr><td class="border-td">Blâme</td><td class="border-td" style="width:22px;"></td></tr>
+            </table>
+        ';
+
+        if ($semestre === 2) {
+            $second = '
+                <table class="full-table" cellspacing="0" style="font-size:9.5px; white-space:nowrap;">
+                    <tr>
+                        <td class="border-td bg-grey bold-exo centered" style="width:82%;">Décision du Conseil</td>
+                        <td class="border-td bg-grey" style="width:18%;"></td>
+                    </tr>
+                    <tr><td class="border-td" style="width:82%;">Admis(e) en classe supérieure</td><td class="border-td" style="width:18%;"></td></tr>
+                    <tr><td class="border-td" style="width:82%;">Autorisé(e) à redoubler</td><td class="border-td" style="width:18%;"></td></tr>
+                    <tr><td class="border-td" style="width:82%;">Exclusion</td><td class="border-td" style="width:18%;"></td></tr>
+                </table>
+            ';
+        } else {
+            $second = '
+                <table class="full-table" cellspacing="0" style="font-size:9.5px; white-space:nowrap;">
+                    <colgroup><col><col style="width:22px;"></colgroup>
+                    <tr><td class="border-td">Travail excellent</td><td class="border-td" style="width:22px;"></td></tr>
+                    <tr><td class="border-td">Satisfaisant doit continuer</td><td class="border-td" style="width:22px;"></td></tr>
+                    <tr><td class="border-td">Peut mieux faire</td><td class="border-td" style="width:22px;"></td></tr>
+                    <tr><td class="border-td">Insuffisant</td><td class="border-td" style="width:22px;"></td></tr>
+                    <tr><td class="border-td">Risque de redoubler</td><td class="border-td" style="width:22px;"></td></tr>
+                    <tr><td class="border-td">Risque l\'exclusion</td><td class="border-td" style="width:22px;"></td></tr>
+                </table>
+            ';
+        }
+
+        return '
+            <table class="full-table" cellspacing="0">
+                <tr>
+                    <td style="width:50%; vertical-align:top; padding:0 4px 0 0;">' . $mention . '</td>
+                    <td style="width:50%; vertical-align:top; padding:0 0 0 4px;">' . $second . '</td>
+                </tr>
+            </table>
+        ';
+    }
+
     protected $logUserRepository;
     public function __construct(LogUserRepository $logUserRepository)
     {
@@ -129,8 +320,8 @@ class EvaluationController extends Controller
                 'note_cc'          => $moyenneCC, // 🔥 AUTO
                 'note_composition' => $request->note_composition,
                 'appreciation'     => $appreciation,
-            ]);
-        
+            ] + \App\Services\AnneeDesNotes::attributs('evaluations', $inscription->annee_academique_id));
+
             // Historique
             HistoryNote::create([
                 'evaluation_id' => $evaluation->id,
@@ -278,12 +469,14 @@ public function generatePDF($id)
 
     $inscription = Inscription::findOrFail($id);
 $classeId = (int) $inscription->classe_id;
-    // Matieres de la classe (PPO)
+    $anneeId = $inscription->annee_academique_id;
+    // Matieres de la classe (PPO), affectées pour l'année de l'inscription
   $matieres = Matiere::where('niveau_etude_id', $inscription->classe->niveau_etude->id)
-    ->whereIn('id', function ($query) use ($classeId) {
+    ->whereIn('id', function ($query) use ($classeId, $anneeId) {
         $query->select('matiere_id')
               ->from('classe_formateur_matiere')
               ->where('classe_id', $classeId)
+              ->when($anneeId, fn ($q) => $q->where('annee_academique_id', $anneeId))
               ->whereNotNull('formateur_id'); // matière réellement assignée
     })
     ->get();
@@ -350,16 +543,9 @@ $classeId = (int) $inscription->classe_id;
         $moyennesTable = '
             <table class="full-table" cellspacing="0" style="margin-top: 10px;">
                 <tr>
-                    <td class="border-td bg-grey bold-exo">Moyenne 1er Semestre</td>
-                    <td class="border-td">' . number_format($moyenneS1, 2, ',', '.') . '</td>
-                </tr>
-                <tr>
-                    <td class="border-td bg-grey bold-exo">Moyenne 2e Semestre</td>
-                    <td class="border-td">' . number_format($moyenneS2, 2, ',', '.') . '</td>
-                </tr>
-                <tr>
-                    <td class="border-td bg-grey bold-exo">Moyenne Générale Annuelle</td>
-                    <td class="border-td">' . number_format($moyenneAnnuelle, 2, ',', '.') . '</td>
+                    <td class="border-td bg-grey bold-exo centered">Moy. 1er Sem : ' . number_format($moyenneS1, 2, ',', '.') . '</td>
+                    <td class="border-td bg-grey bold-exo centered">Moy. 2e Sem : ' . number_format($moyenneS2, 2, ',', '.') . '</td>
+                    <td class="border-td bg-grey bold-exo centered">Moy. Annuelle : ' . number_format($moyenneAnnuelle, 2, ',', '.') . '</td>
                 </tr>
             </table>
         ';
@@ -379,6 +565,12 @@ $classeId = (int) $inscription->classe_id;
     foreach ($matieres as $matiere) {
 
         $evaluation = $evaluations->get($matiere->id);
+
+        // ✅ Une matière sans aucune note (ni devoir/CC, ni composition) ne
+        // doit pas apparaître sur le bulletin.
+        if (!$evaluation || ($evaluation->note_cc === null && $evaluation->note_composition === null)) {
+            continue;
+        }
 
         $coef = (float)($matiere->coef ?? 0);
 
@@ -418,43 +610,52 @@ $classeId = (int) $inscription->classe_id;
     ->when($semestre, fn($q) => $q->where('semestre', (int) $semestre))
     ->get();
 
+// ✅ "justifie" est prioritaire : une ligne ne doit jamais être comptée à la
+// fois comme justifiée et non justifiée, même si "nonjustifie" est resté à 1
+// par erreur (cf. bug de case à cocher non réinitialisée en édition).
 $hAbsJust = (float) $absencesSemestre->where('type','absence')->where('justifie', 1)->sum('nombre_heure_absence');
 
 $hAbsNon = (float) $absencesSemestre->where('type','absence')
-    ->filter(fn($r) => (int)$r->justifie === 0 || (int)$r->nonjustifie === 1)
+    ->where('justifie', '!=', 1)
     ->sum('nombre_heure_absence');
 
 $hRetJust = (float) $absencesSemestre->where('type','retard')->where('justifie', 1)->sum('nombre_heure_retard');
 
 $hRetNon = (float) $absencesSemestre->where('type','retard')
-    ->filter(fn($r) => (int)$r->justifie === 0 || (int)$r->nonjustifie === 1)
+    ->where('justifie', '!=', 1)
     ->sum('nombre_heure_retard');
-;
 $hAbsTotal = $hAbsJust + $hAbsNon;
 $hRetTotal = $hRetJust + $hRetNon;
 
+$retTotal = $absencesSemestre->where('type', 'retard')->count();
+
+$absTotal = $absencesSemestre->where('type', 'absence')->count();
+$absJustifiees = $absencesSemestre->where('type', 'absence')->where('justifie', 1)->count();
+$absNonJustifiees = $absencesSemestre->where('type', 'absence')
+    ->where('justifie', '!=', 1)
+    ->count();
+
     // --- PDF ---
-    $dompdf = new Dompdf();
-    $options = $dompdf->getOptions();
+    $options = new \Dompdf\Options();
     $options->setFontCache(storage_path('fonts'));
     $options->set('isRemoteEnabled', true);
     $options->set('pdfBackend', 'GD');
     $options->setChroot(['/', storage_path('fonts')]);
-    $dompdf->setOptions($options);
 
     $template = file_get_contents('evaluation.html');
 
     // injecter contenu
     $template = str_replace('[BODY]', $output, $template);
     $template = str_replace('[TABLE_MOYENNES]', $moyennesTable, $template);
+    $template = str_replace('[BLOC_MENTIONS]', $this->blocMentionsHtml($semestre), $template);
     $template = str_replace('[RANG]', $rangTexte, $template);
     $template = str_replace('[MOYENNE_CLASSE]', number_format($moyenneClasse, 2, ',', '.'), $template);
 
-    // absences
-      $fmt = fn($n) => rtrim(rtrim(number_format((float)$n, 2, '.', ''), '0'), '.');
-
-$template = str_replace('[NB_ABSENCES]', $fmt($hAbsTotal), $template);
-$template = str_replace('[NB_RETARDS]',  $fmt($hRetTotal), $template);
+    // absences / retards (en heures, cohérent avec la saisie "Nombre d'heures d'absence")
+$template = str_replace('[RET_TOTAL]', $this->formatHeures($hRetTotal), $template);
+$template = str_replace('[ABS_TOTAL]', $this->formatHeures($hAbsTotal), $template);
+$template = str_replace('[ABS_JUSTIFIEES]', $this->formatHeures($hAbsJust), $template);
+$template = str_replace('[ABS_NON_JUSTIFIEES]', $this->formatHeures($hAbsNon), $template);
  $logoPath = public_path('assets/images/titleHead.png');
     $logoBase64 = '';
     if (file_exists($logoPath)) {
@@ -482,7 +683,13 @@ $template = str_replace('[NB_RETARDS]',  $fmt($hRetTotal), $template);
     // ✅ moyenne générale pondérée
     $template = str_replace('[MOYENNE]', number_format($moyenneGenerale, 2, ',', '.'), $template);
 
-    $dompdf->loadHtml($template);
+    // ✅ Compaction adaptative : on mesure le rendu réel et on resserre la
+    // police/les marges jusqu'à ce que tout tienne sur une seule page, quel
+    // que soit le nombre de matières.
+    [$finalHtml, ] = $this->fitContentOnePage($template, $options);
+
+    $dompdf = new Dompdf($options);
+    $dompdf->loadHtml($finalHtml);
     $dompdf->setPaper('A4', 'portrait');
     $dompdf->render();
 
@@ -508,6 +715,12 @@ $template = str_replace('[NB_RETARDS]',  $fmt($hRetTotal), $template);
     }
 
     
+    // ✅ Affiche un nombre d'heures sans décimales inutiles (2 au lieu de 2.00, 2.5 au lieu de 2.50)
+    private function formatHeures($valeur): string
+    {
+        return rtrim(rtrim(number_format((float) $valeur, 2, '.', ''), '0'), '.') ?: '0';
+    }
+
     public function noteAppreciation($note)
 {
     if ($note < 10) {
@@ -533,10 +746,16 @@ $template = str_replace('[NB_RETARDS]',  $fmt($hRetTotal), $template);
 
 public function previewClasseBulletins($classe_id, $semestre)
 {
+    set_time_limit(300);
+
     $semestre = (int) $semestre;
 
-    $classe = Classe::with(['etablissement', 'inscriptions.apprenant', 'niveau_etude'])
+    $classe = Classe::with(['etablissement', 'inscriptions.apprenant', 'inscriptions.anneeAcademique', 'niveau_etude'])
         ->findOrFail($classe_id);
+
+    // Bulletins de l'année choisie uniquement (une classe est réutilisée d'une année à l'autre).
+    $anneeId = \App\Services\AnneeDesNotes::pourClasse((int) $classe->id, request());
+    $classe->setRelation('inscriptions', $classe->inscriptions->when($anneeId, fn ($i) => $i->where('annee_academique_id', $anneeId))->values());
 
     $inscriptions = $classe->inscriptions;
 
@@ -569,10 +788,11 @@ public function previewClasseBulletins($classe_id, $semestre)
 $classeId = (int) $classe->id;
 
 $matieres = Matiere::where('niveau_etude_id', $classe->niveau_etude_id)
-    ->whereIn('id', function ($query) use ($classeId) {
+    ->whereIn('id', function ($query) use ($classeId, $anneeId) {
         $query->select('matiere_id')
             ->from('classe_formateur_matiere')
             ->where('classe_id', $classeId)
+            ->when($anneeId, fn ($q) => $q->where('annee_academique_id', $anneeId))
             ->whereNotNull('formateur_id');
     })
     ->get();
@@ -583,55 +803,23 @@ $matieres = Matiere::where('niveau_etude_id', $classe->niveau_etude_id)
         return (((float)$note_cc + (float)$note_composition) / 2);
     };
 
-    // --- format heures ---
-    $fmt = fn($n) => rtrim(rtrim(number_format((float)$n, 2, '.', ''), '0'), '.');
+    $inscriptionIds = $inscriptions->pluck('id')->all();
 
-    // ✅ Calcul moyennes pondérées pour tous (pour rangs)
-    $moyennes = [];
+    // ✅ Une seule requête pour toutes les évaluations de la classe (tous semestres),
+    // groupées par inscription puis par semestre, pour éviter le N+1 sur les 42 apprenants.
+    $evaluationsParInscription = Evaluation::whereIn('inscription_id', $inscriptionIds)
+        ->get()
+        ->groupBy(['inscription_id', 'semestre']);
 
-    foreach ($inscriptions as $inscription) {
-        $evaluations = Evaluation::where('inscription_id', $inscription->id)
-            ->where('semestre', $semestre)
-            ->get()
-            ->keyBy('matiere_id');
+    // ✅ Une seule requête pour toutes les absences/retards du semestre de la classe.
+    $absencesParInscription = Absence::whereIn('inscription_id', $inscriptionIds)
+        ->where('semestre', $semestre)
+        ->get()
+        ->groupBy('inscription_id');
 
-        $sumTotal = 0.0;
-        $sumCoef  = 0.0;
-
-        foreach ($matieres as $matiere) {
-            $coef = (float)($matiere->coef ?? 0);
-            if ($coef <= 0) continue;
-
-            $eval = $evaluations->get($matiere->id);
-            if (!$eval) continue;
-
-            $moy = $moyenneMatiereFn($eval->note_cc, $eval->note_composition);
-            if ($moy === null) continue;
-
-            $sumTotal += ($moy * $coef);
-            $sumCoef  += $coef;
-        }
-
-        $moyennes[$inscription->id] = $sumCoef > 0 ? round($sumTotal / $sumCoef, 2) : 0.0;
-    }
-
-    $moyenneClasse = count($moyennes)
-        ? round(array_sum($moyennes) / count($moyennes), 2)
-        : 0.0;
-
-    // ✅ Rangs
-    arsort($moyennes);
-    $rangs = [];
-    $position = 1;
-    foreach ($moyennes as $id => $moy) {
-        $rangs[$id] = $position++;
-    }
-
-    // ✅ Moyenne semestre par inscription (S1/S2) si semestre=2
-    $moyenneSemestrePourInscription = function (int $inscriptionId, int $sem) use ($matieres, $moyenneMatiereFn) {
-        $evaluations = Evaluation::where('inscription_id', $inscriptionId)
-            ->where('semestre', $sem)
-            ->get()
+    // ✅ Moyenne pondérée d'une inscription pour un semestre donné (lecture en mémoire, pas de requête)
+    $moyenneSemestrePourInscription = function (int $inscriptionId, int $sem) use ($matieres, $moyenneMatiereFn, $evaluationsParInscription) {
+        $evaluations = ($evaluationsParInscription->get($inscriptionId)?->get($sem) ?? collect())
             ->keyBy('matiere_id');
 
         $sumTotal = 0.0;
@@ -654,32 +842,66 @@ $matieres = Matiere::where('niveau_etude_id', $classe->niveau_etude_id)
         return $sumCoef > 0 ? round($sumTotal / $sumCoef, 2) : 0.0;
     };
 
+    // ✅ Calcul moyennes pondérées pour tous (pour rangs)
+    $moyennes = [];
+
+    foreach ($inscriptions as $inscription) {
+        $moyennes[$inscription->id] = $moyenneSemestrePourInscription((int) $inscription->id, $semestre);
+    }
+
+    $moyenneClasse = count($moyennes)
+        ? round(array_sum($moyennes) / count($moyennes), 2)
+        : 0.0;
+
+    // ✅ Rangs
+    arsort($moyennes);
+    $rangs = [];
+    $position = 1;
+    foreach ($moyennes as $id => $moy) {
+        $rangs[$id] = $position++;
+    }
+
+    // ✅ Options Dompdf pour la mesure/compaction (une par élève : le nombre
+    // de matières visibles diffère selon les notes disponibles).
+    $pdfOptions = new \Dompdf\Options();
+    $pdfOptions->set('isRemoteEnabled', true);
+
+    // ✅ CSS de compaction accumulée, scopée par élève (voir plus bas).
+    $allCss = '';
+
     // 🔹 Bulletins
     foreach ($inscriptions as $inscription) {
         $apprenant = $inscription->apprenant;
 
         // ✅ Absences / retards (heures)
-        $absencesSemestre = Absence::where('inscription_id', (int)$inscription->id)
-            ->where('semestre', (int)$semestre)
-            ->get();
+        $absencesSemestre = $absencesParInscription->get((int) $inscription->id) ?? collect();
 
+        // ✅ "justifie" est prioritaire : une ligne ne doit jamais être comptée à la
+        // fois comme justifiée et non justifiée, même si "nonjustifie" est resté à 1
+        // par erreur (cf. bug de case à cocher non réinitialisée en édition).
         $hAbsJust = (float)$absencesSemestre->where('type', 'absence')->where('justifie', 1)->sum('nombre_heure_absence');
         $hAbsNon  = (float)$absencesSemestre->where('type', 'absence')
-            ->filter(fn($r) => (int)$r->justifie === 0 || (int)$r->nonjustifie === 1)
+            ->where('justifie', '!=', 1)
             ->sum('nombre_heure_absence');
 
         $hRetJust = (float)$absencesSemestre->where('type', 'retard')->where('justifie', 1)->sum('nombre_heure_retard');
         $hRetNon  = (float)$absencesSemestre->where('type', 'retard')
-            ->filter(fn($r) => (int)$r->justifie === 0 || (int)$r->nonjustifie === 1)
+            ->where('justifie', '!=', 1)
             ->sum('nombre_heure_retard');
 
         $hAbsTotal = $hAbsJust + $hAbsNon;
         $hRetTotal = $hRetJust + $hRetNon;
 
+        $retTotal = $absencesSemestre->where('type', 'retard')->count();
+
+        $absTotal = $absencesSemestre->where('type', 'absence')->count();
+        $absJustifiees = $absencesSemestre->where('type', 'absence')->where('justifie', 1)->count();
+        $absNonJustifiees = $absencesSemestre->where('type', 'absence')
+            ->where('justifie', '!=', 1)
+            ->count();
+
         // ✅ Evaluations du semestre courant
-        $evaluations = Evaluation::where('inscription_id', $inscription->id)
-            ->where('semestre', $semestre)
-            ->get()
+        $evaluations = ($evaluationsParInscription->get((int) $inscription->id)?->get($semestre) ?? collect())
             ->keyBy('matiere_id');
 
         $body = '';
@@ -687,11 +909,18 @@ $matieres = Matiere::where('niveau_etude_id', $classe->niveau_etude_id)
         $sumCoef  = 0.0;
 
         foreach ($matieres as $matiere) {
-            $coef = (float)($matiere->coef ?? 0);
             $eval = $evaluations->get($matiere->id);
 
             $note_cc   = $eval?->note_cc;
             $note_comp = $eval?->note_composition;
+
+            // ✅ Une matière sans aucune note (ni devoir/CC, ni composition)
+            // ne doit pas apparaître sur le bulletin.
+            if ($note_cc === null && $note_comp === null) {
+                continue;
+            }
+
+            $coef = (float)($matiere->coef ?? 0);
 
             $moy = $moyenneMatiereFn($note_cc, $note_comp);
 
@@ -729,16 +958,9 @@ $matieres = Matiere::where('niveau_etude_id', $classe->niveau_etude_id)
             $moyennesTable = '
                 <table class="full-table" cellspacing="0" style="margin-top:10px;">
                     <tr>
-                        <td class="border-td bg-grey bold-exo">Moyenne 1er Semestre</td>
-                        <td class="border-td">' . number_format($moyenneS1, 2, ',', '.') . '</td>
-                    </tr>
-                    <tr>
-                        <td class="border-td bg-grey bold-exo">Moyenne 2e Semestre</td>
-                        <td class="border-td">' . number_format($moyenneS2, 2, ',', '.') . '</td>
-                    </tr>
-                    <tr>
-                        <td class="border-td bg-grey bold-exo">Moyenne Générale Annuelle</td>
-                        <td class="border-td">' . number_format($moyenneAnnuelle, 2, ',', '.') . '</td>
+                        <td class="border-td bg-grey bold-exo centered">Moy. 1er Sem : ' . number_format($moyenneS1, 2, ',', '.') . '</td>
+                        <td class="border-td bg-grey bold-exo centered">Moy. 2e Sem : ' . number_format($moyenneS2, 2, ',', '.') . '</td>
+                        <td class="border-td bg-grey bold-exo centered">Moy. Annuelle : ' . number_format($moyenneAnnuelle, 2, ',', '.') . '</td>
                     </tr>
                 </table>
             ';
@@ -753,8 +975,8 @@ $matieres = Matiere::where('niveau_etude_id', $classe->niveau_etude_id)
                 '[CLASSE]', '[SEMESTRE]', '[ANNEESCOLAIRE]',
                 '[USER]', '[DATENAISSANCE]', '[LIEUNAISSANCE]', '[TEL]', '[EMAIL]', '[MATRICULE]',
                 '[BODY]', '[MOYENNE]', '[MOYENNE_CLASSE]', '[RANG]', '[DATE]',
-                '[NB_ABSENCES]', '[NB_RETARDS]',
-                '[TABLE_MOYENNES]',
+                '[RET_TOTAL]', '[ABS_TOTAL]', '[ABS_JUSTIFIEES]', '[ABS_NON_JUSTIFIEES]',
+                '[TABLE_MOYENNES]', '[BLOC_MENTIONS]',
                 '[NbreIns]'
             ],
             [
@@ -775,15 +997,32 @@ $matieres = Matiere::where('niveau_etude_id', $classe->niveau_etude_id)
                 number_format($moyenneClasse, 2, ',', '.'),
                 $rangAffiche,
                 now()->format('d/m/Y'),
-                $fmt($hAbsTotal),
-                $fmt($hRetTotal),
+                $this->formatHeures($hRetTotal),
+                $this->formatHeures($hAbsTotal),
+                $this->formatHeures($hAbsJust),
+                $this->formatHeures($hAbsNon),
                 $moyennesTable,
+                $this->blocMentionsHtml($semestre),
                 (string)$nbInscrits
             ],
             $template
         );
 
-        $html .= '<div style="page-break-after: always;">' . $content . '</div>';
+        // ✅ Compaction adaptative mesurée pour CHAQUE élève : le nombre de
+        // matières visibles diffère selon les notes disponibles (les
+        // matières sans note sont masquées), donc une échelle calibrée sur
+        // un seul élève ne convient pas forcément aux autres. Concaténer
+        // plusieurs documents <html>/<body> complets dans un seul PDF fait
+        // que le parser HTML de Dompdf ne garde qu'un seul <body> : un
+        // <style> par élève "fuit" alors sur tous les autres. On extrait
+        // donc uniquement le contenu de chaque bulletin, on le scope avec
+        // une classe unique, et on regroupe toute la CSS de compaction dans
+        // l'unique <style> partagé du document final.
+        $scopeClass = 'bulletin-' . $inscription->id;
+        [$fittedDoc, $scale] = $this->fitContentOnePage($content, $pdfOptions, '.' . $scopeClass);
+
+        $allCss .= $this->compactStyleFor($scale, '.' . $scopeClass);
+        $html .= $this->extractBodyContent($fittedDoc) . '<div style="page-break-after: always;"></div>';
     }
  $html .= '<div style="page-break-before: always;"></div>';
 
@@ -829,7 +1068,14 @@ $matieres = Matiere::where('niveau_etude_id', $classe->niveau_etude_id)
             </tbody>
         </table>
     ';
-    $pdf = Pdf::loadHTML($html)->setPaper('A4', 'portrait');
+
+    // ✅ Un seul document final : le <head>/<style> du template (avec toute
+    // la CSS de compaction scopée par élève) + le contenu de tous les
+    // bulletins en <body>, au lieu de N documents complets concaténés.
+    $finalDocument = str_replace('</style>', $allCss . '</style>', $template);
+    $finalDocument = $this->injectBodyContent($finalDocument, $html);
+
+    $pdf = Pdf::loadHTML($finalDocument)->setPaper('A4', 'portrait');
 
     return $pdf->stream(
         'Bulletins_' . str_replace(' ', '_', $classe->libelle) . '_Semestre_' . $semestre . '.pdf'
@@ -858,12 +1104,14 @@ public function mesNotes($inscriptionId)
     ])->findOrFail($inscriptionId);
 
     $classeId = (int) $inscription->classe_id;
+    $anneeId = $inscription->annee_academique_id;
 
     $matieres = \App\Models\Matiere::where('niveau_etude_id', $inscription->classe->niveau_etude->id)
-        ->whereIn('id', function ($query) use ($classeId) {
+        ->whereIn('id', function ($query) use ($classeId, $anneeId) {
             $query->select('matiere_id')
                   ->from('classe_formateur_matiere')
                   ->where('classe_id', $classeId)
+                  ->when($anneeId, fn ($q) => $q->where('annee_academique_id', $anneeId))
                   ->whereNotNull('formateur_id');
         })
         ->get()
