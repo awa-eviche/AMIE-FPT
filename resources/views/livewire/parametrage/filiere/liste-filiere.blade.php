@@ -10,7 +10,9 @@
             <input type="text" wire:model="search" wire:keydown="$refresh" placeholder="Rechercher" class="form-input text-sm px-4 py-3 w-max shadow-sm border-white">
         </div>
         <div class="flex">
-            <a href="#" class="mx-2 px-5 rounded-md py-0 flex text-orange-400 text-xs font-bold text-center shadow-md bg-white items-center">
+            <a href="{{ route('filiere.export.pdf', array_filter(['search' => $search ?? '', 'secteur_id' => $selectedFiliereSecteur ?? ''])) }}"
+               target="_blank"
+               class="mx-2 px-5 rounded-md py-0 flex text-orange-400 text-xs font-bold text-center shadow-md bg-white items-center">
                 <span><i class="fa fa-download"></i></span>
                 <span class="mx-2">Télécharger liste</span>
             </a>

@@ -19,23 +19,19 @@ class ClasseSwitch extends Component
     public $annee_academique_id;
     public $anneeAcademiques;
     public $anneeAcademiqueLabel;
-
+    public $devoirIdsApc = [];
     public $currentClasse = null;
     public $currentApprenant = null;
     public $selectedApprenant;
     public $selectedsemestre1 = '';
-
     public $competences = [];
     public $evaluations = [];
-
     public $filtres = [];
     public $filtre = null;
-
     public $count = 0;
     public $startLimit = 0;
     public $nombreApprenants = 0;
 
-   
     public $showApcClasseModal = false;
     public $apcSemestre = '';
 
@@ -122,10 +118,12 @@ $competencesQuery = Competence::query()
    ->with(['ressources' => function ($q) use ($classeId, $user) {
     $q->where('classe_id', $classeId)
       ->where('formateur_id', $user->id);
+    $this->ressourcesDeLAnnee($q);
 }]);
 
     if ($user && $user->hasRole('formateur')) {
         $competenceIds = DB::table('classe_formateur_competence')
+            ->when($this->annee_academique_id, fn ($q) => $q->where('annee_academique_id', $this->annee_academique_id))
             ->where('classe_id', $this->classe)
             ->where('formateur_id', $user->id)
             ->pluck('competence_id')
@@ -258,6 +256,15 @@ private function rebuildNotesCompetenceOptions(): void
 
     $this->notesCompetenceOptions = $names;
 }
+    /** Restreint les ressources (disciplines APC) à l'année académique sélectionnée. */
+    private function ressourcesDeLAnnee($q)
+    {
+        return $q->when(
+            \App\Services\AnneeDesNotes::aUneColonne('ressources') && $this->annee_academique_id,
+            fn ($qq) => $qq->where('annee_academique_id', $this->annee_academique_id)
+        );
+    }
+
 
 
     public function mount()
@@ -265,7 +272,8 @@ private function rebuildNotesCompetenceOptions(): void
         $user = auth()->user();
 
         $this->anneeAcademiques = AnneeAcademique::all();
-        $this->annee_academique_id = session()->get('annee_academique_id', '');
+        $this->annee_academique_id = \App\Services\AnneeDesNotes::choisie();
+        $this->classe = session()->get('currentClasse', '');
 
         $this->anneeAcademiqueLabel = optional(
             $this->anneeAcademiques->firstWhere('id', $this->annee_academique_id)
@@ -285,9 +293,17 @@ private function rebuildNotesCompetenceOptions(): void
                 ->get();
         }
 
-        
+
         if ($this->classe && $this->annee_academique_id) {
-            $this->updatedClasse();
+            $this->currentClasse = Classe::with(['etablissement', 'niveau_etude.metier.filiere'])
+                ->find($this->classe);
+
+            $this->loadApprenants();
+
+            $selectedApprenant = session()->get('selectedApprenant');
+            if ($selectedApprenant) {
+                $this->loadCompetences($selectedApprenant);
+            }
         }
     }
 
@@ -350,6 +366,7 @@ private function rebuildNotesCompetenceOptions(): void
         $this->filtre = null;
         $this->count = 0;
         $this->startLimit = 0;
+        session()->forget('selectedApprenant');
     }
 
     public function loadApprenants()
@@ -371,6 +388,7 @@ private function rebuildNotesCompetenceOptions(): void
  public function loadCompetences($inscriptionId)
 {
     $this->selectedApprenant = $inscriptionId;
+    session()->put('selectedApprenant', $inscriptionId);
     $this->currentApprenant = Inscription::with(['apprenant', 'classe'])->find($inscriptionId);
     if (!$this->currentApprenant) return;
 
@@ -381,6 +399,7 @@ private function rebuildNotesCompetenceOptions(): void
 
     if ($user->hasRole('formateur')) {
         $competenceIds = DB::table('classe_formateur_competence')
+            ->when($this->annee_academique_id, fn ($q) => $q->where('annee_academique_id', $this->annee_academique_id))
             ->where('classe_id', $classe->id)
             ->where('formateur_id', $user->id)
             ->pluck('competence_id')
@@ -396,6 +415,7 @@ private function rebuildNotesCompetenceOptions(): void
 $query = Competence::where('niveau_etude_id', $classe->niveau_etude_id)
     ->with(['ressources' => function ($q) use ($classe) {
         $q->where('classe_id', $classe->id);
+        $this->ressourcesDeLAnnee($q);
     }]);
 
 
@@ -488,13 +508,14 @@ public function openApcClasseModal()
         return;
     }
 
-     if (!$this->selectedsemestre1) {
+    if (!$this->selectedsemestre1) {
         session()->flash(
             'error',
             'Veuillez choisir le semestre pour Ã©valuer.'
         );
-        return; 
+        return;
     }
+    $this->apcSemestre = $this->selectedsemestre1;
     $user = auth()->user();
 
     // 1) Apprenants
@@ -505,6 +526,7 @@ public function openApcClasseModal()
         ->get();
 
     $competenceIds = DB::table('classe_formateur_competence')
+            ->when($this->annee_academique_id, fn ($q) => $q->where('annee_academique_id', $this->annee_academique_id))
         ->where('classe_id', $this->classe)
         ->where('formateur_id', $user->id)
         ->pluck('competence_id')
@@ -529,10 +551,12 @@ public function openApcClasseModal()
     ->whereIn('id', $competenceIds)
     ->whereHas('ressources', function ($q) use ($classeId) {
         $q->where('classe_id', $classeId);
+        $this->ressourcesDeLAnnee($q);
     })
    ->with(['ressources' => function ($q) use ($classeId, $user) {
     $q->where('classe_id', $classeId)
       ->where('formateur_id', $user->id);
+    $this->ressourcesDeLAnnee($q);
 }])
     ->get();
 
@@ -568,6 +592,7 @@ $classeId = $this->classe;
     $user = auth()->user();
 
     $competenceIds = DB::table('classe_formateur_competence')
+            ->when($this->annee_academique_id, fn ($q) => $q->where('annee_academique_id', $this->annee_academique_id))
         ->where('classe_id', $classeId)
         ->where('formateur_id', $user->id)
         ->pluck('competence_id')
@@ -577,10 +602,12 @@ $classeId = $this->classe;
     ->whereIn('id', $competenceIds)
     ->whereHas('ressources', function ($q) use ($classeId) {
         $q->where('classe_id', $classeId);
+        $this->ressourcesDeLAnnee($q);
     })
        ->with(['ressources' => function ($q) use ($classeId, $user) {
     $q->where('classe_id', $classeId)
       ->where('formateur_id', $user->id);
+    $this->ressourcesDeLAnnee($q);
 }])
     ->get();
 
@@ -610,15 +637,21 @@ private function loadApcMccAndCompositions()
         ->values()
         ->all();
 
-    // âœ… reset
+    // reset
     $this->mccsApc = [];
     $this->compositionsApc = [];
     $this->acquisApc = [];
+    $this->devoirIdsApc = [];
 
     if (empty($inscriptionIds) || empty($ressourceIds)) {
         return;
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | 🔵 MCC (moyenne des notes)
+    |--------------------------------------------------------------------------
+    */
     $devoirTable = (new DevoirAPC)->getTable();
 
     $q = DevoirAPC::query()
@@ -626,12 +659,10 @@ private function loadApcMccAndCompositions()
         ->whereIn('ressource_id', $ressourceIds)
         ->whereNotNull('note');
 
-    // classe_id uniquement si la colonne existe
     if (Schema::hasColumn($devoirTable, 'classe_id')) {
         $q->where('classe_id', (int) $this->classe);
     }
 
-    // Certains projets stockent par inscription_id, d'autres par apprenant_id
     if (Schema::hasColumn($devoirTable, 'inscription_id')) {
 
         $rows = $q->whereIn('inscription_id', $inscriptionIds)
@@ -650,7 +681,6 @@ private function loadApcMccAndCompositions()
             ->groupBy('apprenant_id', 'ressource_id')
             ->get();
 
-        // mapper apprenant_id -> inscription_id pour garder ton Blade inchangÃ©
         $map = $inscriptions->keyBy('apprenant_id');
 
         foreach ($rows as $r) {
@@ -661,20 +691,30 @@ private function loadApcMccAndCompositions()
         }
     }
 
+
+    $evals = Evalute::query()
+        ->where('semestre', (int) $this->apcSemestre)
+        ->whereIn('inscription_id', $inscriptionIds)
+        ->whereIn('ressource_id', $ressourceIds)
+        ->get(['inscription_id', 'ressource_id', 'composition']);
+
+    foreach ($evals as $e) {
+        $this->compositionsApc[$e->inscription_id][$e->ressource_id] = $e->composition;
+    }
+
+ 
+    $devoirs = DevoirAPC::query()
+        ->where('semestre', (int) $this->apcSemestre)
+        ->whereIn('inscription_id', $inscriptionIds)
+        ->whereIn('ressource_id', $ressourceIds)
+        ->select('id', 'inscription_id', 'ressource_id')
+        ->orderByDesc('id')
+        ->get();
+
+    foreach ($devoirs as $d) {
+        $this->devoirIdsApc[$d->inscription_id][$d->ressource_id] = $d->id;
+    }
    
-    $evalTable = (new Evalute)->getTable();
-    $ev = Evalute::query()
-    ->where('semestre', (int) $this->apcSemestre)
-   
-    ->whereIn('inscription_id', $inscriptionIds)
-    ->whereIn('ressource_id', $ressourceIds);
-
-$evals = $ev->get(['inscription_id','ressource_id','composition']);
-
-foreach ($evals as $e) {
-    $this->compositionsApc[$e->inscription_id][$e->ressource_id] = $e->composition;
-}
-
 }
 
 public function saveApcClasse()
@@ -873,7 +913,7 @@ if (!$devoirapcId) {
                     [
                         'devoirapc_id' => $devoirapcId,
                         'composition'  => $composition,
-                    ]
+                    ] + \App\Services\AnneeDesNotes::attributs('evalutes', (int) $this->annee_academique_id)
                 );
             }
         }
@@ -899,6 +939,19 @@ if (!$devoirapcId) {
 
     session()->flash('success', 'Absence supprimée avec succès.');
 }
+
+public function deleteComposition($ressourceId)
+{
+    Evalute::where('inscription_id', $this->inscription_id)
+        ->where('ressource_id', $ressourceId)
+        ->where('semestre', $this->semestre)
+        ->update(['composition' => null]);
+
+    $this->compositions[$ressourceId] = null;
+
+    session()->flash('message', 'Note de composition supprimée.');
+}
+
     public function render()
     {
         $absences = collect();
@@ -912,6 +965,8 @@ if (!$devoirapcId) {
                     ->get();
             }
         }
+
+        
 
         return view('livewire.param.classe-switch', [
             'currentClasse'        => $this->currentClasse,

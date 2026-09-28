@@ -19,6 +19,7 @@ class Sommation extends Model
         'acquis',
         'nonacquis',
         'note',
+        'annee_academique_id',
     ];
 
     protected $casts = [

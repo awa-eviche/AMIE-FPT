@@ -45,7 +45,8 @@ class Etablissement extends Model
         "is_active",
         "approved",
         "isDeleted",
-        
+        "type_planning",
+
     ];
     
 
@@ -83,6 +84,11 @@ class Etablissement extends Model
     {
         return $this->hasMany(NiveauEtudeEtablissement::class);
     }
+
+public function emploisDuTemps()
+{
+    return $this->hasMany(EmploiDuTemps::class);
+}
 
 public function metiers()
 {

@@ -20,6 +20,21 @@ class EvaluationSomativeController extends Controller
         return view('evaluation.sommative.page');
     }
 
+    /**
+     * Appréciation textuelle à partir d'une note en pourcentage, sur la même
+     * échelle que celle utilisée pour les ressources (note /20) : les seuils
+     * /20 (16, 14, 12, 10, 8) sont convertis en % (x5).
+     */
+    private function appreciationPourcentage(float $notePourcentage): string
+    {
+        if ($notePourcentage >= 80) return "Excellent travail";
+        if ($notePourcentage >= 70) return "Bien";
+        if ($notePourcentage >= 60) return "Assez bien";
+        if ($notePourcentage >= 50) return "Passable";
+        if ($notePourcentage >= 40) return "Travail insuffisant";
+        return "Très insuffisant";
+    }
+
     
    public function generateClassePdf(Request $request, string $classe_id)
 {
@@ -37,6 +52,10 @@ class EvaluationSomativeController extends Controller
         'inscriptions.apprenant'
     ])->findOrFail($classe_id);
 
+    // Bulletins de l'année choisie uniquement (une classe est réutilisée d'une année à l'autre).
+    $anneeId = \App\Services\AnneeDesNotes::pourClasse((int) $classe->id, request());
+    $classe->setRelation('inscriptions', $classe->inscriptions->when($anneeId, fn ($i) => $i->where('annee_academique_id', $anneeId))->values());
+
     $classeId = $classe->id;
     $niveauId = $classe->niveau_etude_id;
 
@@ -46,13 +65,18 @@ class EvaluationSomativeController extends Controller
     $competencesGenerales = Competence::query()
         ->where('niveau_etude_id', $niveauId)
         ->where('type', 'generale')
-        ->whereHas('ressources.classe', function ($q) use ($classeId) {
-            $q->where('classes.id', $classeId);
-        })
-        ->with(['ressources' => function ($q) use ($classeId) {
+        ->whereHas('ressources', function ($q) use ($classeId, $anneeId) {
             $q->whereHas('classe', function ($qq) use ($classeId) {
                 $qq->where('classes.id', $classeId);
-            })->orderBy('nom');
+            })
+            ->when(\App\Services\AnneeDesNotes::aUneColonne('ressources') && $anneeId, fn ($qq) => $qq->where('annee_academique_id', $anneeId));
+        })
+        ->with(['ressources' => function ($q) use ($classeId, $anneeId) {
+            $q->whereHas('classe', function ($qq) use ($classeId) {
+                $qq->where('classes.id', $classeId);
+            })
+            ->when(\App\Services\AnneeDesNotes::aUneColonne('ressources') && $anneeId, fn ($qq) => $qq->where('annee_academique_id', $anneeId))
+            ->orderBy('nom');
         }])
         ->get();
 
@@ -142,8 +166,15 @@ class EvaluationSomativeController extends Controller
                         ->whereNotNull('critere_id')
                         ->firstWhere('critere_id', $critere->id);
 
-                    $acquis    = $evaluation?->acquis == 1 ? 'X' : '';
-                    $nonacquis = $evaluation?->nonacquis == 1 ? 'X' : '';
+                    // ✅ Décision (Acquis/Non acquis) = note (%) comparée au seuil
+                    // de réussite du critère, calculée à la saisie.
+                    $noteVal = $evaluation?->note;
+                    $noteTxt = $noteVal !== null ? number_format((float) $noteVal, 2, ',', '.').'%' : '-';
+
+                    $acquisMark    = $evaluation?->acquis == 1 ? 'X' : '';
+                    $nonAcquisMark = $evaluation?->nonacquis == 1 ? 'X' : '';
+
+                    $appreciation = $noteVal !== null ? $this->appreciationPourcentage((float) $noteVal) : '-';
 
                     $htmlCompetences .= '<tr>';
 
@@ -158,8 +189,10 @@ class EvaluationSomativeController extends Controller
                     $htmlCompetences .= "
                         <td class='border-td'>".htmlspecialchars($element->nom)."</td>
                         <td class='border-td'>".htmlspecialchars($critere->libelle)."</td>
-                        <td class='border-td text-center'>{$acquis}</td>
-                        <td class='border-td text-center'>{$nonacquis}</td>
+                        <td class='border-td text-center'>{$noteTxt}</td>
+                        <td class='border-td text-center'>{$acquisMark}</td>
+                        <td class='border-td text-center'>{$nonAcquisMark}</td>
+                        <td class='border-td text-center'>{$appreciation}</td>
                     </tr>";
                 }
             }
@@ -168,7 +201,7 @@ class EvaluationSomativeController extends Controller
         if (trim($htmlCompetences) === '') {
             $htmlCompetences = "
             <tr>
-                <td colspan='4' class='border-td text-center'>
+                <td colspan='7' class='border-td text-center'>
                     Aucune compétence particulière évaluée
                 </td>
             </tr>";

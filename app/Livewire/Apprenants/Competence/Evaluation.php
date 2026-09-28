@@ -24,13 +24,20 @@ class Evaluation extends Component
             ->findOrFail($inscription_id);
 
         $niveauId = $this->inscription->classe->niveau_etude_id;
+        $anneeId = $this->inscription->annee_academique_id;
 
-        $this->competencesGenerales = Competence::with('ressources')
+        // Ressources de l'année de l'inscription
+        $ressourcesDeLAnnee = fn ($q) => $q->when(
+            \App\Services\AnneeDesNotes::aUneColonne('ressources') && $anneeId,
+            fn ($qq) => $qq->where('annee_academique_id', $anneeId)
+        );
+
+        $this->competencesGenerales = Competence::with(['ressources' => $ressourcesDeLAnnee])
             ->where('type', 'generale')
             ->where('niveau_etude_id', $niveauId)
             ->get();
 
-        $this->competencesParticulieres = Competence::with('ressources')
+        $this->competencesParticulieres = Competence::with(['ressources' => $ressourcesDeLAnnee])
             ->where('type', 'particuliere')
             ->where('niveau_etude_id', $niveauId)
             ->get();
@@ -61,7 +68,17 @@ class Evaluation extends Component
             $this->acquis[$eval->ressource_id] = (bool) $eval->acquis;
         }
     }
+public function deleteComposition($ressourceId)
+{
+    Evalute::where('inscription_id', $this->inscription_id)
+        ->where('ressource_id', $ressourceId)
+        ->where('semestre', $this->semestre)
+        ->update(['composition' => null]);
 
+    $this->compositions[$ressourceId] = null;
+
+    session()->flash('message', 'Note de composition supprimée.');
+}
 
 
 

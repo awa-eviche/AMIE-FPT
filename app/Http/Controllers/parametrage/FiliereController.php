@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Enums\UserAction;
 use App\Enums\Model;
 use App\Repositories\LogUserRepository;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 
 class FiliereController extends Controller
@@ -82,6 +83,24 @@ class FiliereController extends Controller
 
         return redirect()->route('filiere.index')
                          ->with('success', 'Filiere mis à jour avec succès.');
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $qry = Filiere::with('secteur')->orderBy('nom');
+
+        if ($request->filled('secteur_id')) {
+            $qry->where('secteur_id', $request->secteur_id);
+        }
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $qry->where(fn($q) => $q->where('nom', 'like', "%$s%")->orWhere('code', 'like', "%$s%"));
+        }
+
+        $filieres = $qry->get();
+        $pdf = Pdf::loadView('parametrage.filiere.export-pdf', compact('filieres'))->setPaper('A4', 'portrait');
+
+        return $pdf->stream('liste_filieres_' . date('d-m-Y') . '.pdf');
     }
 
     public function destroy(Filiere $filiere)

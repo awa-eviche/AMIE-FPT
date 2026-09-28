@@ -11,6 +11,12 @@
         <div class="text-xs text-gray-600">
           {{ $compositionMatiereNom }} • Semestre {{ $compositionSemestre }}
         </div>
+        <button type="button"
+    wire:click="deleteAllCompositionNotes"
+    wire:confirm="⚠️ Supprimer toutes les notes de composition de cette classe pour ce semestre ?"
+    class="bg-red-700 text-white text-xs px-3 py-2 rounded hover:bg-red-800">
+    🗑 Supprimer toutes les notes de composition de la classe 
+</button>
       </div>
 
       <button type="button"
@@ -28,44 +34,67 @@
            style="flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;">
 
         <table class="w-full text-sm border">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="border px-2 py-2 text-left">Apprenant</th>
-              <th class="border px-2 py-2 text-center">MCC</th>
-              <th class="border px-2 py-2 text-center">Composition</th>
-            </tr>
-          </thead>
+       <thead class="bg-gray-50">
+  <tr>
+    <th class="border px-2 py-2 text-left">Apprenant</th>
+    <th class="border px-2 py-2 text-center">MCC</th>
+    <th class="border px-2 py-2 text-center">Composition</th>
+    <th class="border px-2 py-2 text-center">Actions</th>  {{-- ✅ ajout --}}
+  </tr>
+</thead>
 
-          <tbody>
-            @foreach($compositionApprenants as $insc)
-              @php($mcc = $compositionMcc[$insc->id] ?? null)
+<tbody>
+  @foreach($compositionApprenants as $insc)
+    @php($mcc = $compositionMcc[$insc->id] ?? null)
+    @php($noteComp = $compositionNotes[$insc->id] ?? null)
 
-              <tr class="hover:bg-gray-50">
-                <td class="border px-2 py-2">
-                  {{ $insc->apprenant?->prenom }} {{ $insc->apprenant?->nom }}
-                </td>
+    <tr class="hover:bg-gray-50">
+      <td class="border px-2 py-2">
+        {{ $insc->apprenant?->prenom }} {{ $insc->apprenant?->nom }}
+      </td>
 
-                <td class="border px-2 py-2 text-center">
-                  @if($mcc !== null)
-                    <span class="font-semibold">{{ number_format((float)$mcc, 2) }}/20</span>
-                  @else
-                    <span class="text-gray-400">—</span>
-                  @endif
-                </td>
+      <td class="border px-2 py-2 text-center">
+        @if($mcc !== null)
+          <span class="font-semibold">{{ number_format((float)$mcc, 2) }}/20</span>
+        @else
+          <span class="text-gray-400">—</span>
+        @endif
+      </td>
 
-                <td class="border px-2 py-2 text-center">
-                  <input type="number"
-                         wire:model.defer="compositionNotes.{{ $insc->id }}"
-                         step="0.01" min="0" max="20"
-                         class="border rounded px-2 py-1 w-28 text-center"
-                         placeholder="0-20">
-                  @error("compositionNotes.$insc->id")
-                    <div class="text-xs text-red-600 mt-1">{{ $message }}</div>
-                  @enderror
-                </td>
-              </tr>
-            @endforeach
-          </tbody>
+      <td class="border px-2 py-2 text-center">
+      <input type="number"
+       wire:model.defer="compositionNotes.{{ $insc->id }}"
+       step="0.01" min="0" max="20"
+       class="border rounded px-2 py-1 w-28 text-center 
+              @if($mcc === null) bg-red-100 cursor-not-allowed border-red-400 @endif"
+       placeholder="0-20"
+       @if($mcc === null) disabled @endif>
+       @if($mcc === null)
+    <div class="text-xs text-red-600 mt-1 font-medium">
+        ⚠️ Notes de devoirs non chargées
+    </div>
+@endif
+        @error("compositionNotes.$insc->id")
+          <div class="text-xs text-red-600 mt-1">{{ $message }}</div>
+        @enderror
+      </td>
+
+      {{-- ✅ Bouton supprimer seulement si note existe --}}
+      <td class="border px-2 py-2 text-center">
+        @if($noteComp !== null)
+          <button type="button"
+                  wire:click="deleteCompositionNote({{ $insc->id }})"
+                  wire:confirm="Supprimer la note de composition de cet apprenant ?"
+                  class="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700">
+            🗑 Supprimer
+          </button>
+        @else
+          <span class="text-gray-400 text-xs italic">—</span>
+        @endif
+      </td>
+    </tr>
+  @endforeach
+</tbody>
         </table>
 
       </div>

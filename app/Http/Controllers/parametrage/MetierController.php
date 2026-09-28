@@ -8,7 +8,7 @@ use App\Models\Filiere;
 use App\Enums\UserAction;
 use App\Repositories\LogUserRepository;
 use App\Enums\Model;
-
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 
 
@@ -92,6 +92,24 @@ class MetierController extends Controller
 
         return redirect()->route('metier.index')
             ->withMessage('Metier mis à jour avec succès.');
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $qry = Metier::with('filiere')->orderBy('nom');
+
+        if ($request->filled('filiere_id')) {
+            $qry->where('filiere_id', $request->filiere_id);
+        }
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $qry->where(fn($q) => $q->where('nom', 'like', "%$s%")->orWhere('code', 'like', "%$s%"));
+        }
+
+        $metiers = $qry->get();
+        $pdf = Pdf::loadView('parametrage.metier.export-pdf', compact('metiers'))->setPaper('A4', 'portrait');
+
+        return $pdf->stream('liste_metiers_' . date('d-m-Y') . '.pdf');
     }
 
     public function destroy(Metier $metier)

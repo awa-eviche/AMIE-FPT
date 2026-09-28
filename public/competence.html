@@ -3,12 +3,15 @@
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <title>Bulletin de note</title>
 <style>
+    @page { size: A4 portrait; margin: 6mm 8mm; }
+
     .bold-exo {
         font-family: ExoBold !important;
     }
 
     body {
         font-family: "ExoRegular" !important;
+        font-size: 12px;
     }
 
     .border-td {
@@ -64,6 +67,10 @@
         font-weight: bold;
         text-decoration: underline;
     }
+
+    .bloc-mentions {
+        page-break-inside: avoid;
+    }
 </style>
 </head>
 
@@ -111,7 +118,7 @@
     </p>
 
     <p style="margin:2px 0; font-size:13px;">
-        Semestre <strong class="bold-exo">1</strong>
+        Semestre <strong class="bold-exo">[SEMESTRE]</strong>
     </p>
     <p style="margin:2px 0; font-size:13px;">
        Année académique : <strong class="bold-exo">[ANNEESCOLAIRE]</strong>
@@ -171,55 +178,40 @@
 
  
 
-<table class="full-table" style="margin-top: 20px;" cellspacing="0">
+<table class="full-table" style="margin-top: 20px; background-color:#b3b3b3;" cellspacing="0">
     <tr>
-       
-        <td style="width: 50%; vertical-align: top;">
-            <table class="full-table" cellspacing="0">
-                <tr>
-                    <td class="border-td bg-grey bold-exo"style="background-color: #d9d9d9; font-weight: bold;">Absences</td>
-                    <td class="border-td" align="center">[NB_ABSENCES]</td>
-                </tr>
-             
-                <tr>
-                    <td class="border-td bg-grey bold-exo"style="background-color: #d9d9d9; font-weight: bold;">Retards</td>
-                    <td class="border-td" align="center">[NB_RETARDS]</td>
-                </tr>
-            </table>
-        </td>
-
-      
-        <td style="width: 50%; vertical-align: top;">
-            <table class="full-table" cellspacing="0">
-                <tr>
-                    <td class="border-td bg-grey bold-exo"style="background-color: #d9d9d9; font-weight: bold;">Travail satisfaisant</td>
-                    <td class="border-td"></td>
-                </tr>
-             
-                <tr>
-                    <td class="border-td bg-grey bold-exo"style="background-color: #d9d9d9; font-weight: bold;">Doit redoubler d'effort</td>
-                    <td class="border-td"></td>
-                </tr>
-                <tr>
-                    <td class="border-td bg-grey bold-exo"style="background-color: #d9d9d9; font-weight: bold;">Passable</td>
-                    <td class="border-td"></td>
-                </tr>
-            </table>
-        </td>
+        <td class="border-td bold-exo">Retards: [RET_TOTAL]</td>
+        <td class="border-td bold-exo">Absences: [ABS_TOTAL] dont [ABS_JUSTIFIEES] justifiée(s) et [ABS_NON_JUSTIFIEES] non justifiée(s)</td>
     </tr>
 </table>
 
-<!-- Signature -->
-<table class="full-table" style="margin-top: 30px;" cellspacing="0">
-    <tr>
-        <td style="padding: 20px 8px 8px 8px; text-align: left; border: none;" class="bold-exo" colspan="2">
-            Le [DATE]
-        </td>
-        <td style="padding: 20px 8px 8px 8px; text-align: right; border: none;" class="bold-exo" colspan="3">
-            Le Chef d'Établissement
-        </td>
-    </tr>
-</table>
+<div class="bloc-mentions">
+    <table class="full-table" style="margin-top: 12px;" cellspacing="0">
+        <tr>
+            <td style="width: 66%; vertical-align: top; padding: 0 4px 0 0;">
+                [BLOC_MENTIONS]
+            </td>
+            <td style="width: 34%; vertical-align: top; padding: 0 0 0 4px;">
+                <div style="border:1px solid #000;">
+                    <div class="border-td bg-grey bold-exo" style="padding:4px 6px; border-bottom:1px solid #000;">Observations du conseil des professeurs</div>
+                    <div class="obs-box" style="min-height:70px;"></div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Signature -->
+    <table class="full-table" style="margin-top: 30px;" cellspacing="0">
+        <tr>
+            <td style="padding: 20px 8px 8px 8px; text-align: left; border: none;" class="bold-exo" colspan="2">
+                Le [DATE]
+            </td>
+            <td style="padding: 20px 8px 8px 8px; text-align: right; border: none;" class="bold-exo" colspan="3">
+                Le Chef d'Établissement
+            </td>
+        </tr>
+    </table>
+</div>
 
 <footer class="footer" align="center">
     <small></small>

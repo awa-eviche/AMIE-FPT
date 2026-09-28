@@ -39,18 +39,12 @@
 
       {{-- CHAMPS FIXES --}}
       <div class="p-4 bg-white border-b" style="flex:0 0 auto;">
-        <div class="flex items-center justify-between gap-3">
-          <div class="flex items-center">
-            <label class="block text-sm font-bold text-gray-700 mr-2">Semestre :</label>
-           <select wire:model.live="apcSemestre" class="border border-gray-300 rounded shadow-sm text-sm">
-
-              <option value="">Sélectionnez un semestre</option>
-              <option value="1">Premier semestre</option>
-              <option value="2">Deuxième semestre</option>
-            </select>
-          </div>
-
-       
+        <div class="flex items-center gap-3">
+          <span class="text-sm font-bold text-gray-700">Semestre :</span>
+          <span class="text-sm font-semibold text-green-700">
+            {{ $apcSemestre == 1 ? 'Premier semestre' : ($apcSemestre == 2 ? 'Deuxième semestre' : '-') }}
+          </span>
+          <input type="hidden" wire:model="apcSemestre">
         </div>
       </div>
 
@@ -111,10 +105,20 @@
             </td>
 
             <td class="border px-4 py-2 text-center">
-                <input type="number"
-                       wire:model.defer="compositionsApc.{{ $insc->id }}.{{ $ressource->id }}"
-                       min="0" max="20" step="0.5"
-                       class="border border-gray-300 p-1 w-24 text-center">
+  
+@php($hasDevoir = $devoirIdsApc[$insc->id][$ressource->id] ?? null)
+           <input type="number"
+    wire:model="compositionsApc.{{ $insc->id }}.{{ $ressource->id }}"
+    min="0" max="20" step="0.5"
+    class="border px-2 py-1 w-24 text-center
+    @if(!$hasDevoir) bg-red-100 border-red-400 cursor-not-allowed @endif"
+    @if(!$hasDevoir) disabled @endif>
+
+@if(!$hasDevoir)
+    <div class="text-xs text-red-600 mt-1">
+        ⚠️ Aucun devoir chargé pour cette ressource
+    </div>
+@endif
             </td>
         </tr>
     @endforeach
@@ -152,10 +156,20 @@
               {{ number_format((float)$mcc, 2) }}
             </td>
             <td class="border px-2 py-2 text-center">
-              <input type="number"
-                     wire:model.defer="compositionsApc.{{ $insc->id }}.{{ $ressource->id }}"
-                     min="0" max="20" step="0.5"
-                     class="border rounded px-2 py-1 w-24 text-center">
+              @php($hasDevoir = $devoirIdsApc[$insc->id][$ressource->id] ?? null)
+           <input type="number"
+    wire:model="compositionsApc.{{ $insc->id }}.{{ $ressource->id }}"
+    min="0" max="20" step="0.5"
+    class="border px-2 py-1 w-24 text-center
+    @if(!$hasDevoir) bg-red-100 border-red-400 cursor-not-allowed @endif"
+    @if(!$hasDevoir) disabled @endif>
+
+@if(!$hasDevoir)
+    <div class="text-xs text-red-600 mt-1">
+        ⚠️ Aucun devoir chargé pour cette ressource
+    </div>
+@endif
+       
             </td>
           </tr>
         @endforeach

@@ -8,6 +8,35 @@
     <div class="p-4">
         <div class="bg-white shadow rounded-lg p-6">
 
+            {{-- ==== Année académique en cours (s'applique à toute la page) ==== --}}
+            @php $userTop = auth()->user(); @endphp
+            @if(
+                $userTop->hasRole('chef_de_travaux') ||
+                $userTop->hasRole('chef_etablissement') ||
+                $userTop->hasRole('superadmin') ||
+                $userTop->hasRole('agent') ||
+                $userTop->hasRole('autorite') ||
+                $userTop->hasRole('directeur_etude') ||
+                $userTop->hasRole('formateur')
+            )
+                <form method="GET" action="{{ route('classe.show', $classe->id) }}" class="mb-6">
+                    <label for="annee_academique_id"
+                           class="bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-base font-bold px-5 py-3 inline-flex items-center gap-3 cursor-pointer shadow-md w-fit">
+                        <i class="fa fa-calendar-days text-lg"></i>
+                        <span>Sélectionner une année académique :</span>
+                        <select name="annee_academique_id" id="annee_academique_id" onchange="this.form.submit()"
+                                class="bg-indigo-600 text-white font-extrabold text-base border-none focus:outline-none focus:ring-0 cursor-pointer">
+                            @foreach ($anneeAcademiques as $annee)
+                                <option value="{{ $annee->id }}" class="text-black"
+                                        {{ ($selectedAnneeAcademiqueId ?? request('annee_academique_id')) == $annee->id ? 'selected' : '' }}>
+                                    {{ $annee->code }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </label>
+                </form>
+            @endif
+
             {{-- ==== En-tête principale ==== --}}
             <div class="flex flex-col sm:flex-row justify-between items-center mb-6">
                 <div>
@@ -134,7 +163,7 @@
     )
         @if(($classe->modalite === 'PPO' && isset($matieres)) || ($classe->modalite === 'APC' && isset($competences)))
         <div class="border rounded-lg p-4 bg-white shadow-sm">
-            
+
             {{-- 🔹 Le bouton d’ouverture du formulaire d’assignation — visible uniquement pour les rôles de gestion --}}
             @if(!$user->hasRole('formateur'))
                 <div class="flex justify-between items-center mb-3">
@@ -146,12 +175,19 @@
                             : 'Assigner des compétences aux formateurs de la classe' }}
                     </div>
                 </div>
+            @endif
 
-                {{-- 🔸 Formulaire d’assignation (non visible pour formateur) --}}
-                <form method="POST" action="{{ route('classe.assign.store', $classe->id) }}" class="mb-4">
-                    @csrf
-                    <div class="grid grid-cols-3 gap-3 items-end">
-                        <div>
+            {{-- 🔸 Formulaire d’assignation + filtre semestre, sur une seule ligne --}}
+            <div class="flex flex-wrap gap-3 items-end mb-1">
+
+                @if(!$user->hasRole('formateur'))
+                    <form id="assignForm" method="POST" action="{{ route('classe.assign.store', $classe->id) }}"
+                          style="display:contents" onsubmit="return checkSemestreSelected()">
+                        @csrf
+                        <input type="hidden" name="annee_academique_id" value="{{ $selectedAnneeAcademiqueId ?? '' }}">
+                        <input type="hidden" name="semestre" value="{{ $selectedSemestre ?? '' }}">
+
+                        <div class="flex-1 min-w-[180px]">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
                                 Choisissez un formateur
                             </label>
@@ -164,12 +200,12 @@
                             </select>
                         </div>
 
-                        <div>
+                        <div class="flex-1 min-w-[180px]">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
                                 {{ $classe->modalite === 'PPO' ? 'Choisissez une matière' : 'Choisissez une compétence' }}
                             </label>
-                            <select 
-                                name="{{ $classe->modalite === 'PPO' ? 'matiere_id' : 'competence_id' }}" 
+                            <select
+                                name="{{ $classe->modalite === 'PPO' ? 'matiere_id' : 'competence_id' }}"
                                 required
                                 class="w-full border-gray-300 focus:ring-first-orange focus:border-first-orange rounded-md p-2 text-sm">
                                 <option value="">
@@ -187,31 +223,53 @@
                                 @endif
                             </select>
                         </div>
+                    </form>
+                @endif
 
-
-                        <div>
-                             @if($user->hasRole('chef_etablissement')|| $user->hasRole('directeur_etude') || $user->hasRole('chef_de_travaux'))
-                            <button type="submit"
-                                class="bg-green-600 text-white text-sm px-4 py-2 rounded hover:bg-green-700">
-                                Assigner
-                            </button>
-                             @endif
-                        </div>
+                <form method="GET" action="{{ route('classe.show', $classe->id) }}" style="display:contents" onsubmit="return false">
+                    <input type="hidden" name="annee_academique_id" value="{{ $selectedAnneeAcademiqueId ?? '' }}">
+                    <div class="flex-1 min-w-[160px]">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Choisissez un semestre
+                        </label>
+                        <select id="globalSemestre" name="semestre" required onchange="changerSemestre(this)"
+                            class="w-full border-gray-300 focus:ring-first-orange focus:border-first-orange rounded-md p-2 text-sm">
+                            <option value="" disabled {{ empty($selectedSemestre) ? 'selected' : '' }}>-- Choisir un semestre --</option>
+                            <option value="1" {{ ($selectedSemestre ?? '') == 1 ? 'selected' : '' }}>Premier semestre</option>
+                            <option value="2" {{ ($selectedSemestre ?? '') == 2 ? 'selected' : '' }}>Deuxième semestre</option>
+                        </select>
                     </div>
                 </form>
-            @endif
-  @if (session('success'))
-            <div class="mb-3 p-2 bg-green-100 text-green-700 rounded text-sm">
-                {{ session('success') }}
-            </div>
-        @endif
 
-        @if (session('error'))
-            <div class="mb-3 p-2 bg-red-100 text-red-700 rounded text-sm">
-                {{ session('error') }}
+                @if(!$user->hasRole('formateur') && ($user->hasRole('chef_etablissement')|| $user->hasRole('directeur_etude') || $user->hasRole('chef_de_travaux')))
+                    <div>
+                        <button type="submit" form="assignForm"
+                            class="bg-green-600 text-white text-sm px-4 py-2 rounded hover:bg-green-700">
+                            Assigner
+                        </button>
+                    </div>
+                @endif
             </div>
-        @endif
-            
+            <p class="text-xs text-gray-500 mb-4">(le semestre filtre la liste ci-dessous et sera utilisé pour toute nouvelle assignation)</p>
+
+            @if (session('success'))
+                <div class="mb-3 p-2 bg-green-100 text-green-700 rounded text-sm">
+                    {{ session('success') }}
+                </div>
+            @endif
+
+            @if (session('message'))
+                <div class="mb-3 p-2 bg-green-100 text-green-700 rounded text-sm">
+                    {{ session('message') }}
+                </div>
+            @endif
+            @if (session('error'))
+                <div class="mb-3 p-2 bg-red-100 text-red-700 rounded text-sm">
+                    {{ session('error') }}
+                </div>
+            @endif
+
+         <div id="assignationsTable">
          <table class="w-full text-sm border border-gray-300 rounded-md">
     <thead class="bg-gray-100">
         <tr>
@@ -249,14 +307,34 @@
 
         <tr class="border-b hover:bg-gray-50">
             <td class="px-3 py-2 border">{{ $a->formateur_prenom }} {{ $a->formateur_nom }}</td>
-            <td class="px-3 py-2 border font-semibold text-gray-800">{{ $a->matiere_nom ?? '-' }}</td>
+            <td class="px-3 py-2 border font-semibold text-gray-800">
+                {{ $a->matiere_nom ?? '-' }}
+                @if(!empty($a->semestre))
+                    <div class="text-xs text-gray-500 font-normal">Semestre {{ $a->semestre }}</div>
+                @endif
+            </td>
 
             <td class="px-3 py-2 border text-center">
                 {{-- Supprimer seulement admin --}}
                 @if(!$user->hasRole('formateur') && !$user->hasRole('superadmin') && !$user->hasRole('autorite') && !$user->hasRole('agent'))
+                    @php
+                        $semestresConcernes = !empty($a->semestre) ? [(int) $a->semestre] : [1, 2];
+                        $nbDevoirs = collect($semestresConcernes)->sum(fn ($sm) => $notesParMatiereSemestre[$a->matiere_id . '|' . $sm]['devoirs'] ?? 0);
+                        $nbEvaluations = collect($semestresConcernes)->sum(fn ($sm) => $notesParMatiereSemestre[$a->matiere_id . '|' . $sm]['evaluations'] ?? 0);
+                        $msgSuppr = "Supprimer l'affectation de la matière « {$a->matiere_nom} » pour "
+                            . trim($a->formateur_prenom . ' ' . $a->formateur_nom)
+                            . (!empty($a->semestre) ? " (semestre {$a->semestre})" : ' (tous les semestres)') . " ?"
+                            . "\n\nATTENTION : les notes de cette matière pour cette classe et cette année seront DÉFINITIVEMENT supprimées"
+                            . " ({$nbDevoirs} devoir(s), {$nbEvaluations} évaluation(s) avec compositions)"
+                            . ", sauf si un autre formateur reste affecté à cette matière pour ce semestre."
+                            . "\n\nCette action est irréversible.";
+                    @endphp
                     <form class="inline-block" method="POST"
+                          onsubmit="return demanderConfirmation(this, {{ \Illuminate\Support\Js::from($msgSuppr) }})"
                           action="{{ route('classe.assign.destroy', [$classe->id, $a->formateur_id, $a->matiere_id]) }}">
                         @csrf @method('DELETE')
+                        <input type="hidden" name="annee_academique_id" value="{{ $selectedAnneeAcademiqueId ?? '' }}">
+                        <input type="hidden" name="semestre" value="{{ $a->semestre }}">
                         <button type="submit"
                                 class="bg-red-600 text-white text-xs px-2 py-1 rounded hover:bg-red-700">
                             Supprimer
@@ -315,6 +393,8 @@
         $apcRessourcesCache[$key] = \App\Models\Ressource::where('competence_id', $a->competence_id)
             ->where('classe_id', $classe->id)
             ->where('formateur_id', $a->formateur_id)
+            ->when(\App\Services\AnneeDesNotes::aUneColonne('ressources') && $selectedAnneeAcademiqueId,
+                fn ($q) => $q->where('annee_academique_id', $selectedAnneeAcademiqueId))
             ->orderBy('id')
             ->get();
     }
@@ -325,8 +405,8 @@
     $devoirs = $ressource
         ? (
             $user->hasRole('formateur')
-                ? $ressource->devoirsAPC
-                : $ressource->devoirsAPC->whereNotNull('note')
+                ? $ressource->devoirsAPC->where('annee_academique_id', $selectedAnneeAcademiqueId)
+                : $ressource->devoirsAPC->where('annee_academique_id', $selectedAnneeAcademiqueId)->whereNotNull('note')
           )
         : collect();
 @endphp
@@ -340,7 +420,12 @@
 
     <td class="px-3 py-2 border font-semibold">
         {{ $a->competence_nom }}
-        <div class="text-xs text-gray-500">(Compétence générale)</div>
+        <div class="text-xs text-gray-500">
+            (Compétence générale)
+            @if(!empty($a->semestre))
+                &middot; Semestre {{ $a->semestre }}
+            @endif
+        </div>
     </td>
 
     <td class="px-3 py-2 border text-center">
@@ -402,10 +487,32 @@
                     </button>
                 @endif
 
-          <form method="POST"
-    action="{{ route('classe.assign.destroy', [$classe->id, $a->formateur_id, $a->competence_id]) }}">
+          @php
+        $formateurNom = trim($a->formateur_prenom . ' ' . $a->formateur_nom);
+        if ($ressource) {
+            $nbDevoirsRes = \App\Models\DevoirAPC::where('ressource_id', $ressource->id)->count();
+            $nbCompositions = \App\Models\Evalute::where('ressource_id', $ressource->id)->whereNotNull('composition')->count();
+            $nbSommatives = \App\Models\Sommation::where('ressource_id', $ressource->id)->count();
+            $msgSuppr = "Supprimer la discipline « {$ressource->nom} » (compétence « {$a->competence_nom} », {$formateurNom}) ?"
+                . "\n\nATTENTION : les notes de cette discipline seront DÉFINITIVEMENT supprimées"
+                . " ({$nbDevoirsRes} devoir(s), {$nbCompositions} composition(s), {$nbSommatives} note(s) sommative(s))."
+                . "\n\nSi c'est la dernière discipline de ce formateur pour cette compétence, l'affectation sera aussi supprimée."
+                . "\n\nCette action est irréversible.";
+        } else {
+            $msgSuppr = "Supprimer l'affectation de la compétence « {$a->competence_nom} » pour {$formateurNom} ?"
+                . ($a->competence_type === 'particuliere'
+                    ? "\n\nATTENTION : les notes sommatives des critères de cette compétence pour cette classe et cette année seront DÉFINITIVEMENT supprimées (sauf si une autre affectation la couvre encore)."
+                    : '')
+                . "\n\nCette action est irréversible.";
+        }
+    @endphp
+    <form method="POST"
+          onsubmit="return demanderConfirmation(this, {{ \Illuminate\Support\Js::from($msgSuppr) }})"
+          action="{{ route('classe.assign.destroy', [$classe->id, $a->formateur_id, $a->competence_id]) }}">
     @csrf
     @method('DELETE')
+    {{-- Année affichée sur la page (la suppression porte sur les affectations de cette année) --}}
+    <input type="hidden" name="annee_academique_id" value="{{ $selectedAnneeAcademiqueId ?? '' }}">
 
     {{-- ✅ id unique de l'assignation (ligne cfc) --}}
     
@@ -455,6 +562,8 @@
         $apcRessourcesCache[$key] = \App\Models\Ressource::where('competence_id', $a->competence_id)
             ->where('classe_id', $classe->id)
             ->where('formateur_id', $a->formateur_id)
+            ->when(\App\Services\AnneeDesNotes::aUneColonne('ressources') && $selectedAnneeAcademiqueId,
+                fn ($q) => $q->where('annee_academique_id', $selectedAnneeAcademiqueId))
             ->orderBy('id')
             ->get();
     }
@@ -465,8 +574,8 @@
     $devoirs = $ressource
         ? (
             $user->hasRole('formateur')
-                ? $ressource->devoirsAPC
-                : $ressource->devoirsAPC->whereNotNull('note')
+                ? $ressource->devoirsAPC->where('annee_academique_id', $selectedAnneeAcademiqueId)
+                : $ressource->devoirsAPC->where('annee_academique_id', $selectedAnneeAcademiqueId)->whereNotNull('note')
           )
         : collect();
 @endphp
@@ -482,7 +591,12 @@
     {{-- COMPÉTENCE --}}
     <td class="px-3 py-2 border font-semibold">
         {{ $a->competence_nom }}
-        <div class="text-xs text-gray-500">(Compétence particulière)</div>
+        <div class="text-xs text-gray-500">
+            (Compétence particulière)
+            @if(!empty($a->semestre))
+                &middot; Semestre {{ $a->semestre }}
+            @endif
+        </div>
     </td>
 
     
@@ -540,11 +654,32 @@
                     </button>
                 @endif
 
-          <form method="POST"
-    
-    action="{{ route('classe.assign.destroy', [$classe->id, $a->formateur_id, $a->competence_id]) }}">
+          @php
+        $formateurNom = trim($a->formateur_prenom . ' ' . $a->formateur_nom);
+        if ($ressource) {
+            $nbDevoirsRes = \App\Models\DevoirAPC::where('ressource_id', $ressource->id)->count();
+            $nbCompositions = \App\Models\Evalute::where('ressource_id', $ressource->id)->whereNotNull('composition')->count();
+            $nbSommatives = \App\Models\Sommation::where('ressource_id', $ressource->id)->count();
+            $msgSuppr = "Supprimer la discipline « {$ressource->nom} » (compétence « {$a->competence_nom} », {$formateurNom}) ?"
+                . "\n\nATTENTION : les notes de cette discipline seront DÉFINITIVEMENT supprimées"
+                . " ({$nbDevoirsRes} devoir(s), {$nbCompositions} composition(s), {$nbSommatives} note(s) sommative(s))."
+                . "\n\nSi c'est la dernière discipline de ce formateur pour cette compétence, l'affectation sera aussi supprimée."
+                . "\n\nCette action est irréversible.";
+        } else {
+            $msgSuppr = "Supprimer l'affectation de la compétence « {$a->competence_nom} » pour {$formateurNom} ?"
+                . ($a->competence_type === 'particuliere'
+                    ? "\n\nATTENTION : les notes sommatives des critères de cette compétence pour cette classe et cette année seront DÉFINITIVEMENT supprimées (sauf si une autre affectation la couvre encore)."
+                    : '')
+                . "\n\nCette action est irréversible.";
+        }
+    @endphp
+    <form method="POST"
+          onsubmit="return demanderConfirmation(this, {{ \Illuminate\Support\Js::from($msgSuppr) }})"
+          action="{{ route('classe.assign.destroy', [$classe->id, $a->formateur_id, $a->competence_id]) }}">
     @csrf
     @method('DELETE')
+    {{-- Année affichée sur la page (la suppression porte sur les affectations de cette année) --}}
+    <input type="hidden" name="annee_academique_id" value="{{ $selectedAnneeAcademiqueId ?? '' }}">
 
 <input type="hidden" name="assign_id" value="{{ $a->assign_id }}">
 
@@ -554,9 +689,11 @@
         <input type="hidden" name="ressource_id" value="{{ $ressource->id }}">
     @endif
 
+            @if(!$user->hasRole('formateur'))
     <button class="bg-red-600 text-white text-xs px-2 py-1 rounded">
         Supprimer
     </button>
+    @endif
 </form>
 
 
@@ -582,6 +719,7 @@
         @endforelse
     </tbody>
 </table>
+</div>{{-- /#assignationsTable --}}
 
 
 </div>
@@ -601,6 +739,8 @@
 
             <input type="hidden" name="competence_id" id="elementId">
             <input type="hidden" name="classe_id" value="{{ $classe->id }}">
+            {{-- Année affichée sur la page : la discipline est créée pour cette année-là --}}
+            <input type="hidden" name="annee_academique_id" value="{{ $selectedAnneeAcademiqueId ?? '' }}">
 
             <label class="block text-sm font-medium text-gray-700 mb-1">
                 Nom de la discipline :
@@ -686,10 +826,8 @@
         <div class="flex items-center gap-3">
           <div>
             <label class="block text-sm mb-1">Semestre</label>
-            <select name="semestre" required class="rounded border-gray-300 text-sm">
-              <option value="1">Premier semestre</option>
-              <option value="2">Deuxième semestre</option>
-            </select>
+            <span class="text-sm font-semibold text-green-700" id="devoirModalSemestreLabel">-</span>
+            <input type="hidden" name="semestre" id="devoirModalSemestreInput">
           </div>
 
           <div class="flex-1">
@@ -757,14 +895,12 @@
             <button onclick="closeVoirDevoirsModal()" class="text-red-600 font-bold text-xl">✕</button>
         </div>
 
-        <div class="mb-4 flex items-center gap-4">
-            <label class="text-sm font-medium">Filtrer par semestre :</label>
-            <select id="filtreSemestre" onchange="filtrerParSemestre()"
-                    class="border rounded px-3 py-1 text-sm">
-                <option value="">Tous les semestres</option>
-                <option value="1">Premier semestre</option>
-                <option value="2">Deuxième semestre</option>
-            </select>
+        <div class="mb-4 flex items-center gap-4 flex-wrap">
+            <span class="text-xs text-gray-600">
+                Année académique : <strong>{{ $anneeAcademiques->firstWhere('id', $selectedAnneeAcademiqueId)?->code ?? '-' }}</strong>
+            </span>
+            <label class="text-sm font-medium">Semestre :</label>
+            <span class="text-sm font-semibold text-green-700" id="voirDevoirsModalSemestreLabel">-</span>
         </div>
 
         
@@ -814,11 +950,8 @@
       <!-- CHAMPS FIXES -->
       <div class="p-4 border-b bg-white"
            style="flex:0 0 auto;">
-        <select name="semestre" class="rounded border-gray-300 text-sm">
-          <option value="">Tous les semestres</option>
-          <option value="1">Premier semestre</option>
-          <option value="2">Deuxième semestre</option>
-        </select>
+        <span class="text-sm font-semibold text-green-700" id="addDevoirModalSemestreLabel">-</span>
+      <input type="hidden" name="semestre" id="addDevoirModalSemestreInput">
 
         <div class="mt-4">
           <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -931,22 +1064,10 @@
     $user->hasRole('autorite') ||
     $user->hasRole('directeur_etude')
 )
-
-                        <form method="GET" action="{{ route('classe.show', $classe->id) }}" class="flex items-center gap-2">
-                            <label for="annee_academique_id" class="text-sm font-medium">Année académique :</label>
-                            <select name="annee_academique_id" id="annee_academique_id" onchange="this.form.submit()"
-                                    class="rounded border-gray-300 text-sm">
-                                @foreach ($anneeAcademiques as $annee)
-                                    <option value="{{ $annee->id }}" {{ request('annee_academique_id') == $annee->id ? 'selected' : '' }}>
-                                        {{ $annee->code }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </form>
                     </div>
 
                     <div class="flex items-start gap-6 mb-6">
-                        {{-- Ajouter un apprenant --}}
+                        {{-- Ajouter un apprenant --}} 
                         <div onclick="window.location='{{ route('apprenant.create', $classe->id) }}'" style="background-color:#006D3A; cursor: pointer;"
                              class="bg-green-700 text-white hover:bg-green-800 rounded-lg text-sm px-4 py-2 cursor-pointer">
                             Ajouter un apprenant
@@ -959,16 +1080,16 @@
     @csrf
 
     <div class="flex flex-col sm:flex-row items-center gap-3 w-full">
-        {{-- Année académique 2025-2026 --}}
+        {{-- Année académique sélectionnée (session) --}}
         @php
-            $annee = $anneeAcademiques->firstWhere('code', '2025-2026');
+            $annee = $anneeAcademiques->firstWhere('id', $selectedAnneeAcademiqueId);
         @endphp
 
         @if($annee)
             <input type="hidden" name="annee_academique_id" value="{{ $annee->id }}">
-            <input type="hidden" value="{{ $annee->code }}" readonly>
+            <span class="text-xs text-gray-600 whitespace-nowrap">Année : <strong>{{ $annee->code }}</strong></span>
         @else
-            <p class="text-red-500 text-sm">⚠️ Année 2025-2026 introuvable</p>
+            <p class="text-red-500 text-sm">⚠️ Aucune année académique sélectionnée</p>
         @endif
 
         {{-- Fichier + Bouton côte à côte sans espace inutile --}}
@@ -1042,7 +1163,7 @@
 
                     {{-- Pagination --}}
                     <div class="mt-4">
-                        {{ $inscriptions->appends(['annee_academique_id' => request('annee_academique_id')])->links() }}
+                        {{ $inscriptions->appends(['annee_academique_id' => $selectedAnneeAcademiqueId ?? request('annee_academique_id')])->links() }}
                     </div>
                 </div>
             </div>
@@ -1119,6 +1240,11 @@
 </script>
 <script>
 function openDevoirModal(ressourceId) {
+    if (!getGlobalSemestre()) {
+        alert('Veuillez sélectionner un semestre avant d\'ajouter un devoir.');
+        return;
+    }
+    syncGlobalSemestre();
     document.getElementById('devoir_ressource_id').value = ressourceId;
     document.getElementById('devoirModal').classList.remove('hidden');
 }
@@ -1199,12 +1325,13 @@ function closeVoirDevoirsModal() {
     document.getElementById('voirDevoirsModal').classList.add('hidden');
 }
 
-// Fonction pour ouvrir le modal d'ajout
 function openAddDevoirModal() {
-    // Fermer d'abord le modal de liste
+    if (!getGlobalSemestre()) {
+        alert('Veuillez sélectionner un semestre avant d\'ajouter un devoir.');
+        return;
+    }
     closeVoirDevoirsModal();
-    
-    // Remplir l'ID de la ressource
+    syncGlobalSemestre();
     document.getElementById('add_devoir_ressource_id').value = currentRessourceId;
     
     // Vider le tableau
@@ -1244,6 +1371,9 @@ function closeAddDevoirModal() {
         openVoirDevoirModal(currentRessourceId);
     }
 }
+
+
+
 </script>
 
 <script>
@@ -1335,14 +1465,14 @@ function cancelEditNoteInline(devoirId) {
 <script>
 function openVoirDevoirModal(ressourceId) {
     currentRessourceId = ressourceId;
-    
-    document.getElementById('devoirsListContainer').innerHTML = 
+    syncGlobalSemestre();
+
+    document.getElementById('devoirsListContainer').innerHTML =
         '<div class="text-center py-8">Chargement...</div>';
-    
+
     document.getElementById('voirDevoirsModal').classList.remove('hidden');
-    
-    // Charger sans filtre initial
-    chargerDevoirs(ressourceId);
+
+    chargerDevoirs(ressourceId, getGlobalSemestre());
 }
 
 function chargerDevoirs(ressourceId, semestre = '') {
@@ -1368,12 +1498,9 @@ function chargerDevoirs(ressourceId, semestre = '') {
     });
 }
 
-// Fonction pour filtrer par semestre
 function filtrerParSemestre() {
-    const semestre = document.getElementById('filtreSemestre').value;
-    
     if (currentRessourceId) {
-        chargerDevoirs(currentRessourceId, semestre);
+        chargerDevoirs(currentRessourceId, getGlobalSemestre());
     }
 }</script>
 <script>
@@ -1445,6 +1572,224 @@ function reinitPaginationEvents() {
     });
 }
 </script>
+<script>
+function showToastApc(message, type = 'success') {
+    const colors = { success: 'bg-green-600', error: 'bg-red-600' };
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-6 right-6 z-[100] text-white text-sm px-5 py-3 rounded shadow-lg ${colors[type]}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
+}
+
+function confirmerSuppressionApc(devoirId, semestre, libelle) {
+    const semestreLabel = semestre == 1 ? 'Premier semestre (S1)' : 'Deuxième semestre (S2)';
+    const ok = confirm(`Êtes-vous sûr de vouloir supprimer les notes du devoir "${libelle}" du ${semestreLabel} ?`);
+    if (!ok) return;
+
+    fetch(`/devoirAPC/${devoirId}?semestre=${semestre}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const container = document.getElementById('devoirsListContainer');
+            if (container && currentRessourceId) {
+                container.innerHTML = '<div class="text-center py-8 text-gray-500">Chargement...</div>';
+                const semestreFiltre = getGlobalSemestre();
+                const url = semestreFiltre
+                    ? `/devoirAPC/ressource/${currentRessourceId}?semestre=${semestreFiltre}`
+                    : `/devoirAPC/ressource/${currentRessourceId}`;
+
+                fetch(url, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' }
+                })
+                .then(r => r.text())
+                .then(html => {
+                    container.innerHTML = html;
+                    showToastApc('✅ Devoir supprimé avec succès.');
+                })
+                .catch(() => showToastApc('Erreur de rechargement.', 'error'));
+            }
+        } else {
+            showToastApc('Erreur lors de la suppression.', 'error');
+        }
+    })
+    .catch(() => showToastApc('Erreur réseau.', 'error'));
+}
+</script>
+
+{{-- Fenêtre de confirmation des suppressions d'affectation (remplace la boîte native du navigateur) --}}
+<div id="confirmationSuppression" role="dialog" aria-modal="true" aria-labelledby="confirmationTitre"
+     style="display:none;position:fixed;inset:0;z-index:80;background:rgba(17,24,39,.55);align-items:center;justify-content:center;padding:1rem;">
+    <div style="background:#fff;border-radius:.75rem;max-width:32rem;width:100%;box-shadow:0 25px 50px -12px rgba(0,0,0,.35);overflow:hidden;">
+        <div style="display:flex;align-items:center;gap:.75rem;padding:1rem 1.25rem;border-bottom:1px solid #e5e7eb;">
+            <span aria-hidden="true" style="flex:none;width:2.25rem;height:2.25rem;border-radius:9999px;background:#fee2e2;color:#dc2626;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;">!</span>
+            <h3 id="confirmationTitre" style="margin:0;font-size:1.05rem;font-weight:600;color:#111827;">Confirmer la suppression</h3>
+        </div>
+        <div id="confirmationCorps" style="padding:1rem 1.25rem;max-height:60vh;overflow-y:auto;font-size:.9rem;line-height:1.45;color:#374151;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:.5rem;padding:.85rem 1.25rem;background:#f9fafb;border-top:1px solid #e5e7eb;">
+            <button type="button" id="confirmationAnnuler"
+                    style="padding:.5rem 1rem;border-radius:.5rem;border:1px solid #d1d5db;background:#fff;color:#374151;font-size:.875rem;cursor:pointer;">Annuler</button>
+            <button type="button" id="confirmationValider"
+                    style="padding:.5rem 1rem;border-radius:.5rem;border:1px solid #dc2626;background:#dc2626;color:#fff;font-size:.875rem;font-weight:600;cursor:pointer;">Supprimer définitivement</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Confirmation par fenêtre intégrée. Le message est découpé en paragraphes (séparés par une ligne vide) :
+// le premier est la question, ceux qui commencent par « ATTENTION » sont mis en évidence.
+(function () {
+    let formulaire = null;
+    let precedent = null;
+
+    const boite = () => document.getElementById('confirmationSuppression');
+
+    function fermer() {
+        boite().style.display = 'none';
+        document.removeEventListener('keydown', touches);
+        formulaire = null;
+        if (precedent && precedent.focus) precedent.focus();
+    }
+
+    function touches(e) {
+        if (e.key === 'Escape') fermer();
+    }
+
+    window.demanderConfirmation = function (form, message) {
+        if (!boite()) return confirm(message);   // repli : boîte native si la fenêtre est absente
+
+        formulaire = form;
+        precedent = document.activeElement;
+
+        const corps = document.getElementById('confirmationCorps');
+        corps.textContent = '';
+        String(message).split('\n\n').forEach(function (bloc, i) {
+            const p = document.createElement('p');
+            p.textContent = bloc;
+            p.style.margin = i === 0 ? '0 0 .75rem' : '.5rem 0 0';
+            if (i === 0) {
+                p.style.fontWeight = '600';
+                p.style.color = '#111827';
+            } else if (/^attention/i.test(bloc)) {
+                p.style.cssText += ';padding:.6rem .75rem;background:#fef2f2;border:1px solid #fecaca;border-radius:.5rem;color:#991b1b;';
+            } else if (/^cette action est irr/i.test(bloc)) {
+                p.style.fontWeight = '600';
+                p.style.color = '#991b1b';
+            }
+            corps.appendChild(p);
+        });
+
+        document.getElementById('confirmationValider').disabled = false;
+        boite().style.display = 'flex';
+        document.getElementById('confirmationAnnuler').focus();   // le choix par défaut est d'annuler
+        document.addEventListener('keydown', touches);
+
+        return false;   // la soumission attend le clic sur « Supprimer définitivement »
+    };
+
+    document.getElementById('confirmationAnnuler').addEventListener('click', fermer);
+    boite().addEventListener('click', function (e) { if (e.target === boite()) fermer(); });
+    document.getElementById('confirmationValider').addEventListener('click', function () {
+        const f = formulaire;
+        this.disabled = true;   // évite un double envoi
+        boite().style.display = 'none';
+        document.removeEventListener('keydown', touches);
+        if (f) f.submit();
+    });
+})();
+</script>
+<script>
+function getGlobalSemestre() {
+    return document.getElementById('globalSemestre')?.value || '';
+}
+
+// Change de semestre sans recharger la page : le serveur renvoie la page filtrée (même logique
+// qu'avant, y compris la numérotation des disciplines APC) et on ne remplace que le tableau des
+// affectations. Le formateur, la matière ou la compétence déjà choisis sont conservés.
+let changementSemestreEnCours = 0;
+async function changerSemestre(select) {
+    const semestre = select.value;
+    if (!semestre) return;
+
+    const champ = document.querySelector('#assignForm input[name="semestre"]');
+    if (champ) champ.value = semestre;
+    syncGlobalSemestre();
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('semestre', semestre);
+
+    const numero = ++changementSemestreEnCours;
+    const cible = document.getElementById('assignationsTable');
+    if (cible) cible.style.opacity = '0.5';
+
+    try {
+        const reponse = await fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' },
+            credentials: 'same-origin',
+        });
+        if (!reponse.ok) throw new Error('HTTP ' + reponse.status);
+
+        const page = new DOMParser().parseFromString(await reponse.text(), 'text/html');
+        const nouveau = page.getElementById('assignationsTable');
+        if (!nouveau) throw new Error('tableau introuvable');
+
+        if (numero !== changementSemestreEnCours) return;   // un choix plus récent est en cours
+        document.getElementById('assignationsTable').replaceWith(nouveau);
+        history.replaceState(null, '', url);
+    } catch (e) {
+        window.location.href = url;   // repli : rechargement classique
+    } finally {
+        const zone = document.getElementById('assignationsTable');
+        if (zone) zone.style.opacity = '';
+    }
+}
+
+function checkSemestreSelected() {
+    if (!getGlobalSemestre()) {
+        alert('Veuillez sélectionner un semestre avant d\'assigner un formateur.');
+        return false;
+    }
+    return true;
+}
+
+function getSemestreLabel(val) {
+    if (val == 1) return 'Premier semestre';
+    if (val == 2) return 'Deuxième semestre';
+    return '-';
+}
+
+function syncGlobalSemestre() {
+    const val  = getGlobalSemestre();
+    const lbl  = getSemestreLabel(val);
+    const pairs = [
+        ['devoirModalSemestreLabel',    'devoirModalSemestreInput'],
+        ['addDevoirModalSemestreLabel',  'addDevoirModalSemestreInput'],
+        ['ppoDevoirModalSemestreLabel',  'ppoDevoirModalSemestreInput'],
+        ['ppoAddDevoirSemestreLabel',    'ppoAddDevoirSemestreInput'],
+    ];
+    pairs.forEach(([labelId, inputId]) => {
+        const el  = document.getElementById(labelId);
+        const inp = document.getElementById(inputId);
+        if (el)  el.textContent = lbl;
+        if (inp) inp.value = val;
+    });
+    const vl = document.getElementById('voirDevoirsModalSemestreLabel');
+    if (vl) vl.textContent = lbl;
+    const vlPpo = document.getElementById('voirDevoirPpoModalSemestreLabel');
+    if (vlPpo) vlPpo.textContent = lbl;
+}
+</script>
+
  @if($classe->modalite === 'PPO')
         @include('classe.ppo.partials.devoir_modal')
         @include('classe.ppo.partials.voir_devoir_modal')

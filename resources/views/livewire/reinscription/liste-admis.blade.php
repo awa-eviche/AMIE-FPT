@@ -57,12 +57,14 @@
 
 
     @if($currentClasse && $annee_academique_id)
+        @php $isApc = $currentClasse->modalite === 'APC'; @endphp
+
         <h1 class="text-xl font-bold mb-4">
-            Apprenants admis à réinscrire – {{ $currentClasse->libelle }}
+            {{ $isApc ? 'Apprenants de la classe' : 'Apprenants admis à réinscrire' }} – {{ $currentClasse->libelle }}
         </h1>
 
         @if(count($admis) > 0)
-            {{-- Tableau des admis --}}
+            {{-- Tableau des apprenants --}}
             <table class="table-auto w-full bg-white shadow rounded mb-6">
                 <thead>
                     <tr class="bg-gray-200 text-left">
@@ -70,7 +72,9 @@
                         <th class="px-4 py-2">Nom</th>
                         <th class="px-4 py-2">Prénom</th>
                         <th class="px-4 py-2">Matricule</th>
-                        <th class="px-4 py-2">Moyenne</th>
+                        @unless($isApc)
+                            <th class="px-4 py-2">Moyenne</th>
+                        @endunless
                     </tr>
                 </thead>
                 <tbody>
@@ -82,14 +86,16 @@
                             <td class="px-4 py-2">{{ $entry['inscription']->apprenant->nom }}</td>
                             <td class="px-4 py-2">{{ $entry['inscription']->apprenant->prenom }}</td>
                             <td class="px-4 py-2">{{ $entry['inscription']->apprenant->matricule }}</td>
-                            <td class="px-4 py-2">{{ $entry['moyenne'] }}</td>
+                            @unless($isApc)
+                                <td class="px-4 py-2">{{ $entry['moyenne'] }}</td>
+                            @endunless
                         </tr>
                     @endforeach
                 </tbody>
             </table>
             <label class="inline-flex items-center space-x-2 mt-2 mb-4">
     <input type="checkbox" id="selectAllCheckbox" onclick="toggleCheckboxes()" class="form-checkbox h-4 w-4 text-blue-600">
-    <span class="text-sm text-blue-600 cursor-pointer">Tout cocher / décocher</span>
+    <span class="text-sm text-blue-600 cursor-pointer">{{ $isApc ? 'Sélectionner toute la classe' : 'Tout cocher / décocher' }}</span>
 </label>
 
 
@@ -100,6 +106,8 @@
                 <select wire:model="nouvelle_classe_id" wire:change="$refresh" class="border p-2 rounded w-full">
                     <option value="">-- Choisir --</option>
                     @foreach ($classes as $c)
+                        @continue($isApc && $c->modalite !== 'APC')
+                        @continue($c->id === $currentClasse->id)
                         <option value="{{ $c->id }}">{{ $c->libelle }}</option>
                     @endforeach
                 </select>
@@ -116,12 +124,16 @@
 </div>
 
             {{-- Bouton --}}
-            <button wire:click="reinscrire" 
+            <button wire:click="reinscrire"
                 class="bg-green-600 text-white mt-6 px-6 py-2 rounded hover:bg-green-700">
-                Réinscrire les apprenants sélectionnés
+                {{ $isApc ? 'Transférer les apprenants sélectionnés' : 'Réinscrire les apprenants sélectionnés' }}
             </button>
         @else
-            <p class="text-gray-600">Aucun apprenant admissible à la réinscription dans cette classe pour cette année académique.</p>
+            <p class="text-gray-600">
+                {{ $isApc
+                    ? 'Aucun apprenant inscrit dans cette classe pour cette année académique.'
+                    : 'Aucun apprenant admissible à la réinscription dans cette classe pour cette année académique.' }}
+            </p>
         @endif
     @endif
 </div>
@@ -132,9 +144,9 @@
 
         checkboxes.forEach(cb => cb.checked = !allChecked);
 
-        // Manuellement déclencher un événement 'input' pour Livewire
+        // Alpine/Livewire écoute 'change' (pas 'input') sur les checkboxes
         checkboxes.forEach(cb => {
-            cb.dispatchEvent(new Event('input', { bubbles: true }));
+            cb.dispatchEvent(new Event('change', { bubbles: true }));
         });
     }
 </script>

@@ -43,17 +43,29 @@ class ListeAdmis extends Component
     {
         $this->currentClasse = Classe::with('niveau_etude')->find($this->classe);
         $this->admis = [];
-    
+
         if (!$this->currentClasse || !$this->annee_academique_id) return;
-    
-        $matieres = Matiere::where('niveau_etude_id', $this->currentClasse->niveau_etude_id)->get();
-    
+
         // Charger les inscriptions dans cette classe ET pour l'année sélectionnée
         $inscriptions = Inscription::with('apprenant')
             ->where('classe_id', $this->currentClasse->id)
             ->where('annee_academique_id', $this->annee_academique_id)
             ->get();
-    
+
+        // Classes APC : pas de notion de moyenne, on liste tous les apprenants de la classe
+        // pour permettre leur transfert vers une autre classe.
+        if ($this->currentClasse->modalite === 'APC') {
+            foreach ($inscriptions as $inscription) {
+                $this->admis[] = [
+                    'inscription' => $inscription,
+                    'moyenne' => null,
+                ];
+            }
+            return;
+        }
+
+        $matieres = Matiere::where('niveau_etude_id', $this->currentClasse->niveau_etude_id)->get();
+
         // Trouver l'année suivante
         $anneeSuivante = AnneeAcademique::where('code', '>', AnneeAcademique::find($this->annee_academique_id)->code)
             ->orderBy('code')
@@ -109,25 +121,55 @@ class ListeAdmis extends Component
         ]);
     
         $ignorés = [];
-    
-        foreach ($this->apprenantsSelectionnes as $apprenant_id) {
-            $déjà_inscrit = Inscription::where('apprenant_id', $apprenant_id)
-                ->where('annee_academique_id', $this->annee_reinscription_id)
-                ->exists();
-    
-            if ($déjà_inscrit) {
-                $ignorés[] = $apprenant_id;
-                continue;
+
+        if ($this->currentClasse && $this->currentClasse->modalite === 'APC') {
+            // Transfert APC : on déplace l'inscription existante vers la nouvelle classe
+            // (et la nouvelle année académique), sans créer de doublon.
+            foreach ($this->apprenantsSelectionnes as $apprenant_id) {
+                $inscription = Inscription::where('apprenant_id', $apprenant_id)
+                    ->where('classe_id', $this->currentClasse->id)
+                    ->where('annee_academique_id', $this->annee_academique_id)
+                    ->first();
+
+                if (!$inscription) {
+                    continue;
+                }
+
+                $dejaAilleurs = Inscription::where('apprenant_id', $apprenant_id)
+                    ->where('annee_academique_id', $this->annee_reinscription_id)
+                    ->where('id', '!=', $inscription->id)
+                    ->exists();
+
+                if ($dejaAilleurs) {
+                    $ignorés[] = $apprenant_id;
+                    continue;
+                }
+
+                $inscription->update([
+                    'classe_id' => $this->nouvelle_classe_id,
+                    'annee_academique_id' => $this->annee_reinscription_id,
+                ]);
             }
-    
-            Inscription::create([
-                'apprenant_id' => $apprenant_id,
-                'classe_id' => $this->nouvelle_classe_id,
-                'annee_academique_id' => $this->annee_reinscription_id,
-                'date_inscription' => now(),
-            ]);
+        } else {
+            foreach ($this->apprenantsSelectionnes as $apprenant_id) {
+                $déjà_inscrit = Inscription::where('apprenant_id', $apprenant_id)
+                    ->where('annee_academique_id', $this->annee_reinscription_id)
+                    ->exists();
+
+                if ($déjà_inscrit) {
+                    $ignorés[] = $apprenant_id;
+                    continue;
+                }
+
+                Inscription::create([
+                    'apprenant_id' => $apprenant_id,
+                    'classe_id' => $this->nouvelle_classe_id,
+                    'annee_academique_id' => $this->annee_reinscription_id,
+                    'dateInscription' => now(),
+                ]);
+            }
         }
-    
+
         if (count($ignorés)) {
             $noms = \App\Models\Apprenant::whereIn('id', $ignorés)->get()
                 ->map(fn($a) => $a->prenom . ' ' . $a->nom)

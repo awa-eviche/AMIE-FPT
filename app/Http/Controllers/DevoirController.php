@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Devoir;
+use App\Models\Evaluation;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -28,6 +29,10 @@ class DevoirController extends Controller
             'libelle.unique' => 'Ce libellé existe déjà pour cette classe, cette matière et ce semestre.',
         ]);
 
+        $anneeAcademiqueId = $request->input('annee_academique_id')
+            ?? session('annee_academique_id')
+            ?? \App\Services\AnneeDesNotes::anneeParDefaut();
+
         $touched = [];
 
         foreach ($request->notes as $inscription_id => $note) {
@@ -45,7 +50,8 @@ class DevoirController extends Controller
                     'inscription_id' => (int) $inscription_id,
                 ],
                 [
-                    'note' => (float) $note,
+                    'note'                => (float) $note,
+                    'annee_academique_id' => $anneeAcademiqueId,
                 ]
             );
 
@@ -75,10 +81,15 @@ class DevoirController extends Controller
 
         $classeId = (int) $request->classe_id;
 
+        $anneeAcademiqueId = $request->input('annee_academique_id')
+            ?? session('annee_academique_id')
+            ?? \App\Services\AnneeDesNotes::anneeParDefaut();
+
         $agg = Devoir::query()
             ->selectRaw('classe_id, inscription_id, matiere_id, semestre, ROUND(AVG(note), 2) as mcc')
             ->where('classe_id', $classeId)
             ->where('matiere_id', $matiereId)
+            ->when($anneeAcademiqueId, fn($q) => $q->where('annee_academique_id', $anneeAcademiqueId))
             ->when($request->filled('semestre'), fn($q) => $q->where('semestre', $request->semestre))
             ->whereNotNull('note')
             ->groupBy('classe_id', 'inscription_id', 'matiere_id', 'semestre');
@@ -94,6 +105,7 @@ class DevoirController extends Controller
             ->select('devoirs.*', 'm.mcc')
             ->where('devoirs.classe_id', $classeId)
             ->where('devoirs.matiere_id', $matiereId)
+            ->when($anneeAcademiqueId, fn($q) => $q->where('devoirs.annee_academique_id', $anneeAcademiqueId))
             ->when($request->filled('semestre'), fn($q) => $q->where('devoirs.semestre', $request->semestre))
             ->orderBy('devoirs.semestre', 'asc')
             ->orderBy('devoirs.created_at', 'desc')
@@ -155,29 +167,33 @@ class DevoirController extends Controller
         }
     }
 
-    public function destroy($id, Request $request)
-    {
-        $devoir = Devoir::findOrFail($id);
+ public function destroy($id, Request $request)
+{
+    $devoir = Devoir::findOrFail($id);
 
-        $inscription_id = (int) $devoir->inscription_id;
-        $classe_id      = (int) $devoir->classe_id;
-        $matiere_id     = (int) $devoir->matiere_id;
-        $semestre       = (int) $devoir->semestre;
+    $inscription_id = (int) $devoir->inscription_id;
+    $classe_id      = (int) $devoir->classe_id;
+    $matiere_id     = (int) $devoir->matiere_id;
+    $semestre       = (int) $request->input('semestre', $devoir->semestre);
 
-        $devoir->delete();
+    // Supprimer tous les devoirs du même libellé pour le semestre choisi
+    Devoir::where('libelle', $devoir->libelle)
+           ->where('classe_id', $classe_id)
+           ->where('matiere_id', $matiere_id)
+           ->where('semestre', $semestre)
+           ->delete();
 
-        $this->recalculerMCC($inscription_id, $classe_id, $matiere_id, $semestre);
+    $this->recalculerMCC($inscription_id, $classe_id, $matiere_id, $semestre);
 
-        if ($request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Devoir supprimé avec succès.'
-            ]);
-        }
-
-        return back()->with('success', 'Devoir supprimé.');
+    if ($request->ajax()) {
+        return response()->json([
+            'success' => true,
+            'message' => 'Devoir supprimé avec succès.'
+        ]);
     }
 
+    return back()->with('success', 'Devoir supprimé.');
+}
 
     private function recalculerMCC(int $inscription_id, int $classe_id, int $matiere_id, int $semestre): float
     {
@@ -197,6 +213,27 @@ class DevoirController extends Controller
             ->where('matiere_id', $matiere_id)
             ->where('semestre', $semestre)
             ->update(['mcc' => $mcc]);
+
+        // Garder Evaluation.note_cc synchronisé : c'est ce champ qui est lu
+        // ailleurs (composition, moyenne générale en réinscription) sans recalcul.
+        // L'évaluation prend l'année académique des devoirs qui la fondent (à défaut, l'année courante).
+        $annee = Devoir::where('inscription_id', $inscription_id)
+            ->where('classe_id', $classe_id)
+            ->where('matiere_id', $matiere_id)
+            ->where('semestre', $semestre)
+            ->whereNotNull('annee_academique_id')
+            ->value('annee_academique_id') ?? \App\Services\AnneeDesNotes::courante();
+
+        Evaluation::updateOrCreate(
+            [
+                'inscription_id' => $inscription_id,
+                'matiere_id'     => $matiere_id,
+                'semestre'       => $semestre,
+            ],
+            [
+                'note_cc' => $mcc,
+            ] + \App\Services\AnneeDesNotes::attributs('evaluations', $annee)
+        );
 
         return $mcc;
     }

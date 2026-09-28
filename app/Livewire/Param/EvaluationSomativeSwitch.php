@@ -44,6 +44,11 @@ public array $somativeNoteRessource = [];
 public array $somativeDateRessource = [];
 public array $somativeObsRessource  = [];
 
+// ✅ Note (%) saisie par critère : la décision Acquis/Non acquis est
+// calculée automatiquement en comparant cette note au seuil de réussite
+// du critère (Critere::seuilPourcentage(), lu depuis son libellé, ex: "70%").
+public array $somativeNoteCritere = [];
+
 
 
 public function openSomativeClasseModal()
@@ -81,13 +86,15 @@ public function openSomativeClasseModal()
         $q->whereHas('classe', function ($qq) use ($classeId) {
             $qq->where('classes.id', $classeId);
         });
+        $this->ressourcesDeLAnnee($q);
     })
 
 
     ->with(['ressources' => function ($q) use ($classeId) {
         $q->whereHas('classe', function ($qq) use ($classeId) {
             $qq->where('classes.id', $classeId);
-        })
+        });
+        $this->ressourcesDeLAnnee($q)
         ->orderBy('nom');
     }])
 
@@ -147,7 +154,40 @@ public function saveSomativeClasse()
         return;
     }
 
-    DB::transaction(function () {
+    // ✅ Charger les critères concernés en une fois pour lire leur seuil de
+    // réussite (%) sans requête par ligne.
+    $critereIds = collect($this->somativeNoteCritere)
+        ->flatMap(fn($criteres) => array_keys($criteres))
+        ->unique()
+        ->all();
+
+    $criteresById = \App\Models\Critere::whereIn('id', $critereIds)->get()->keyBy('id');
+
+    // ✅ On bloque tant qu'un seuil de réussite n'est pas un pourcentage
+    // valide (ex: "Reussi" au lieu de "70%") : impossible de calculer
+    // Acquis/Non acquis de façon fiable dans ce cas.
+    $critereInvalides = $criteresById->filter(fn($c) => $c->seuilPourcentage() === null);
+    if ($critereInvalides->isNotEmpty()) {
+        session()->flash('error',
+            "Impossible d'enregistrer : le seuil de réussite n'est pas un pourcentage valide pour : "
+            . $critereInvalides->pluck('libelle')->unique()->map(fn($l) => "\"{$l}\"")->implode(', ')
+            . ". Merci de corriger le seuil de réussite de ce(s) critère(s) avant de continuer."
+        );
+        return;
+    }
+
+    // ✅ Les notes doivent être des pourcentages (0 à 100).
+    foreach ($this->somativeNoteCritere as $criteres) {
+        foreach ($criteres as $note) {
+            if ($note === "" || $note === null) continue;
+            if (!is_numeric($note) || (float) $note < 0 || (float) $note > 100) {
+                session()->flash('error', "La note doit être un pourcentage entre 0 et 100.");
+                return;
+            }
+        }
+    }
+
+    DB::transaction(function () use ($criteresById) {
 
         /* ==============================
            1️⃣ COMPÉTENCES GÉNÉRALES
@@ -171,7 +211,7 @@ public function saveSomativeClasse()
                             'note'      => (float) $note,
                             'acquis'    => null,
                             'nonacquis' => null,
-                        ]
+                        ] + \App\Services\AnneeDesNotes::attributs('sommations', (int) $this->annee_academique_id)
                     );
                 }
             }
@@ -179,14 +219,22 @@ public function saveSomativeClasse()
 
         /* ==============================
            2️⃣ COMPÉTENCES PARTICULIÈRES
+           La décision (Acquis / Non acquis) est calculée automatiquement en
+           comparant la note (%) saisie au seuil de réussite du critère.
            ==============================*/
-        if (!empty($this->somativeStatut)) {
+        if (!empty($this->somativeNoteCritere)) {
 
-            foreach ($this->somativeStatut as $inscId => $criteres) {
+            foreach ($this->somativeNoteCritere as $inscId => $criteres) {
 
-                foreach ($criteres as $critereId => $valeur) {
+                foreach ($criteres as $critereId => $note) {
 
-                    if ($valeur === "" || $valeur === null) continue;
+                    if ($note === "" || $note === null) continue;
+
+                    $seuil = $criteresById->get($critereId)?->seuilPourcentage();
+                    if ($seuil === null) continue; // sécurité (déjà bloqué plus haut)
+
+                    $noteFloat = (float) $note;
+                    $acquis = $noteFloat >= $seuil;
 
                     Sommation::updateOrCreate(
                         [
@@ -196,10 +244,10 @@ public function saveSomativeClasse()
                             'semestre'       => $this->somativeSemestre,
                         ],
                         [
-                            'note'      => null,
-                            'acquis'    => $valeur == 2 ? 1 : 0,
-                            'nonacquis' => $valeur == 0 ? 1 : 0,
-                        ]
+                            'note'      => $noteFloat,
+                            'acquis'    => $acquis ? 1 : 0,
+                            'nonacquis' => $acquis ? 0 : 1,
+                        ] + \App\Services\AnneeDesNotes::attributs('sommations', (int) $this->annee_academique_id)
                     );
                 }
             }
@@ -221,34 +269,34 @@ private function loadSomativeExisting()
         ->where('semestre', $this->somativeSemestre)
         ->get();
 
+    $this->somativeNoteRessource = [];
+    $this->somativeDateRessource = [];
+    $this->somativeObsRessource  = [];
+    $this->somativeNoteCritere   = [];
+
     foreach($rows as $r){
 
-      
         if(!empty($r->ressource_id) && empty($r->critere_id)){
             $this->somativeNoteRessource[$r->inscription_id][$r->ressource_id] = $r->note;
             $this->somativeDateRessource[$r->inscription_id][$r->ressource_id] = $r->date ? \Carbon\Carbon::parse($r->date)->format('Y-m-d') : null;
             $this->somativeObsRessource[$r->inscription_id][$r->ressource_id]  = $r->observations ?? '';
             continue;
         }
-    $this->somativeStatut = [];
 
-    $records = \App\Models\Sommation::where('semestre', $this->somativeSemestre)
-        ->whereIn('inscription_id', collect($this->apprenantsSomativeModal)->pluck('id'))
-        ->get();
-
-    foreach ($records as $record) {
-
-        if ($record->acquis == 1) {
-            $this->somativeStatut[$record->inscription_id][$record->critere_id] = 2;
+        if (!empty($r->critere_id)) {
+            $this->somativeNoteCritere[$r->inscription_id][$r->critere_id] = $r->note;
         }
-
-        if ($record->nonacquis == 1) {
-            $this->somativeStatut[$record->inscription_id][$record->critere_id] = 0;
-        }
-    }
-      
     }
 }
+    /** Restreint les ressources (disciplines APC) à l'année académique sélectionnée. */
+    private function ressourcesDeLAnnee($q)
+    {
+        return $q->when(
+            \App\Services\AnneeDesNotes::aUneColonne('ressources') && $this->annee_academique_id,
+            fn ($qq) => $qq->where('annee_academique_id', $this->annee_academique_id)
+        );
+    }
+
 
 
 
@@ -257,7 +305,7 @@ private function loadSomativeExisting()
         $user = auth()->user();
 
         $this->anneeAcademiques = AnneeAcademique::all();
-        $this->annee_academique_id = session()->get('annee_academique_id', '');
+        $this->annee_academique_id = \App\Services\AnneeDesNotes::choisie();
         $this->anneeAcademiqueLabel = optional(
             $this->anneeAcademiques->firstWhere('id', $this->annee_academique_id)
         )->code;
@@ -362,6 +410,7 @@ private function loadSomativeExisting()
 
         if ($user->hasRole('formateur')) {
             $competenceIds = DB::table('classe_formateur_competence')
+            ->when($this->annee_academique_id, fn ($q) => $q->where('annee_academique_id', $this->annee_academique_id))
                 ->where('classe_id', $classe->id)
                 ->where('formateur_id', $user->id)
                 ->pluck('competence_id')
@@ -408,6 +457,7 @@ private function loadSomativeExisting()
         // mêmes restrictions formateur (limiter aux critères de ses compétences)
         if ($user->hasRole('formateur') && $classe) {
             $competenceIds = DB::table('classe_formateur_competence')
+            ->when($this->annee_academique_id, fn ($q) => $q->where('annee_academique_id', $this->annee_academique_id))
                 ->where('classe_id', $classe->id)
                 ->where('formateur_id', $user->id)
                 ->pluck('competence_id')

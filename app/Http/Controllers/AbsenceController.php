@@ -24,6 +24,16 @@ public function store(Request $request)
     }
 
     $rows = [];
+    // Une absence appartient à l'année académique de l'inscription concernée.
+    $inscriptions = Inscription::with('apprenant')->whereIn('id', array_keys($inscriptionMap))->get()->keyBy('id');
+    $annees = $inscriptions->pluck('annee_academique_id', 'id');
+    // Nom de l'apprenant pour les messages d'erreur (à défaut, le numéro d'inscription).
+    $qui = function ($id) use ($inscriptions) {
+        $a = $inscriptions[$id]->apprenant ?? null;
+        $nom = trim(($a->prenom ?? '') . ' ' . ($a->nom ?? ''));
+
+        return $nom !== '' ? $nom : "#$id";
+    };
 
     foreach (array_keys($inscriptionMap) as $inscriptionId) {
 
@@ -48,26 +58,26 @@ public function store(Request $request)
 
         // règles obligatoires si actif
         if (!in_array($semestre, ['1','2'], true)) {
-            return back()->with('error', "Semestre invalide pour l’apprenant #$inscriptionId.")->withInput();
+            return back()->with('error', "Choisissez le semestre pour l’apprenant " . $qui($inscriptionId) . ".")->withInput();
         }
         if (!in_array($type, ['absence','retard'], true)) {
-            return back()->with('error', "Type invalide pour l’apprenant #$inscriptionId.")->withInput();
+            return back()->with('error', "Choisissez le type (absence ou retard) pour l’apprenant " . $qui($inscriptionId) . ".")->withInput();
         }
 
         // exclusivité
         if ($justifie === 1 && $nonjustifie === 1) {
-            return back()->with('error', "Coche une seule option (Justifiée OU Non justifiée) pour #$inscriptionId.")->withInput();
+            return back()->with('error', "Cochez une seule option (Justifiée OU Non justifiée) pour " . $qui($inscriptionId) . ".")->withInput();
         }
 
         // heures selon type
         if ($type === 'absence') {
             if ($hAbs === null || $hAbs === '') {
-                return back()->with('error', "Nombre d'heures d’absence obligatoire pour #$inscriptionId.")->withInput();
+                return back()->with('error', "Indiquez le nombre d’heures d’absence pour " . $qui($inscriptionId) . " (type « Absence » sélectionné).")->withInput();
             }
             $hRet = null;
         } else {
             if ($hRet === null || $hRet === '') {
-                return back()->with('error', "Nombre d'heures de retard obligatoire pour #$inscriptionId.")->withInput();
+                return back()->with('error', "Indiquez le nombre d’heures de retard pour " . $qui($inscriptionId) . " (type « Retard » sélectionné).")->withInput();
             }
             $hAbs = null;
         }
@@ -82,7 +92,7 @@ public function store(Request $request)
             'nonjustifie'          => $nonjustifie ? 1 : 0,
             'created_at'           => now(),
             'updated_at'           => now(),
-        ];
+        ] + \App\Services\AnneeDesNotes::attributs('absences', $annees[$inscriptionId] ?? null);
     }
 
     if (empty($rows)) {

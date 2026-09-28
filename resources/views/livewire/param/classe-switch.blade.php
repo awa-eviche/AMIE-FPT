@@ -483,6 +483,7 @@ onclick="openEditAbsenceModal(
 '{{ $abs->nombre_heure_absence }}',
 '{{ $abs->nombre_heure_retard }}',
 '{{ $abs->justifie }}',
+'{{ $abs->nonjustifie }}',
 this.dataset.updateUrl
 )">
 Modifier
@@ -770,7 +771,7 @@ Modifier
 </script>
 
 <script>
-  function openEditAbsenceModal(id, semestre, type, hAbs, hRet, justifie, updateUrl) {
+  function openEditAbsenceModal(id, semestre, type, hAbs, hRet, justifie, nonjustifie, updateUrl) {
     const modal = document.getElementById('editAbsenceModal');
     const form  = document.getElementById('editAbsenceForm');
 
@@ -785,7 +786,12 @@ Modifier
     document.getElementById('edit_nombre_heure_absence').value = (hAbs ?? '');
     document.getElementById('edit_nombre_heure_retard').value = (hRet ?? '');
 
+    // ✅ Les deux cases sont toujours resynchronisées avec l'état réel de la
+    // ligne éditée pour éviter qu'une coche reste "collée" depuis l'édition
+    // précédente (ce qui pouvait faire compter une absence comme justifiée
+    // ET non justifiée à la fois dans le bulletin).
     document.getElementById('edit_justifie').checked = (parseInt(justifie) === 1);
+    document.getElementById('edit_nonjustifie_radio').checked = (parseInt(nonjustifie) === 1);
 
     // ✅ Afficher modal
     modal.classList.remove('hidden');
@@ -794,4 +800,12 @@ Modifier
   function closeEditAbsenceModal() {
     document.getElementById('editAbsenceModal').classList.add('hidden');
   }
+
+  // ✅ Exclusivité Justifiée / Non justifiée dans le formulaire de modification
+  document.getElementById('edit_justifie').addEventListener('change', function () {
+    if (this.checked) document.getElementById('edit_nonjustifie_radio').checked = false;
+  });
+  document.getElementById('edit_nonjustifie_radio').addEventListener('change', function () {
+    if (this.checked) document.getElementById('edit_justifie').checked = false;
+  });
 </script>

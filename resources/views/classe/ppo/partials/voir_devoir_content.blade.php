@@ -11,15 +11,25 @@
       @php($first = $devoirs->first())
 
       <div class="border rounded mb-4">
-        <div class="bg-gray-100 px-3 py-2 flex justify-between items-center">
-          <div class="font-semibold">{{ $libelleKey }}</div>
+      {{-- APRÈS --}}
+<div class="bg-gray-100 px-3 py-2 flex justify-between items-center">
+  <div class="font-semibold">{{ $libelleKey }}</div>
 
-          <div class="flex items-center gap-2 text-xs">
-            <span class="px-2 py-1 rounded {{ (int)$semestreKey === 1 ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' }}">
-              Semestre {{ $semestreKey }}
-            </span>
-          </div>
-        </div>
+  <div class="flex items-center gap-2 text-xs">
+    <span class="px-2 py-1 rounded {{ (int)$semestreKey === 1 ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' }}">
+      Semestre {{ $semestreKey }}
+    </span>
+
+    @if(auth()->user()->hasRole('formateur') || auth()->user()->hasRole('chef_de_travaux'))
+      <button type="button"
+              onclick="confirmerSuppressionPpo({{ $first->id }}, {{ $semestreKey }}, '{{ addslashes($libelleKey) }}')"
+              class="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 text-xs">
+        🗑 Supprimer
+      </button>
+    @endif
+  </div>
+</div>
+</div>
 
         <div class="p-3 overflow-x-auto">
           <table class="w-full text-sm border">

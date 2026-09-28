@@ -28,7 +28,7 @@
             <div class="grid grid-cols-3 gap-2 py-2 text-md">
                 <div class="flex items-center">
                     <span class="text-gray-800">Année Scolaire :</span>
-                    <span class="font-bold"></span>
+                    <span class="font-bold">&nbsp;{{ $anneeAcademiques->count() === 1 ? $anneeAcademiques->first()->code : '' }}</span>
                 </div>
                 <div class="flex items-center">
                     <span class="text-gray-800">Filiere :</span>
@@ -110,12 +110,22 @@
                         <input type="hidden" name="classe_id" value="{{ $currentClasse->id }}">
 
 <div class="form-group">
-    <label for="annee_academique_id">Année académique</label>
-    <select name="annee_academique_id" class="form-control" required>
-        @foreach ($anneeAcademiques as $annee)
-            <option value="{{ $annee->id }}">{{ $annee->code }}</option>
-        @endforeach
-    </select>
+    <label for="annee_academique_choisie">Année académique</label>
+    @if ($anneeAcademiques->count() === 1)
+        {{-- Une seule année ouverte : elle s'impose. Le champ est grisé (un champ désactivé n'est
+             pas envoyé avec le formulaire) et la valeur part par le champ caché. --}}
+        <select id="annee_academique_choisie" class="form-control" disabled
+                style="background-color:#e5e7eb;color:#6b7280;cursor:not-allowed" aria-readonly="true">
+            <option value="{{ $anneeAcademiques->first()->id }}" selected>{{ $anneeAcademiques->first()->code }}</option>
+        </select>
+        <input type="hidden" id="annee_academique_id" name="annee_academique_id" value="{{ $anneeAcademiques->first()->id }}">
+    @else
+        <select id="annee_academique_id" name="annee_academique_id" class="form-control" required>
+            @foreach ($anneeAcademiques as $annee)
+                <option value="{{ $annee->id }}">{{ $annee->code }}</option>
+            @endforeach
+        </select>
+    @endif
 </div>
                             <div class="flex flex-wrap">
                             
@@ -369,7 +379,7 @@
                                     <x-label for="telephone">
                                         Téléphone <span class="text-red-500">*</span>
                                     </x-label>
-                                    <x-input id="telephone" class="block w-full focus:border-first-orange enlever_shadow rounded px-2 py-0.75 shadow-first-orange text-sm border-2 " type="text" name="telephone" :value="old('telephone')" required autofocus autocomplete="telephone" />
+                                    <x-input id="telephone" class="block w-full focus:border-first-orange enlever_shadow rounded px-2 py-0.75 shadow-first-orange text-sm border-2 " type="text" name="telephone" :value="old('telephone')"  autofocus autocomplete="telephone" />
                                     @error('telephone')
                                     <span class="text-xs text-red-500">
                                         {{$message}}
