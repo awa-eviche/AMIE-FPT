@@ -157,9 +157,11 @@ class ListeClasse extends Component
             $qry->where('etablissement_id', $this->selectedEtablissement);
         }
 
+       
+
         if ($this->selectedClasseAnnee) {
-            $qry->whereHas('annee_academique', function ($query) {
-                $query->where('id', $this->selectedClasseAnnee);
+            $qry->whereHas('inscriptions', function ($query) {
+                $query->where('annee_academique_id', $this->selectedClasseAnnee);
             });
         }
 
