@@ -16,7 +16,7 @@ use Livewire\Component;
 
 class GestionEmploiDuTemps extends Component
 {
-    const ROLES_AUTORISES = ['chef_etablissement', 'chef_de_travaux', 'de', 'surveillant'];
+    const ROLES_AUTORISES = ['chef_etablissement', 'chef_de_travaux', 'directeur_etude', 'surveillant'];
 
     // Sélection
     public $classeId;

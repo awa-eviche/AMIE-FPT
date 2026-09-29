@@ -447,7 +447,7 @@ Route::get('/classe/{classe}/referentiels', [ClasseController::class, 'referenti
 // Emploi du temps
 Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified'])->group(function () {
     Route::get('/emploi-du-temps', \App\Livewire\EmploiDuTemps\GestionEmploiDuTemps::class)
-        ->middleware('role:chef_etablissement|chef_de_travaux|de|surveillant')
+        ->middleware('role:chef_etablissement|chef_de_travaux|directeur_etude|surveillant')
         ->name('emploi-du-temps.index');
     Route::get('/mon-planning', \App\Livewire\EmploiDuTemps\PlanningFormateur::class)
         ->middleware('role:formateur')
