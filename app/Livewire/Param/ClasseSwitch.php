@@ -68,6 +68,12 @@ public function openAbsenceClasseModal()
         return;
     }
 
+    // Le semestre est celui choisi sur la page : le modal n'a pas son propre sélecteur.
+    if (!in_array((string) $this->selectedsemestre1, ['1', '2'], true)) {
+        session()->flash('error', "Veuillez choisir le semestre (premier ou deuxième) avant d'ajouter des absences ou des retards.");
+        return;
+    }
+
     $this->apprenantsAbsModal = Inscription::with('apprenant')
         ->where('classe_id', $this->classe)
         ->where('annee_academique_id', $this->annee_academique_id)
@@ -274,6 +280,8 @@ private function rebuildNotesCompetenceOptions(): void
         $this->anneeAcademiques = AnneeAcademique::all();
         $this->annee_academique_id = \App\Services\AnneeDesNotes::choisie();
         $this->classe = session()->get('currentClasse', '');
+        // Semestre mémorisé : les bulletins le lisent en session, la page doit afficher le même.
+        $this->selectedsemestre1 = (string) session()->get('selectedsemestre1', '');
 
         $this->anneeAcademiqueLabel = optional(
             $this->anneeAcademiques->firstWhere('id', $this->annee_academique_id)

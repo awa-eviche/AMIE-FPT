@@ -44,9 +44,10 @@ public array $somativeNoteRessource = [];
 public array $somativeDateRessource = [];
 public array $somativeObsRessource  = [];
 
-// ✅ Note (%) saisie par critère : la décision Acquis/Non acquis est
-// calculée automatiquement en comparant cette note au seuil de réussite
-// du critère (Critere::seuilPourcentage(), lu depuis son libellé, ex: "70%").
+// ✅ Note sur 20 saisie par critère : la décision Acquis/Non acquis est
+// calculée automatiquement en comparant cette note, ramenée en pourcentage
+// (x5), au seuil de réussite du critère (Critere::seuilPourcentage(), lu
+// depuis son libellé, ex: "70%" => acquis à partir de 14/20).
 public array $somativeNoteCritere = [];
 
 
@@ -61,6 +62,13 @@ public function openSomativeClasseModal()
     $classe = Classe::find($this->classe);
     if (!$classe) {
         session()->flash('error', "Classe introuvable.");
+        return;
+    }
+
+    // Le semestre est celui choisi sur la page : le modal n'a pas son propre sélecteur.
+    if (empty($this->somativeSemestre)) {
+        $this->showSomativeClasseModal = false;
+        session()->flash('error', "Veuillez choisir le semestre (premier ou deuxième) avant d'évaluer.");
         return;
     }
 
@@ -142,6 +150,9 @@ public function closeSomativeClasseModal()
 
 public function updatedSomativeSemestre()
 {
+    // Même mémorisation que la page des notes APC.
+    session()->put('selectedsemestre1', $this->somativeSemestre);
+
     if($this->showSomativeClasseModal){
         $this->loadSomativeExisting();
           $this->openSomativeClasseModal(); 
@@ -176,12 +187,12 @@ public function saveSomativeClasse()
         return;
     }
 
-    // ✅ Les notes doivent être des pourcentages (0 à 100).
+    // ✅ Les notes sont saisies sur 20, comme celles des disciplines.
     foreach ($this->somativeNoteCritere as $criteres) {
         foreach ($criteres as $note) {
             if ($note === "" || $note === null) continue;
-            if (!is_numeric($note) || (float) $note < 0 || (float) $note > 100) {
-                session()->flash('error', "La note doit être un pourcentage entre 0 et 100.");
+            if (!is_numeric($note) || (float) $note < 0 || (float) $note > 20) {
+                session()->flash('error', "La note doit être comprise entre 0 et 20.");
                 return;
             }
         }
@@ -234,7 +245,7 @@ public function saveSomativeClasse()
                     if ($seuil === null) continue; // sécurité (déjà bloqué plus haut)
 
                     $noteFloat = (float) $note;
-                    $acquis = $noteFloat >= $seuil;
+                    $acquis = $noteFloat * 5 >= $seuil;   // note /20 ramenée en %
 
                     Sommation::updateOrCreate(
                         [
@@ -306,6 +317,8 @@ private function loadSomativeExisting()
 
         $this->anneeAcademiques = AnneeAcademique::all();
         $this->annee_academique_id = \App\Services\AnneeDesNotes::choisie();
+        // Semestre déjà choisi sur la page des notes APC.
+        $this->somativeSemestre = (string) session()->get('selectedsemestre1', '');
         $this->anneeAcademiqueLabel = optional(
             $this->anneeAcademiques->firstWhere('id', $this->annee_academique_id)
         )->code;

@@ -21,17 +21,16 @@ class EvaluationSomativeController extends Controller
     }
 
     /**
-     * Appréciation textuelle à partir d'une note en pourcentage, sur la même
-     * échelle que celle utilisée pour les ressources (note /20) : les seuils
-     * /20 (16, 14, 12, 10, 8) sont convertis en % (x5).
+     * Appréciation textuelle d'une note de critère (sur 20), sur la même
+     * échelle que celle utilisée pour les ressources.
      */
-    private function appreciationPourcentage(float $notePourcentage): string
+    private function appreciationSur20(float $note): string
     {
-        if ($notePourcentage >= 80) return "Excellent travail";
-        if ($notePourcentage >= 70) return "Bien";
-        if ($notePourcentage >= 60) return "Assez bien";
-        if ($notePourcentage >= 50) return "Passable";
-        if ($notePourcentage >= 40) return "Travail insuffisant";
+        if ($note >= 16) return "Excellent travail";
+        if ($note >= 14) return "Bien";
+        if ($note >= 12) return "Assez bien";
+        if ($note >= 10) return "Passable";
+        if ($note >= 8) return "Travail insuffisant";
         return "Très insuffisant";
     }
 
@@ -166,15 +165,15 @@ class EvaluationSomativeController extends Controller
                         ->whereNotNull('critere_id')
                         ->firstWhere('critere_id', $critere->id);
 
-                    // ✅ Décision (Acquis/Non acquis) = note (%) comparée au seuil
+                    // ✅ Décision (Acquis/Non acquis) = note /20 ramenée en % (x5), comparée au seuil
                     // de réussite du critère, calculée à la saisie.
                     $noteVal = $evaluation?->note;
-                    $noteTxt = $noteVal !== null ? number_format((float) $noteVal, 2, ',', '.').'%' : '-';
+                    $noteTxt = $noteVal !== null ? number_format((float) $noteVal, 2, ',', '.') : '-';
 
                     $acquisMark    = $evaluation?->acquis == 1 ? 'X' : '';
                     $nonAcquisMark = $evaluation?->nonacquis == 1 ? 'X' : '';
 
-                    $appreciation = $noteVal !== null ? $this->appreciationPourcentage((float) $noteVal) : '-';
+                    $appreciation = $noteVal !== null ? $this->appreciationSur20((float) $noteVal) : '-';
 
                     $htmlCompetences .= '<tr>';
 
@@ -243,6 +242,7 @@ class EvaluationSomativeController extends Controller
             '[DATENAISSANCE]',
             '[LIEUNAISSANCE]',
             '[MATRICULE]',
+            '[REDOUBLANT]',
             '[TEL]',
             '[CLASSE]',
             '[SEMESTRE]',
@@ -261,6 +261,7 @@ class EvaluationSomativeController extends Controller
             $inscription->apprenant->date_naissance ?? '',
             $inscription->apprenant->lieu_naissance ?? '',
             $inscription->apprenant->matricule ?? '',
+            !empty($inscription->redoublant) ? 'Oui' : 'Non',
             $inscription->apprenant->telephone ?? '',
             $classe->libelle,
             $semestreLabel,

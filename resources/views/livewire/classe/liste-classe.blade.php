@@ -14,12 +14,12 @@
                 <span class="mx-2">Télécharger liste</span>
             </a>
             <select wire:model="selectedClasseAnnee" wire:change="$refresh">
-    <option value="">Choisissez une année</option>
-    @foreach ($annee_academique as $annee)
-        <option value="{{ $annee->id }}">
-            {{ $annee->code ?: ($annee->annee1 . ' - ' . $annee->annee2) }}
-            @if($annee->is_open) (en cours) @endif
-        </option>
+              <option value="">Choisissez une année</option>
+                 @foreach ($annee_academique as $annee)
+                 <option value="{{ $annee->id }}">
+                     {{ $annee->code ?: ($annee->annee1 . ' - ' . $annee->annee2) }}
+                      @if($annee->is_open) (en cours) @endif
+                 </option> 
     @endforeach
 </select>
  @php

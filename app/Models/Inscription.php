@@ -20,10 +20,13 @@ class Inscription extends Model
         "apprenant_id",
         "classe_id",
         "statut",
+        "redoublant",
         "annee_academique_id",
         "dateInscription"
+    ];
 
-       
+    protected $casts = [
+        'redoublant' => 'boolean',
     ];
 
     public function listes(): MorphMany

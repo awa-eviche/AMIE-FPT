@@ -31,12 +31,10 @@ class Getalletablissement extends Component
     public $selectedDepartemant;
     public $regions;
     public $departements;
-    public $filieres;
     public $ias;
     public $iefs;
     public $selectedFiliere;
     public $selectedMetier;
-    public $metiers;
     //public $selectedMetierName = "Choisir un métier";
  
 
@@ -70,8 +68,11 @@ class Getalletablissement extends Component
         ->join('niveau_etudes', 'niveau_etudes.id', '=', 'classes.niveau_etude_id')
         ->join('metiers', 'metiers.id', '=', 'niveau_etudes.metier_id')
         ->join('filieres', 'filieres.id', '=', 'metiers.filiere_id')
-        ->join('inscriptions', 'inscriptions.classe_id', '=', 'classes.id')
-        ->join('annee_academiques', 'annee_academiques.id', '=', 'inscriptions.annee_academique_id')
+        // Classes ayant au moins un inscrit : EXISTS au lieu d'une jointure, pour ne pas
+        // multiplier chaque classe par son nombre d'inscrits.
+        ->whereExists(fn ($q) => $q->selectRaw('1')->from('inscriptions')
+            ->join('annee_academiques', 'annee_academiques.id', '=', 'inscriptions.annee_academique_id')
+            ->whereColumn('inscriptions.classe_id', 'classes.id'))
         ->where(function($query) {
             if ($this->selectedCommune) {
                 $query->where('etablissements.commune_id', $this->selectedCommune);
@@ -116,24 +117,28 @@ class Getalletablissement extends Component
             $query->where('etablissements.is_active', 1);
         });
     
-       // $this->count = $allEtablissements->select('etablissements.*')->distinct(['etablissements.id'])->count();
-       $this->count = $allEtablissements
-    ->distinct('etablissements.id')
-    ->count('etablissements.id');
+        // Une seule requête ramène les identifiants de toutes les dimensions ; le total
+        // et les listes des filtres en sont déduits, au lieu de rejouer la jointure
+        // complète pour chacun.
+        $lignes = $allEtablissements->toBase()->distinct()->get([
+            'etablissements.id as etab_id', 'communes.id as commune_id', 'classes.id as classe_id',
+            'niveau_etudes.id as niveau_id', 'metiers.id as metier_id', 'filieres.id as filiere_id',
+        ]);
+        $ids = fn (string $col) => $lignes->pluck($col)->unique()->values()->all();
+        $liste = fn (string $table, string $col, string $libelle) => DB::table($table)
+            ->whereIn('id', $ids($col) ?: [0])->get(['id', $libelle]);
 
-        $communes = $allEtablissements->select('communes.*')->get()->unique('id');
-       // $niveaux = $allEtablissements->select('niveau_etudes.*')->get()->unique('id');
-       if ($this->selectedMetier) {
-        // Afficher tous les niveaux du métier
-        $niveaux = \App\Models\NiveauEtude::where('metier_id', $this->selectedMetier)->get();
-    } else {
-        // Cas normal : afficher tous les niveaux filtrés par les autres critères
-        $niveaux = $allEtablissements->select('niveau_etudes.*')->get()->unique('id');
-    }
-    
-        $classes = $allEtablissements->select('classes.*')->get();
-        $this->filieres = $allEtablissements->select('filieres.*')->get()->unique('id');
-        $this->metiers = $allEtablissements->select('metiers.*')->get()->unique('id');
+        $etabIds = $ids('etab_id');
+        $this->count = count($etabIds);
+
+        $communes = $liste('communes', 'commune_id', 'libelle');
+        // Un métier choisi : tous ses niveaux, sinon ceux qui restent après filtrage.
+        $niveaux = $this->selectedMetier
+            ? \App\Models\NiveauEtude::where('metier_id', $this->selectedMetier)->get()
+            : $liste('niveau_etudes', 'niveau_id', 'nom');
+        $classes = $liste('classes', 'classe_id', 'libelle');
+        $filieres = $liste('filieres', 'filiere_id', 'nom');
+        $metiers = $liste('metiers', 'metier_id', 'nom');
 
         if ($this->selectedRegion || $this->selectedDepartemant) {
             if ($this->selectedRegion ) {
@@ -159,9 +164,13 @@ class Getalletablissement extends Component
             $this->iefs = Ief::query()->get();
         }
         
-        $etablissements =   $allEtablissements
-        ->select('etablissements.*','communes.libelle as nameCommune')->distinct(['etablissements.id'])->paginate(10);
-    
-        return view('livewire.dfpt.getalletablissement',compact('etablissements','communes','niveaux','classes'));
+        $etablissements = Etablissement::query()
+            ->join('communes', 'communes.id', '=', 'etablissements.commune_id')
+            ->whereIn('etablissements.id', $etabIds ?: [0])
+            ->select('etablissements.*', 'communes.libelle as nameCommune')
+            ->orderBy('etablissements.id')
+            ->paginate(10);
+
+        return view('livewire.dfpt.getalletablissement', compact('etablissements', 'communes', 'niveaux', 'classes', 'filieres', 'metiers'));
     }
 }

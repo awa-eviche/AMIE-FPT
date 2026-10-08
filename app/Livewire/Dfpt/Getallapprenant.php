@@ -88,12 +88,11 @@ class Getallapprenant extends Component
             // ✅ DISTINCT côté SQL au lieu de récupérer toutes les lignes
             // (avec doublons, un par inscription) puis dédupliquer en PHP.
             $niveaux  = (clone $chain)->select('niveaux.*')->distinct()->get();
-            $classes  = (clone $chain)->select('classes.*')->distinct()->get();
             $filieres = (clone $chain)->select('filieres.*')->distinct()->get();
 
             // ✅ On ne récupère qu'une seule colonne (pas apprenants.* pour
             // des milliers de lignes) pour construire la liste des communes.
-            $communeIds = (clone $chain)->pluck('apprenants.commune_id')->filter()->unique();
+            $communeIds = (clone $chain)->distinct()->pluck('apprenants.commune_id')->filter();
             $communes = Commune::whereIn('id', $communeIds)->get();
 
             $annees = DB::table('annee_academiques')
@@ -103,11 +102,10 @@ class Getallapprenant extends Component
                 ->distinct()
                 ->get();
 
-            return compact('niveaux', 'classes', 'filieres', 'communes', 'annees');
+            return compact('niveaux', 'filieres', 'communes', 'annees');
         });
 
         $this->niveaux   = $filtres['niveaux'];
-        $this->classes   = $filtres['classes'];
         $this->filieres  = $filtres['filieres'];
         $this->communes  = $filtres['communes'];
         $this->annees    = $filtres['annees'];
@@ -178,14 +176,8 @@ class Getallapprenant extends Component
         // apprenants. Un ajout/suppression d'apprenant peut mettre jusqu'à
         // 2 min à se refléter ici — acceptable pour un compteur de dashboard.
         $result = Cache::remember($this->filtersCacheKey(), self::RESULT_CACHE_TTL, function () {
-            // ✅ Simple COUNT (pas de récupération des lignes) : $apprenantsParAnnee
-            // n'était utilisé nulle part dans la vue — sa suppression fait gagner
-            // ~3s à elle seule, en plus d'éviter de charger ~10 000 lignes
-            // complètes en PHP à chaque ouverture de la modale.
-            $count = $this->filteredApprenantsQuery()->count();
-
-            // ✅ Requête séparée, paginée à 50 lignes (au lieu de réexécuter la
-            // même requête complète une 3e fois).
+            // ✅ Page de 50 lignes ; la commune est chargée en une requête pour
+            // toute la page (au lieu d'une par apprenant dans la vue).
             $apprenants = $this->filteredApprenantsQuery()
                 ->select(
                     'apprenants.*',
@@ -194,9 +186,12 @@ class Getallapprenant extends Component
                     'etablissements.sigle as etablissementSigle',
                     'annee_academiques.code as anneeCode'
                 )
+                ->with('commune')
                 ->paginate(50);
 
-            return ['count' => $count, 'apprenants' => $apprenants];
+            // ✅ Le total vient du COUNT déjà fait par la pagination : pas de
+            // second COUNT sur la même requête à 7 jointures.
+            return ['count' => $apprenants->total(), 'apprenants' => $apprenants];
         });
 
         $this->count = $result['count'];

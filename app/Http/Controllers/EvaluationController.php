@@ -671,6 +671,7 @@ $template = str_replace('[ABS_NON_JUSTIFIEES]', $this->formatHeures($hAbsNon), $
     $template = str_replace('[TEL]', $inscription->apprenant->telephone, $template);
     $template = str_replace('[EMAIL]', $inscription->apprenant->email, $template);
     $template = str_replace('[MATRICULE]', $inscription->apprenant->matricule, $template);
+    $template = str_replace('[REDOUBLANT]', !empty($inscription->redoublant) ? 'Oui' : 'Non', $template);
 
     $template = str_replace('[SEMESTRE]', $semestre, $template);
     $template = str_replace('[CLASSE]', $inscription->classe->libelle ?? '', $template);
@@ -973,7 +974,7 @@ $matieres = Matiere::where('niveau_etude_id', $classe->niveau_etude_id)
             [
                 '[EFPT]', '[EFPTTEL]', '[EFPTMAIL]',
                 '[CLASSE]', '[SEMESTRE]', '[ANNEESCOLAIRE]',
-                '[USER]', '[DATENAISSANCE]', '[LIEUNAISSANCE]', '[TEL]', '[EMAIL]', '[MATRICULE]',
+                '[USER]', '[DATENAISSANCE]', '[LIEUNAISSANCE]', '[TEL]', '[EMAIL]', '[MATRICULE]', '[REDOUBLANT]',
                 '[BODY]', '[MOYENNE]', '[MOYENNE_CLASSE]', '[RANG]', '[DATE]',
                 '[RET_TOTAL]', '[ABS_TOTAL]', '[ABS_JUSTIFIEES]', '[ABS_NON_JUSTIFIEES]',
                 '[TABLE_MOYENNES]', '[BLOC_MENTIONS]',
@@ -992,6 +993,7 @@ $matieres = Matiere::where('niveau_etude_id', $classe->niveau_etude_id)
                 $apprenant->telephone ?? '-',
                 $apprenant->email ?? '-',
                 $apprenant->matricule ?? '-',
+                !empty($inscription->redoublant) ? 'Oui' : 'Non',
                 $body,
                 $moyenne,
                 number_format($moyenneClasse, 2, ',', '.'),
