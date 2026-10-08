@@ -305,7 +305,15 @@ public function scopeExceptAssistante($query)
     }
     public function personnel()
     {
-        return $this->hasOne(PersonnelEtablissement::class);
+        return $this->hasOne(PersonnelEtablissement::class)
+            ->where('actif', true);
+    }
+    
+    // Historique complet
+    public function personnelHistorique()
+    {
+        return $this->hasMany(PersonnelEtablissement::class)
+            ->orderByDesc('date_debut');
     }
  public function etablissementId(): ?int
 {

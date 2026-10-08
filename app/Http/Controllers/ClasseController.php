@@ -252,12 +252,13 @@ $inscriptionsAll = Inscription::with('apprenant')
     ->get();
    
     $formateurs = DB::table('formateur_etablissement')
-        ->join('personnel_etablissements', 'formateur_etablissement.personnel_etablissement_id', '=', 'personnel_etablissements.id')
-        ->join('users', 'personnel_etablissements.user_id', '=', 'users.id')
-        ->where('formateur_etablissement.classe_id', $classe->id)
-        ->select('users.id', 'users.nom', 'users.prenom')
-        ->distinct()
-        ->get();
+    ->join('personnel_etablissements', 'formateur_etablissement.personnel_etablissement_id', '=', 'personnel_etablissements.id')
+    ->join('users', 'personnel_etablissements.user_id', '=', 'users.id')
+    ->where('formateur_etablissement.classe_id', $classe->id)
+    ->where('personnel_etablissements.actif', true)   // ⬅️ AJOUT
+    ->select('users.id', 'users.nom', 'users.prenom')
+    ->distinct()
+    ->get();
 
     
     $usersWithEnterprises = [];
@@ -418,24 +419,38 @@ if ($classe->modalite === 'PPO') {
         return view('classe.assign-formateurs', compact('classe', 'formateurs', 'formateursAssignes'));
     }
 
- public function assign($classeId)
+    public function assign($classeId)
     {
         $classe = Classe::with('etablissement')->findOrFail($classeId);
     
-        // 🔹 On récupère les personnels (table personnel_etablissements)
-        //    rattachés à l’établissement de la classe,
-        //    dont l’utilisateur associé a le rôle "formateur"
+        // ✅ Formateurs actuellement actifs dans l'établissement de la classe
         $formateurs = \App\Models\PersonnelEtablissement::where('etablissement_id', $classe->etablissement_id)
+            ->where('actif', true)   // ← filtre ajouté
             ->whereHas('user.roles', function ($q) {
                 $q->where('name', 'formateur');
             })
             ->with('user')
+            ->orderBy('id', 'desc')
             ->get();
     
-        // 🔹 ID des personnels déjà assignés à cette classe
-        $formateursAssignes = $classe->formateurs()->pluck('personnel_etablissement_id')->toArray();
+        // ✅ Uniquement les assignations dont le formateur est encore actif dans cet établissement
+        $formateursAssignes = $classe->formateurs()
+            ->whereHas('user.personnel', function ($q) use ($classe) {
+                $q->where('etablissement_id', $classe->etablissement_id)
+                  ->where('actif', true);
+            })
+            ->pluck('personnel_etablissement_id')
+            ->toArray();
     
-        return view('classe.assign-formateurs', compact('classe', 'formateurs', 'formateursAssignes'));
+        // 📊 Bonus : récupérer le nombre d'assignations historiques (pour info)
+        $assignationsHistoriques = $classe->formateurs()->count() - count($formateursAssignes);
+    
+        return view('classe.assign-formateurs', compact(
+            'classe',
+            'formateurs',
+            'formateursAssignes',
+            'assignationsHistoriques'
+        ));
     }
     
     
@@ -449,7 +464,28 @@ if ($classe->modalite === 'PPO') {
             'formateurs.*' => 'exists:personnel_etablissements,id',
         ]);
     
-        $classe->formateurs()->sync($validated['formateurs']); // met à jour la table formateur_etablissement
+        // 🔒 Filtrer : ne garder que les formateurs actifs dans l'établissement de la classe
+        $formateursValides = \App\Models\PersonnelEtablissement::whereIn('id', $validated['formateurs'])
+            ->where('etablissement_id', $classe->etablissement_id)
+            ->where('actif', true)
+            ->pluck('id')
+            ->toArray();
+    
+        // 🔄 Synchroniser SANS supprimer les assignations historiques
+        // On ajoute les nouveaux, on ne supprime pas ceux qui ne sont plus dans la liste
+        $existants = $classe->formateurs()->pluck('personnel_etablissement_id')->toArray();
+        $aAjouter = array_diff($formateursValides, $existants);
+    
+        // On retire uniquement ceux qui sont explicitement décochés ET encore actifs
+        $aRetirer = array_diff($existants, $formateursValides);
+        $aRetirer = \App\Models\PersonnelEtablissement::whereIn('id', $aRetirer)
+            ->where('etablissement_id', $classe->etablissement_id)
+            ->where('actif', true)
+            ->pluck('id')
+            ->toArray();
+    
+        $classe->formateurs()->detach($aRetirer);
+        $classe->formateurs()->syncWithoutDetaching($aAjouter);
     
         return redirect()->route('classe.show', $classeId)
             ->with('message', 'Les formateurs ont été assignés avec succès.');
