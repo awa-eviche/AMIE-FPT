@@ -20,29 +20,9 @@
                 <p wire:click="resetAll" class="border-2 flex items-center font-bold bg-first-orange rounded py-1 px-3 text-sm cursor-pointer text-white">Tous</p>
             </div>
                 <div class="flex items-baseline my-4">
-                    <label for="selectedNiveau" class="sr-only">Niveaux</label>
-                    <select id="selectedNiveau" wire:model="selectedNiveau" wire:change="$refresh" name="selectedNiveau"  class="border border-gray-300 p-3 w-full max-w-xs focus:border-first-orange enlever_shadow rounded px-8 py-0.75 shadow-first-orange text-sm font-bold">
-                        <option selected>Choisir une Niveaux</option>
-                        @foreach ($niveaux as $niveau)
-                        <option value="{{ $niveau->id }}">{{ $niveau->nom  }}</option> 
-                        @endforeach
-                    </select>
-    
-                </div>
-    
-                <div class="flex items-baseline my-4">
-                    <label for="selectedClasse" class="sr-only">Classe</label>
-                    <select id="selectedClasse" wire:model="selectedClasse" wire:change="$refresh" name="selectedClasse"  class="border border-gray-300 p-3 w-full max-w-xs focus:border-first-orange enlever_shadow rounded px-8 py-0.75 shadow-first-orange text-sm font-bold">
-                        <option selected>Choisir une Classe</option>
-                        @foreach ($classes as $classe)
-                        <option value="{{ $classe->id }}">{{ $classe->libelle  }}</option> 
-                        @endforeach
-                    </select>
-                </div>
-                <div class="flex items-baseline my-4">
                     <label for="selectedSecteur" class="sr-only">Secteur</label>
                     <select id="selectedSecteur" wire:model="selectedSecteur" wire:change="$refresh" name="selectedSecteur"  class="border border-gray-300 p-3 w-full max-w-xs focus:border-first-orange enlever_shadow rounded px-8 py-0.75 shadow-first-orange text-sm font-bold">
-                        <option selected>Choisir un secteur</option>
+                        <option value="">Choisir un secteur</option>
                         @foreach ($secteurs as $secteur)
                         <option value="{{ $secteur->id }}">{{ $secteur->libelle  }}</option> 
                         @endforeach
@@ -58,40 +38,24 @@
                     <tr
                         class="text-xs font-black tracking-wide text-left text-maquette-gris font-bold border-b">
                         {{-- <th class="px-4 py-3">N° </th> --}}
-                        <th class="px-1 text-gray-800">filières</th>
-                        <th class="px-1 text-gray-800">classes</th>
-                        <th class="px-1 text-gray-800">Secteurs</th>
-                        <th class="px-1 text-gray-800">Niveaux</th>
-                        
+                        <th class="px-1 text-gray-800">Filière</th>
+                        <th class="px-1 text-gray-800">Secteur</th>
+
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y ">
+                    @forelse ($filieres as $filiere)
                         <tr class="text-gray-700 ">
-                            @foreach ($filieres as $filiere)
-                            
-                             <td class="p-2 border-b text-gray-500 ">
-                                {{ $filiere->filiereName ?? ' - ' }}
-                            </td>
-                             
                             <td class="p-2 border-b text-gray-500 ">
-                                {{ $filiere->nom ?? ' - ' }}
+                                {{ $filiere->filiereName ?? ' - ' }}
                             </td>
                             <td class="p-2 border-b text-gray-500 ">
                                 {{ $filiere->secteurName ?? ' - ' }}
                             </td>
-                            <td class="p-2 border-b text-gray-500 ">
-                                {{ $filiere->niveauName ?? ' - '}}
-                            </td>
-                            
-                            {{-- <td class="p-2 border-b text-gray-500 text-center">
-                                <a href="{{route('inscription.show',$apprenant->id)}}" class="text-greeen-600"><i class="fa fa-eye"></i></a>
-                            </td> --}}
-
                         </tr>
-                    @endforeach
-                    @if ($filieres == [])
-                        <tr><td colspan="6" class="px-2 py-2 font-bold text-xs text-center">Aucune filière n'est enregistré pour cette classe.</td></tr>
-                    @endif
+                    @empty
+                        <tr><td colspan="2" class="px-2 py-2 font-bold text-xs text-center">Aucune filière ne correspond à ces critères.</td></tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>

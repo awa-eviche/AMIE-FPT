@@ -127,8 +127,8 @@ class DashboardStats
                 $this->kpi('Établissements actifs', $this->etablissementsCount(), 'building', 'orange', 'dfpt.getalletablissement', 'Établissements', true),
                 $this->kpi('Apprenants inscrits', $effectif, 'academic-cap', 'green', 'dfpt.getallapprenant', 'Apprenants'),
                 $this->kpi('Classes', $this->classesCount(), 'collection', 'orange'),
-                $this->kpi('Filières', $this->filieresCount(), 'briefcase', 'green', 'Dfpt.Filiere', 'Filières', true),
-                $this->kpi('Métiers', $this->lignes()->pluck('metier_id')->filter()->unique()->count(), 'wrench', 'orange', 'Dfpt.Metier', 'Métiers', true),
+                $this->kpi('Filières', $this->filieresFixesCount(), 'briefcase', 'green', 'Dfpt.Filiere', 'Filières', true),
+                $this->kpi('Métiers', $this->metiersCount(), 'wrench', 'orange', 'Dfpt.Metier', 'Métiers', true),
                 $this->kpi('Personnel', $this->personnelCount(), 'users', 'green'),
             ],
             'charts' => array_values(array_filter([
@@ -503,10 +503,24 @@ class DashboardStats
             ->pluck('total', 'annee')->map(fn ($v) => (int) $v)->all();
     }
 
-    /** Établissements qui ont au moins un inscrit sur l'année choisie. */
+    /**
+     * Établissements actifs ayant au moins un inscrit, toutes années confondues :
+     * le nombre ne dépend pas de l'année choisie et reprend les mêmes critères que
+     * la liste « Voir le détail » (Dfpt\Getalletablissement).
+     */
     private function etablissementsCount(): int
     {
-        return $this->lignes()->pluck('etab_id')->unique()->count();
+        return DB::table('etablissements as e')
+            ->join('communes as co', 'co.id', '=', 'e.commune_id')
+            ->join('classes as c', 'c.etablissement_id', '=', 'e.id')
+            ->join('niveau_etudes as n', 'n.id', '=', 'c.niveau_etude_id')
+            ->join('metiers as m', 'm.id', '=', 'n.metier_id')
+            ->join('filieres as f', 'f.id', '=', 'm.filiere_id')
+            ->join('inscriptions as i', 'i.classe_id', '=', 'c.id')
+            ->join('annee_academiques as an', 'an.id', '=', 'i.annee_academique_id')
+            ->where('e.is_active', 1)
+            ->when($this->etabIds !== null, fn ($q) => $q->whereIn('e.id', $this->etabIds ?: [0]))
+            ->distinct()->count('e.id');
     }
 
     private function apprenantsCount(): int
@@ -517,6 +531,35 @@ class DashboardStats
     private function classesCount(): int
     {
         return $this->lignes()->pluck('classe_id')->unique()->count();
+    }
+
+    /**
+     * Métiers et filières ayant au moins un inscrit, toutes années confondues : ces
+     * nombres ne dépendent pas de l'année choisie et reprennent les critères des
+     * listes « Voir le détail » (Dfpt\Metier et Dfpt\Filiere).
+     */
+    private function inscritsToutesAnnees(): Builder
+    {
+        return DB::table('inscriptions as i')
+            ->join('apprenants as a', 'a.id', '=', 'i.apprenant_id')
+            ->join('classes as c', 'c.id', '=', 'i.classe_id')
+            ->join('etablissements as e', 'e.id', '=', 'c.etablissement_id')
+            ->join('niveau_etudes as n', 'n.id', '=', 'c.niveau_etude_id')
+            ->join('metiers as m', 'm.id', '=', 'n.metier_id')
+            ->where('a.isDeleted', 0)
+            ->when($this->etabIds !== null, fn ($q) => $q->whereIn('c.etablissement_id', $this->etabIds ?: [0]));
+    }
+
+    private function metiersCount(): int
+    {
+        return $this->inscritsToutesAnnees()->distinct()->count('m.id');
+    }
+
+    private function filieresFixesCount(): int
+    {
+        return $this->inscritsToutesAnnees()
+            ->join('filieres as f', 'f.id', '=', 'm.filiere_id')
+            ->distinct()->count('f.id');
     }
 
     private function filieresCount(): int

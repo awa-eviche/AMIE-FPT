@@ -216,12 +216,12 @@
 </button>
 
 @if($showAbsenceClasseModal)
-<div class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+<div class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" style="position:fixed; top:0; right:0; bottom:0; left:0; z-index:50; background-color:rgba(0,0,0,.7); display:flex; align-items:center; justify-content:center; padding:1rem;"
      wire:click.self="closeAbsenceClasseModal"
      wire:keydown.escape.window="closeAbsenceClasseModal">
 
   <div class="bg-white rounded-lg shadow-xl w-[900px] max-w-[95vw]"
-       style="height:90vh; display:flex; flex-direction:column; overflow:hidden;">
+       style="width:900px; max-width:95vw; height:90vh; display:flex; flex-direction:column; overflow:hidden;">
 
     {{-- HEADER --}}
     <div class="p-4 border-b flex items-center justify-between bg-white" style="flex:0 0 auto;">
@@ -230,6 +230,12 @@
         <div class="text-xs text-gray-600">
           Classe : <span class="font-semibold">{{ $currentClasse?->libelle ?? '-' }}</span>
           • Année : <span class="font-semibold">{{ $anneeAcademiqueLabel ?? '-' }}</span>
+        </div>
+        {{-- Semestre de la page (mémorisé en session), mis en évidence --}}
+        <div style="margin-top:8px;">
+          <span style="display:inline-block; background:#047857; color:#fff; font-size:14px; font-weight:700; padding:5px 14px; border-radius:999px;">
+            {{ (string) $selectedsemestre === '2' ? 'Deuxième semestre' : 'Premier semestre' }}
+          </span>
         </div>
       </div>
 
@@ -273,18 +279,9 @@
               
 
                            <input type="hidden" name="inscription_id[{{ $insc->id }}]" value="{{ $insc->id }}">
+                <input type="hidden" name="semestre[{{ $insc->id }}]" value="{{ $selectedsemestre }}">
 
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700">Semestre</label>
-                    <select name="semestre[{{ $insc->id }}]"
-                            class="w-full border rounded p-2 js-semestre">
-                      <option value="">-- Sélectionnez --</option>
-                      <option value="1">Premier semestre</option>
-                      <option value="2">Deuxième semestre</option>
-                    </select>
-                  </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
 
                   <div>
                     <label class="block text-sm font-medium text-gray-700">Type</label>

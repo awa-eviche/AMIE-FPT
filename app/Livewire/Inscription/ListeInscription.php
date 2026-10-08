@@ -60,6 +60,12 @@ public function openAbsenceClasseModal()
         return;
     }
 
+    // Le semestre est celui choisi sur la page : le modal n'a pas son propre sélecteur.
+    if (!in_array((string) $this->selectedsemestre, ['1', '2'], true)) {
+        session()->flash('error', "Veuillez choisir le semestre (premier ou deuxième) avant d'ajouter des absences ou des retards.");
+        return;
+    }
+
     $this->apprenantsAbsModal = Inscription::with('apprenant')
         ->where('classe_id', $this->classe)
         ->where('annee_academique_id', $this->annee_academique_id)

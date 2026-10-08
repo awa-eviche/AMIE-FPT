@@ -47,8 +47,8 @@ public function store(Request $request)
         $nonjustifie = (int) $request->input("nonjustifie.$inscriptionId", 0);
 
         // ✅ si rien n'est rempli pour cet apprenant => on skip
-        $active = ($semestre !== null && $semestre !== '')
-               || ($type !== null && $type !== '')
+        // Le semestre vient de la page pour tous les apprenants : il ne suffit pas à activer une ligne.
+        $active = ($type !== null && $type !== '')
                || ($hAbs !== null && $hAbs !== '')
                || ($hRet !== null && $hRet !== '')
                || $justifie === 1

@@ -13,7 +13,17 @@
         </div>
     @endif
 
-    {{-- ✅ Header + filtres --}}
+    @if (session('error'))
+        <div class="mb-4 px-4">
+            <div class="flex items-center p-4 text-sm text-red-800 border border-red-300 rounded-lg bg-red-50 shadow-sm" role="alert">
+                <div>
+                    <span class="font-medium">Erreur !</span> {{ session('error') }}
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- ✅ Header + filtres (même architecture que la page des notes APC) --}}
     <div class="flex items-center px-4">
         <div class="flex-1">
             <h2 class="font-bold text-maquette-black text-xl py-4">
@@ -22,21 +32,21 @@
         </div>
 
         <div class="mb-4 flex gap-4">
-            {{-- Classe --}}
+            <!-- Classe -->
             <div>
                 <label for="classe" class="block text-sm font-medium">Classe :</label>
                 <select wire:model="classe" wire:change="$refresh" id="classe" class="rounded border-gray-300 text-sm">
-                    <option value="">-- Choisir une classe ftp --</option>
+                    <option value="">-- Choisir une classe --</option>
                     @foreach ($classes as $cl)
                         <option value="{{ $cl->id }}">{{ $cl->libelle }}</option>
                     @endforeach
                 </select>
             </div>
 
-            {{-- Année académique --}}
             <div>
                 <label for="annee_academique_id" class="block text-sm font-medium">Année académique :</label>
-                <select wire:model="annee_academique_id" wire:change="$refresh" id="annee_academique_id" class="rounded border-gray-300 text-sm">
+                <select wire:model="annee_academique_id" wire:change="$refresh" id="annee_academique_id"
+                    class="rounded border-gray-300 text-sm">
                     <option value="">-- Toutes les années --</option>
                     @foreach (\App\Models\AnneeAcademique::all() as $annee)
                         <option value="{{ $annee->id }}">{{ $annee->code }}</option>
@@ -47,51 +57,41 @@
     </div>
 
     @if ($currentClasse)
-
-        {{-- ✅ Infos classe --}}
+        <!-- Informations classe -->
         <div class="py-2 px-4 m-2 shadow bg-vert2 border border-black rounded-md">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-                <div class="rounded bg-white/70 p-2 border">
-                    <span class="text-gray-600">Année Scolaire :</span>
-                    <span class="font-bold text-gray-900">{{ $anneeAcademiqueLabel ?? 'N/A' }}</span>
+            <div class="grid sm:grid-cols-3 gap-2 py-2 text-md">
+                <div><span class="text-gray-800">Année Scolaire :</span> <span
+                        class="font-bold">{{ $anneeAcademiqueLabel ?? 'N/A' }}</span></div>
+                <div><span class="text-gray-800">Centre de ressources :</span>
+                    <span class="font-bold">{{ $currentClasse->etablissement->nom ?? '-' }}</span>
                 </div>
-
-                <div class="rounded bg-white/70 p-2 border">
-                    <span class="text-gray-600">Centre de ressources :</span>
-                    <span class="font-bold text-gray-900">{{ $currentClasse->etablissement->nom ?? '-' }}</span>
+                <div><span class="text-gray-800">Filière :</span>
+                    <span class="font-bold">{{ $currentClasse->niveau_etude->metier->filiere->nom ?? '-' }}</span>
                 </div>
-
-                <div class="rounded bg-white/70 p-2 border">
-                    <span class="text-gray-600">Filière :</span>
-                    <span class="font-bold text-gray-900">{{ $currentClasse->niveau_etude->metier->filiere->nom ?? '-' }}</span>
+                <div><span class="text-gray-800">Métier :</span>
+                    <span class="font-bold">{{ $currentClasse->niveau_etude->metier->nom ?? '-' }}</span>
                 </div>
-
-                <div class="rounded bg-white/70 p-2 border">
-                    <span class="text-gray-600">Métier :</span>
-                    <span class="font-bold text-gray-900">{{ $currentClasse->niveau_etude->metier->nom ?? '-' }}</span>
+                <div><span class="text-gray-800">Niveau d'études :</span>
+                    <span class="font-bold">{{ $currentClasse->niveau_etude->nom ?? '-' }}</span>
                 </div>
-
-                <div class="rounded bg-white/70 p-2 border">
-                    <span class="text-gray-600">Niveau d'études :</span>
-                    <span class="font-bold text-gray-900">{{ $currentClasse->niveau_etude->nom ?? '-' }}</span>
-                </div>
-
-                <div class="rounded bg-white/70 p-2 border">
-                    <span class="text-gray-600">Nombre apprenants :</span>
-                    <span class="font-bold text-gray-900">{{ $nombreApprenants }}</span>
+                <div><span class="text-gray-800">Nombre apprenants :</span>
+                    <span class="font-bold">{{ $nombreApprenants }}</span>
                 </div>
             </div>
         </div>
 
         @php $user = auth()->user(); @endphp
 
-     
         <div class="flex flex-col sm:flex-row sm:items-center gap-3 px-4 pb-4">
+
+            <!-- Ligne des actions -->
             <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
 
+                <!-- Form PDF -->
                 <form method="GET" action="{{ route('classe.sommation.pdf', $currentClasse->id) }}" target="_blank"
                       class="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <select name="semestre" class="rounded border-gray-300 text-sm">
+                    {{-- Semestre de la page : utilisé pour le PDF et pour l'évaluation --}}
+                    <select name="semestre" wire:model.live="somativeSemestre" class="rounded border-gray-300 text-sm">
                         <option value="">Tous les semestres</option>
                         <option value="1">Premier semestre</option>
                         <option value="2">Deuxième semestre</option>
@@ -105,7 +105,7 @@
                 @if($user->hasRole('formateur') || $user->hasRole('chef_de_travaux') || $user->hasRole('chef_etablissement') || $user->hasRole('directeur_etude') || $user->hasRole('surveillant') || $user->hasRole('superadmin'))
                     <button type="button"
                             wire:click="openSomativeClasseModal"
-                            class="text-white bg-green-800 text-sm rounded-md shadow-md px-4 py-2 hover:bg-green-800">
+                            class="text-white bg-green-700 text-sm rounded-md shadow-md px-4 py-2 hover:bg-green-800">
                         <i class="fa-solid fa-file-lines"></i>&nbsp;Évaluer
                     </button>
                 @endif
@@ -117,14 +117,13 @@
             </div>
         </div>
 
-      
         @if($showSomativeClasseModal)
-            <div class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+            <div class="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" style="position:fixed; top:0; right:0; bottom:0; left:0; z-index:50; background-color:rgba(0,0,0,.7); display:flex; align-items:center; justify-content:center; padding:1rem;"
                  wire:click.self="closeSomativeClasseModal"
                  wire:keydown.escape.window="closeSomativeClasseModal">
 
                 <div class="bg-white rounded-lg shadow-xl w-[1200px] max-w-[95vw]"
-                     style="height:90vh; display:flex; flex-direction:column; overflow:hidden;">
+                     style="width:1200px; max-width:95vw; height:90vh; display:flex; flex-direction:column; overflow:hidden;">
 
                     <div class="p-4 border-b flex items-center justify-between bg-white" style="flex:0 0 auto;">
                         <div>
@@ -132,6 +131,12 @@
                             <div class="text-xs text-gray-600">
                                 Classe : <span class="font-semibold">{{ $currentClasse?->libelle ?? '-' }}</span>
                                 • Année : <span class="font-semibold">{{ $anneeAcademiqueLabel ?? '-' }}</span>
+                            </div>
+                            {{-- Semestre évalué, mis en évidence --}}
+                            <div style="margin-top:8px;">
+                                <span style="display:inline-block; background:#047857; color:#fff; font-size:14px; font-weight:700; padding:5px 14px; border-radius:999px;">
+                                    {{ $somativeSemestre == 2 ? 'Deuxième semestre' : 'Premier semestre' }}
+                                </span>
                             </div>
                         </div>
 
@@ -143,16 +148,16 @@
                           style="flex:1 1 auto; min-height:0; display:flex; flex-direction:column;">
 
                       
-                        <div class="p-4 bg-white border-b" style="flex:0 0 auto;">
-                            <div class="flex items-center gap-3">
-                                <label class="block text-sm font-bold text-gray-700">Semestre :</label>
-                                <select wire:model.live="somativeSemestre" class="border border-gray-300 rounded shadow-sm text-sm">
-                                    <option value="">Sélectionnez un semestre</option>
-                                    <option value="1">Premier semestre</option>
-                                    <option value="2">Deuxième semestre</option>
-                                </select>
+                        @if (session('success'))
+                            <div class="px-4 py-2 text-sm text-green-800 bg-green-50 border-b border-green-300" style="flex:0 0 auto;">
+                                {{ session('success') }}
                             </div>
-                        </div>
+                        @endif
+                        @if (session('error'))
+                            <div class="px-4 py-2 text-sm text-red-800 bg-red-50 border-b border-red-300" style="flex:0 0 auto;">
+                                {{ session('error') }}
+                            </div>
+                        @endif
 
                         {{-- BODY SCROLL --}}
                         <div class="p-4" style="flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;">
@@ -276,7 +281,7 @@
                                                                     <th class="px-4 py-3 text-white border border-black">Compétence</th>
                                                                     <th class="px-4 py-3 text-white border border-black">Element de compétence</th>
                                                                     <th class="px-4 py-3 text-white border border-black">Critère (seuil de réussite)</th>
-                                                                    <th class="px-4 py-3 text-white border border-black">Note (%)</th>
+                                                                    <th class="px-4 py-3 text-white border border-black">Note /20</th>
                                                                     <th class="px-4 py-3 text-white border border-black">Acquis</th>
                                                                     <th class="px-4 py-3 text-white border border-black">Non acquis</th>
                                                                     <th class="px-4 py-3 text-white border border-black">Appréciation</th>
@@ -363,37 +368,37 @@
                                                                                             @endif
                                                                                         </td>
 
-                                                                                        {{-- Note (%) saisie par le formateur --}}
+                                                                                        {{-- Note sur 20 saisie par le formateur --}}
                                                                                         <td class="px-4 py-2 border border-black text-center">
-                                                                                            <input type="number" min="0" max="100" step="0.5"
+                                                                                            <input type="number" min="0" max="20" step="0.5"
                                                                                                    class="w-20 border rounded px-2 py-1 text-center"
                                                                                                    wire:model.defer="somativeNoteCritere.{{ $insc->id }}.{{ $critere->id }}"
                                                                                                    @input="note = $event.target.value === '' ? null : Number($event.target.value)">
-                                                                                            <span class="text-gray-500">%</span>
+                                                                                            <span class="text-gray-500">/20</span>
                                                                                         </td>
 
                                                                                         {{-- Acquis / Non acquis : cochés automatiquement (lecture seule),
-                                                                                             calculés en comparant la note (%) au seuil de réussite. La
+                                                                                             calculés en comparant la note /20, ramenée en % (x5), au seuil de réussite. La
                                                                                              valeur réellement enregistrée est calculée côté serveur à
                                                                                              partir de la note, ces cases ne sont qu'un aperçu visuel. --}}
                                                                                         <td class="px-4 py-2 border border-black text-center">
                                                                                             <input type="checkbox" disabled
-                                                                                                   :checked="seuil !== null && note !== null && note !== '' && Number(note) >= seuil">
+                                                                                                   :checked="seuil !== null && note !== null && note !== '' && Number(note) * 5 >= seuil">
                                                                                         </td>
                                                                                         <td class="px-4 py-2 border border-black text-center">
                                                                                             <input type="checkbox" disabled
-                                                                                                   :checked="seuil !== null && note !== null && note !== '' && Number(note) < seuil">
+                                                                                                   :checked="seuil !== null && note !== null && note !== '' && Number(note) * 5 < seuil">
                                                                                         </td>
 
-                                                                                        {{-- Appréciation calculée en direct à partir de la note (%),
-                                                                                             même échelle que le bulletin PDF (correspondance /20 x5). --}}
+                                                                                        {{-- Appréciation calculée en direct à partir de la note /20,
+                                                                                             même échelle que le bulletin PDF et que les disciplines. --}}
                                                                                         <td class="px-4 py-2 border border-black text-center text-xs"
                                                                                             x-text="note === null || note === '' ? '-' :
-                                                                                                (Number(note) >= 80 ? 'Excellent travail' :
-                                                                                                 Number(note) >= 70 ? 'Bien' :
-                                                                                                 Number(note) >= 60 ? 'Assez bien' :
-                                                                                                 Number(note) >= 50 ? 'Passable' :
-                                                                                                 Number(note) >= 40 ? 'Travail insuffisant' :
+                                                                                                (Number(note) >= 16 ? 'Excellent travail' :
+                                                                                                 Number(note) >= 14 ? 'Bien' :
+                                                                                                 Number(note) >= 12 ? 'Assez bien' :
+                                                                                                 Number(note) >= 10 ? 'Passable' :
+                                                                                                 Number(note) >= 8 ? 'Travail insuffisant' :
                                                                                                  'Très insuffisant')">
                                                                                         </td>
                                                                                     </tr>
