@@ -7,6 +7,7 @@ use App\Http\Controllers\EntrepriseController;
 use App\Http\Controllers\FrontAdminController;
 use App\Http\Controllers\FrontController;
 use App\Http\Controllers\MaterielController;
+use App\Http\Controllers\PersonnelMutationController;
 use App\Livewire\Parametrage\ElementCompetence\ElementCompetenceMultiFixed;
 //use App\Http\Controllers\FrontController;
 use App\Http\Controllers\parametrage\EtatWorkflowController;
@@ -442,7 +443,24 @@ Route::get('/get-niveaux/{metier}', [ReferentielController::class, 'getNiveaux']
 
 Route::get('/classe/{classe}/referentiels', [ClasseController::class, 'referentiels'])
     ->name('classe.referentiels');
-   
+   //Mutations
+   Route::get('/personnel/historique', [PersonnelMutationController::class, 'historiqueIndex'])
+   ->name('personnel.historique.index');
+   // Liste des personnels mutables
+   Route::get('/personnel/muter', [PersonnelMutationController::class, 'index'])
+   ->name('personnel.muter.index');
+
+// Formulaire de mutation pour un personnel donné
+Route::get('/personnel/{personnel}/muter', [PersonnelMutationController::class, 'create'])
+   ->name('personnel.muter');
+
+// Traitement de la mutation
+Route::post('/personnel/{personnel}/muter', [PersonnelMutationController::class, 'store'])
+   ->name('personnel.muter.store');
+
+// Historique
+Route::get('/personnel/{personnel}/historique', [PersonnelMutationController::class, 'historique'])
+   ->name('personnel.historique');
 
 // Emploi du temps
 Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified'])->group(function () {
@@ -457,3 +475,4 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::get('/mon-planning/pdf', [\App\Http\Controllers\EmploiDuTempsController::class, 'exportPdfFormateur'])
         ->name('emploi-du-temps.formateur.pdf');
 });
+
