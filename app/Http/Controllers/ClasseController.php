@@ -26,6 +26,8 @@ use App\Enums\Model;
 use Illuminate\Support\Facades\DB;
 use PDF;
 use App\Models\Referentiel;
+use Illuminate\Validation\Rule;
+
 
 
 
@@ -74,24 +76,39 @@ class ClasseController extends Controller
      */
     public function store(Request $request)
     {
+        // 1. Normaliser le libellé (trim + espaces multiples → 1 espace)
+        $libelleNettoye = preg_replace('/\s+/', ' ', trim($request->libelle));
+        $request->merge(['libelle' => $libelleNettoye]);
+    
+        // 2. Validation
         $request->validate([
-           
-            'libelle' => 'required|string|max:255',
+            'libelle' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('classes', 'libelle')
+                    ->where('etablissement_id', $request->etablissement_id)
+                    ->where('niveau_etude_id', $request->niveau_etude_id)
+                    ->where(function ($query) use ($libelleNettoye) {
+                        $query->whereRaw('LOWER(libelle) = ?', [mb_strtolower($libelleNettoye)]);
+                    }),
+            ],
             'modalite' => 'required',
             'niveau_etude_id' => 'required|string',
-           // 'annee_academique_id' => 'required|string',
             'etablissement_id' => 'required|string',
-           
-
+        ], [
+            'libelle.unique' => 'Cette classe existe déjà pour ce niveau dans cet établissement.',
         ]);
-
-        
+    
         $classe = Classe::create($request->all());
-        $this->logUserRepository->store(['action' => UserAction::AddClasse, 'model' => Model::Classe, 'new_object' => json_encode($classe)]);
-
+        $this->logUserRepository->store([
+            'action' => UserAction::AddClasse,
+            'model' => Model::Classe,
+            'new_object' => json_encode($classe),
+        ]);
+    
         return redirect()->route('classe.index')
-
-                         ->withMessage('Classe créé avec succès.');
+            ->withMessage('Classe créée avec succès.');
     }
 
     /**
@@ -333,18 +350,33 @@ if ($classe->modalite === 'PPO') {
 
     public function update(Request $request, Classe $classe)
     {
+        $libelleNettoye = preg_replace('/\s+/', ' ', trim($request->libelle));
+        $request->merge(['libelle' => $libelleNettoye]);
+    
         $request->validate([
-            'libelle' => 'required|string|max:255',
-            'modalite' => 'required|',
+            'libelle' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('classes', 'libelle')
+                    ->where('etablissement_id', $request->etablissement_id)
+                    ->where('niveau_etude_id', $request->niveau_etude_id)
+                    ->where(function ($query) use ($libelleNettoye) {
+                        $query->whereRaw('LOWER(libelle) = ?', [mb_strtolower($libelleNettoye)]);
+                    })
+                    ->ignore($classe->id),
+            ],
+            'modalite' => 'required',
             'niveau_etude_id' => 'required|string',
-           // 'annee_academique_id' => 'required|string',
             'etablissement_id' => 'required|string',
+        ], [
+            'libelle.unique' => 'Cette classe existe déjà pour ce niveau dans cet établissement.',
         ]);
-
+    
         $classe->update($request->all());
-
+    
         return redirect()->route('classe.index')
-                         ->with('success', 'Classe mise à jour avec succès.');
+            ->with('success', 'Classe mise à jour avec succès.');
     }
 
     public function destroy(Classe $classe)
