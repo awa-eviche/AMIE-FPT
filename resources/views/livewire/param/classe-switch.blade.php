@@ -114,6 +114,8 @@
           class="flex flex-col sm:flex-row sm:items-center gap-2">
       
       <input type="hidden" name="semestre" value="{{ $selectedsemestre1 }}">
+      {{-- Année affichée sur la page : le bulletin imprime la même --}}
+      <input type="hidden" name="annee_academique_id" value="{{ $annee_academique_id }}">
 
       <button type="submit"
               class="text-white bg-red-800 text-sm rounded-md shadow-md px-4 py-2 hover:bg-red-700">

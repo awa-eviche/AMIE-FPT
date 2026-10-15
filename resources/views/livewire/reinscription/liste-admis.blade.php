@@ -43,10 +43,10 @@
         </div>
         <div>
             <label class="reins-label">Année académique</label>
-            {{-- Année d'origine fixée : seule l'avant-dernière année est proposée --}}
-            <select wire:model="annee_academique_id" class="reins-select">
+            {{-- Année d'origine : toutes les années, l'avant-dernière est présélectionnée --}}
+            <select wire:model="annee_academique_id" wire:change="$refresh" class="reins-select">
+                <option value="">-- Choisir une année --</option>
                 @foreach ($annees as $a)
-                    @continue($a->id != $annee_academique_id)
                     <option value="{{ $a->id }}">{{ $a->code }}</option>
                 @endforeach
             </select>
@@ -173,10 +173,10 @@
                 <div class="reins-foot reins-grid">
                     <div>
                         <label class="reins-label">Année de réinscription</label>
-                        {{-- Année de réinscription fixée : seule la dernière année est proposée --}}
-                        <select wire:model="annee_reinscription_id" class="reins-select">
+                        {{-- Année de réinscription : toutes les années, la dernière est présélectionnée --}}
+                        <select wire:model="annee_reinscription_id" wire:change="$refresh" class="reins-select">
+                            <option value="">-- Choisir une année --</option>
                             @foreach ($annees as $a)
-                                @continue($a->id != $annee_reinscription_id)
                                 <option value="{{ $a->id }}">{{ $a->code }}</option>
                             @endforeach
                         </select>
@@ -185,23 +185,21 @@
                         @enderror
                     </div>
 
-                    {{-- Classe d'accueil : seulement s'il y a des apprenants qui passent --}}
-                    @if($nbPasse > 0)
-                        <div>
-                            <label class="reins-label">Classe d'accueil de ceux qui passent</label>
-                            <select wire:model="nouvelle_classe_id" wire:change="$refresh" class="reins-select">
-                                <option value="">-- Choisir --</option>
-                                @foreach ($classes as $c)
-                                    @continue($isApc && $c->modalite !== 'APC')
-                                    @continue($c->id === $currentClasse->id)
-                                    <option value="{{ $c->id }}">{{ $c->libelle }}</option>
-                                @endforeach
-                            </select>
-                            @error('nouvelle_classe_id')
-                                <p class="reins-error">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    @endif
+                    {{-- Classe d'accueil : toujours affichée, obligatoire seulement s'il y a des apprenants qui passent --}}
+                    <div>
+                        <label class="reins-label">Classe d'accueil de ceux qui passent</label>
+                        <select wire:model="nouvelle_classe_id" wire:change="$refresh" class="reins-select">
+                            <option value="">-- Choisir --</option>
+                            @foreach ($classes as $c)
+                                @continue($isApc && $c->modalite !== 'APC')
+                                @continue($c->id === $currentClasse->id)
+                                <option value="{{ $c->id }}">{{ $c->libelle }}</option>
+                            @endforeach
+                        </select>
+                        @error('nouvelle_classe_id')
+                            <p class="reins-error">{{ $message }}</p>
+                        @enderror
+                    </div>
                 </div>
 
                 {{-- Récapitulatif et validation --}}

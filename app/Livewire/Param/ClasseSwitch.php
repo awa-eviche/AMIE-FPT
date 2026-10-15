@@ -856,9 +856,11 @@ if (!$devoirExiste) {
         ->all();
 
     $missingMcc = 0;
+    // Chaque note prend l'année de l'inscription de l'apprenant (à défaut, celle de la page).
+    $anneesInscriptions = \App\Services\AnneeDesNotes::desInscriptions($inscriptionIds);
 
     DB::transaction(function () use (
-        $inscriptionIds, $ressourceIds,
+        $inscriptionIds, $ressourceIds, $anneesInscriptions,
         $generalSet, $partSet,
         $mccMap, $devoirIdMap,
         $existing,
@@ -921,7 +923,7 @@ if (!$devoirapcId) {
                     [
                         'devoirapc_id' => $devoirapcId,
                         'composition'  => $composition,
-                    ] + \App\Services\AnneeDesNotes::attributs('evalutes', (int) $this->annee_academique_id)
+                    ] + \App\Services\AnneeDesNotes::attributs('evalutes', $anneesInscriptions[(int) $inscriptionId] ?? (int) $this->annee_academique_id)
                 );
             }
         }

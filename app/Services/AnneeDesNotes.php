@@ -68,6 +68,21 @@ class AnneeDesNotes
     }
 
     /**
+     * Année de chaque inscription. Une note (devoir, composition, sommation) appartient toujours
+     * à l'année de l'inscription de l'apprenant, quelle que soit l'année affichée sur la page de
+     * saisie : un apprenant réinscrit a une inscription par année.
+     *
+     * @return array<int, int> inscription_id => annee_academique_id
+     */
+    public static function desInscriptions(iterable $inscriptionIds): array
+    {
+        $ids = collect($inscriptionIds)->map(fn ($id) => (int) $id)->filter()->unique()->values()->all();
+
+        return $ids ? DB::table('inscriptions')->whereIn('id', $ids)->whereNotNull('annee_academique_id')
+            ->pluck('annee_academique_id', 'id')->map(fn ($a) => (int) $a)->all() : [];
+    }
+
+    /**
      * Année académique courante : celle de la requête ou de la session (partagée avec
      * les pages d'assignation et de saisie), à défaut l'année ouverte.
      */
@@ -92,14 +107,15 @@ class AnneeDesNotes
     /**
      * Année dont on imprime les bulletins d'une classe. Une classe est réutilisée d'une
      * année à l'autre : on retient l'année demandée ou sélectionnée si la classe y a des
-     * inscrits, sinon la plus récente. On n'utilise pas aveuglément l'année ouverte, qui
-     * viderait les bulletins d'une année déjà terminée.
+     * inscrits, à défaut l'année par défaut (celle qu'affichent les pages de notes), sinon la
+     * plus récente. On n'utilise pas aveuglément la plus récente : une classe qui reçoit des
+     * réinscrits de l'année suivante verrait sinon ses bulletins basculer sur une année sans notes.
      */
     public static function pourClasse(int $classeId, ?\Illuminate\Http\Request $request = null): ?int
     {
         $annees = DB::table('inscriptions')->where('classe_id', $classeId)
             ->whereNotNull('annee_academique_id')->distinct()->pluck('annee_academique_id')->map(fn ($a) => (int) $a)->all();
-        $demandee = $request?->input('annee_academique_id') ?? session('annee_academique_id');
+        $demandee = $request?->input('annee_academique_id') ?? session('annee_academique_id') ?? self::anneeParDefaut();
 
         if ($demandee && in_array((int) $demandee, $annees, true)) {
             return (int) $demandee;

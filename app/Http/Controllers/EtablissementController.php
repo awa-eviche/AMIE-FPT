@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Http\Controllers;
-
 use App\Models\Etablissement;
 use App\Models\PersonnelEtablissement;
 use App\Models\Liste;

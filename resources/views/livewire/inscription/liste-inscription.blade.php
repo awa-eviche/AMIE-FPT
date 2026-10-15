@@ -160,7 +160,7 @@
                                     <i class="fa fa-file-pdf"></i>&nbsp;Télécharger le bulletin
                                 </a>
 
-                               <a href="{{ route('evaluation.classe.preview', ['id' => $currentClasse->id, 'semestre' => $selectedsemestre ?: 1]) }}"
+                               <a href="{{ route('evaluation.classe.preview', ['id' => $currentClasse->id, 'semestre' => $selectedsemestre ?: 1, 'annee_academique_id' => $annee_academique_id]) }}"
    target="_blank"
    class="bg-green-600 text-white px-2 py-2 rounded-md shadow hover:bg-green-700">
    <i class="fa fa-print"></i> Imprimer les bulletins de la classe

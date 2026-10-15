@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Livewire\DFPT;
-
 use App\Models\Commune;
 use App\Models\Departement;
 use App\Models\Etablissement;
@@ -68,11 +66,8 @@ class Getalletablissement extends Component
         ->join('niveau_etudes', 'niveau_etudes.id', '=', 'classes.niveau_etude_id')
         ->join('metiers', 'metiers.id', '=', 'niveau_etudes.metier_id')
         ->join('filieres', 'filieres.id', '=', 'metiers.filiere_id')
-        // Classes ayant au moins un inscrit : EXISTS au lieu d'une jointure, pour ne pas
-        // multiplier chaque classe par son nombre d'inscrits.
-        ->whereExists(fn ($q) => $q->selectRaw('1')->from('inscriptions')
-            ->join('annee_academiques', 'annee_academiques.id', '=', 'inscriptions.annee_academique_id')
-            ->whereColumn('inscriptions.classe_id', 'classes.id'))
+        // Pas de condition sur les inscrits : un établissement compte dès qu'il a une classe
+        // (même critère que DashboardStats::etablissementsCount()).
         ->where(function($query) {
             if ($this->selectedCommune) {
                 $query->where('etablissements.commune_id', $this->selectedCommune);

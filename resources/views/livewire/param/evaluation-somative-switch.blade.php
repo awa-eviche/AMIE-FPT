@@ -90,6 +90,8 @@
                 <!-- Form PDF -->
                 <form method="GET" action="{{ route('classe.sommation.pdf', $currentClasse->id) }}" target="_blank"
                       class="flex flex-col sm:flex-row sm:items-center gap-2">
+                    {{-- Année affichée sur la page : le bulletin imprime la même --}}
+                    <input type="hidden" name="annee_academique_id" value="{{ $annee_academique_id }}">
                     {{-- Semestre de la page : utilisé pour le PDF et pour l'évaluation --}}
                     <select name="semestre" wire:model.live="somativeSemestre" class="rounded border-gray-300 text-sm">
                         <option value="">Tous les semestres</option>

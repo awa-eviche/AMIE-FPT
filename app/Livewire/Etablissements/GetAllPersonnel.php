@@ -23,8 +23,11 @@ class GetAllPersonnel extends Component
     public function render()
     {
         
-        if (auth()->user()->personnel != null) {
-            $etablissementId = auth()->user()->personnel->etablissement_id;
+        // etablissementId() couvre aussi les comptes « Établissement » (sans ligne personnel).
+        $etablissementId = auth()->user()->etablissementId();
+        $users = User::query()->whereRaw('1 = 0')->paginate(10);
+        $fonctions = collect();
+        if ($etablissementId != null) {
             if ($this->searchfunction) {
                 $users = User::query()
                     ->whereHas('personnel', function ($q) use ($etablissementId) {
@@ -41,7 +44,10 @@ class GetAllPersonnel extends Component
                         ->whereHas('personnel', function ($q) use ($etablissementId) {
                             $q->where('etablissement_id', $etablissementId);
 
-                        })->orWhere('nom','like',"%{ $this->search }%")
+                        })
+                        // Recherche limitée à l'établissement : un orWhere ici forçait le parcours
+                        // de toute la table users (Gateway Timeout sur le serveur).
+                        ->when($this->search, fn ($q) => $q->where('nom','like',"%{$this->search}%"))
                         ->paginate(10);
             }
            
