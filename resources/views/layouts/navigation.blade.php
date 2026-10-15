@@ -67,6 +67,9 @@
         </span>
     </a>
 @endif
+
+
+
             
             {{-- @if(auth()->user()->can('visualiser_apprenant') and !auth()->user()->hasRole(config('constants.roles.superadmin')))
                 <a class="element_sidebar {{ request()->is('apprenant*') ? 'element_sidebar_acitf' : '' }}" href="{{route('apprenant.index')}}">
@@ -292,6 +295,18 @@
                     </span>
                 </a>
              @endif 
+
+             @if(auth()->user()->hasAnyRole(['chef_etablissement', 'chef_de_travaux', 'directeur_etude', 'surveillant','superadmin']))
+    <a class="element_sidebar {{ request()->is('personnel/muter*') ? 'element_sidebar_acitf' : '' }}"
+       href="{{ route('personnel.muter.index') }}">
+        <span class="text-left">
+            <i class="menu-icon fa-solid fa-arrow-up-right-dots"></i>
+        </span>
+        <span class="mx-4 text-base font-normal">
+            Mutations Personnels
+        </span>
+    </a>
+@endif
 
              {{-- Mon planning : formateur uniquement --}}
               @if(auth()->user()->hasRole('formateur'))

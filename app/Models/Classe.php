@@ -68,18 +68,25 @@ class Classe extends Model
     }
 
 
+  // Tous les formateurs (historique complet)
 public function formateurs()
-    {
-        return $this->belongsToMany(
-            \App\Models\PersonnelEtablissement::class, // modèle lié
-            'formateur_etablissement',                 // nom de la table pivot
-            'classe_id',                               // clé étrangère locale (classe)
-            'personnel_etablissement_id'               // clé étrangère du modèle lié
-        )
-        ->withPivot('role')
-        ->withTimestamps();
-    }
-    
+{
+    return $this->belongsToMany(
+        \App\Models\PersonnelEtablissement::class,
+        'formateur_etablissement',
+        'classe_id',
+        'personnel_etablissement_id'
+    )
+    ->withPivot('role')
+    ->withTimestamps();
+}
+
+// Uniquement les formateurs encore actifs dans l'établissement de la classe
+public function formateursActifs()
+{
+    return $this->formateurs()
+        ->where('actif', true);
+}
 public function matieres()
 {
     return $this->belongsToMany(Matiere::class, 'classe_formateur_matiere', 'classe_id', 'matiere_id')
