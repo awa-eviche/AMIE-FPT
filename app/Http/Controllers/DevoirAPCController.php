@@ -28,6 +28,8 @@ public function store(Request $request)
         $anneeAcademiqueId = $request->input('annee_academique_id')
             ?? session('annee_academique_id')
             ?? \App\Services\AnneeDesNotes::anneeParDefaut();
+        // Chaque note prend l'année de l'inscription de l'apprenant (à défaut, celle de la page).
+        $anneesInscriptions = \App\Services\AnneeDesNotes::desInscriptions(array_keys($request->notes));
 
         foreach ($request->notes as $inscription_id => $note) {
 
@@ -45,7 +47,7 @@ public function store(Request $request)
                 ],
                 [
                     'note'                => (float) $note,
-                    'annee_academique_id' => $anneeAcademiqueId,
+                    'annee_academique_id' => $anneesInscriptions[(int) $inscription_id] ?? $anneeAcademiqueId,
                 ]
             );
 

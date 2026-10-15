@@ -29,190 +29,7 @@ class InscriptionController extends Controller
      * ressources, l'en-tête, le bandeau de titre et le bloc mentions/
      * observations (qui avaient des tailles figées, jamais réduites avant).
      */
-    private function antiOverflowCssFor(float $scale, string $scope = ''): string
-    {
-        $scale = max(0.55, min(1.0, $scale));
-
-        $bodyFont     = round(12 * $scale, 2);
-        $tdFont       = round(12 * $scale, 2);
-        $tdPad        = round(0.3 * $scale, 3);
-        $mentionsFont = round(9.5 * $scale, 2);
-        $obsHeight    = max(18, round(70 * $scale));
-        $h1           = round(20 * $scale, 1);
-        $h2           = round(16 * $scale, 1);
-        $pFont        = round(13 * $scale, 1);
-        $titleFont    = max(11, round(18 * $scale, 1));
-
-        // ✅ Si $scope est fourni (ex: ".bulletin-42"), chaque règle est
-        // limitée à ce sous-arbre : indispensable quand plusieurs bulletins
-        // (avec chacun leur propre échelle de compaction) sont regroupés dans
-        // un même document PDF — sinon des règles non préfixées (body,
-        // .border-td...) s'appliqueraient à tout le document et écraseraient
-        // la compaction des autres bulletins.
-        $root = $scope !== '' ? $scope : 'body';
-        $d    = $scope !== '' ? $scope . ' ' : '';
-
-        return "
-            {$root} { font-size: {$bodyFont}px !important; }
-            .full-table{ width:100%; border-collapse:collapse; table-layout:fixed; }
-            .wrap{ word-wrap:break-word; overflow-wrap:break-word; }
-            .num{ text-align:center; white-space:nowrap; }
-            {$d}.border-td{ border:1px solid #000; padding:{$tdPad}em !important; font-size:{$tdFont}px !important; vertical-align:top; white-space:normal; }
-            {$d}header h1 { font-size: {$h1}px !important; }
-            {$d}header h2 { font-size: {$h2}px !important; }
-            {$d}header p { font-size: {$pFont}px !important; margin: 1px 0 !important; }
-            {$d}header { margin-bottom: 4px !important; }
-            {$d}.title-band { font-size: {$titleFont}px !important; padding: 3px 8px !important; margin: 3px 0 5px 0 !important; }
-            {$d}.p-small { margin-top: 2px !important; }
-            {$d}.bloc-mentions table { font-size: {$mentionsFont}px !important; margin-top: 2px !important; }
-            {$d}.obs-box { min-height: {$obsHeight}px !important; }
-        ";
-    }
-
-    /**
-     * Injecte la CSS anti-débordement dans $templateBase (marqueur </style>
-     * encore intact) puis rend le PDF ; si le résultat déborde sur plusieurs
-     * pages, recommence avec une compaction plus forte, jusqu'à ce que tout
-     * tienne sur une seule page (ou que la compaction max soit atteinte).
-     * Retourne le HTML final et l'échelle retenue, pour pouvoir la réutiliser
-     * sans re-mesurer (ex : tous les bulletins d'une même classe).
-     *
-     * Si $scope est fourni (ex: ".bulletin-42", pour un carnet de classe où
-     * plusieurs élèves sont regroupés dans un même document), la mesure est
-     * faite sur la structure EXACTEMENT telle qu'elle sera assemblée dans le
-     * document final (contenu isolé dans un <div class="...">) : mesurer sur
-     * <body> directement puis extraire le fragment donnerait une échelle
-     * légèrement optimiste, le <div> supplémentaire pouvant suffire à faire
-     * déborder un ajustement pile-poil.
-     */
-    private function fitContentOnePage(string $templateBase, \Dompdf\Options $options, string $scope = ''): array
-    {
-        $scale = 1.0;
-        $html  = $templateBase;
-
-        for ($attempt = 0; $attempt < 4; $attempt++) {
-            $html = str_replace('</style>', $this->antiOverflowCssFor($scale, $scope) . '</style>', $templateBase);
-
-            if ($scope !== '') {
-                $scopeClass = ltrim($scope, '.');
-                $wrapped = '<div class="' . $scopeClass . '">' . $this->extractBodyContent($html) . '</div>';
-                $html = $this->injectBodyContent($html, $wrapped);
-            }
-
-            $dompdf = new Dompdf($options);
-            $dompdf->loadHtml($html);
-            $dompdf->setPaper('A4', 'portrait');
-            $dompdf->render();
-
-            $pages = $dompdf->getCanvas()->get_page_count();
-            if ($pages <= 1 || $scale <= 0.55) {
-                break;
-            }
-
-            $scale = max(0.55, $scale - 0.12 * $pages);
-        }
-
-        return [$html, $scale];
-    }
-
-    /**
-     * Extrait uniquement le contenu de <body>...</body> d'un document HTML
-     * complet. Utilisé pour regrouper plusieurs bulletins dans un seul
-     * document final au lieu de concaténer des <html>/<body> complets (que
-     * Dompdf aplatit en un seul <body>, faisant "fuir" les <style> de l'un
-     * sur les autres).
-     */
-    private function extractBodyContent(string $html): string
-    {
-        $bodyOpenPos = strpos($html, '<body');
-        if ($bodyOpenPos === false) {
-            return $html;
-        }
-        $bodyOpenEnd = strpos($html, '>', $bodyOpenPos) + 1;
-
-        $bodyClosePos = strpos($html, '</body>');
-        if ($bodyClosePos === false) {
-            return substr($html, $bodyOpenEnd);
-        }
-
-        return substr($html, $bodyOpenEnd, $bodyClosePos - $bodyOpenEnd);
-    }
-
-    /**
-     * Remplace le contenu de <body>...</body> de $template par $bodyContent.
-     */
-    private function injectBodyContent(string $template, string $bodyContent): string
-    {
-        $bodyOpenPos = strpos($template, '<body');
-        if ($bodyOpenPos === false) {
-            return $template . $bodyContent;
-        }
-        $bodyOpenEnd = strpos($template, '>', $bodyOpenPos) + 1;
-
-        $bodyClosePos = strpos($template, '</body>');
-        if ($bodyClosePos === false) {
-            return substr($template, 0, $bodyOpenEnd) . $bodyContent;
-        }
-
-        return substr($template, 0, $bodyOpenEnd) . $bodyContent . substr($template, $bodyClosePos);
-    }
-
-    /**
-     * Bloc mentions : la mention (Félicitations...) reste toujours en 1ère position.
-     * En 2e position : mentions de travail (Travail excellent...) au 1er semestre,
-     * décision du conseil (passage/redoublement/exclusion) au 2e semestre.
-     */
-    // ✅ Affiche un nombre d'heures sans décimales inutiles (2 au lieu de 2.00, 2.5 au lieu de 2.50)
-    private function formatHeures($valeur): string
-    {
-        return rtrim(rtrim(number_format((float) $valeur, 2, '.', ''), '0'), '.') ?: '0';
-    }
-
-    private function blocMentionsHtml(?int $semestre): string
-    {
-        $mention = '
-            <table class="full-table" cellspacing="0">
-                <tr><td class="border-td">Félicitations</td><td class="border-td" style="width:22px;"></td></tr>
-                <tr><td class="border-td">Encouragements</td><td class="border-td"></td></tr>
-                <tr><td class="border-td">Tableau d\'honneur</td><td class="border-td"></td></tr>
-                <tr><td class="border-td">Passable</td><td class="border-td"></td></tr>
-                <tr><td class="border-td">Doit redoubler d\'effort</td><td class="border-td"></td></tr>
-                <tr><td class="border-td">Avertissement</td><td class="border-td"></td></tr>
-                <tr><td class="border-td">Blâme</td><td class="border-td"></td></tr>
-            </table>
-        ';
-
-        if ($semestre === 2) {
-            $second = '
-                <table class="full-table" cellspacing="0">
-                    <tr><td class="border-td bg-grey bold-exo centered" colspan="2">Décision du Conseil</td></tr>
-                    <tr><td class="border-td">Admis(e) en classe supérieure</td><td class="border-td" style="width:22px;"></td></tr>
-                    <tr><td class="border-td">Autorisé(e) à redoubler</td><td class="border-td"></td></tr>
-                    <tr><td class="border-td">Exclusion</td><td class="border-td"></td></tr>
-                </table>
-            ';
-        } else {
-            $second = '
-                <table class="full-table" cellspacing="0">
-                    <tr><td class="border-td">Travail excellent</td><td class="border-td" style="width:22px;"></td></tr>
-                    <tr><td class="border-td">Satisfaisant doit continuer</td><td class="border-td"></td></tr>
-                    <tr><td class="border-td">Peut mieux faire</td><td class="border-td"></td></tr>
-                    <tr><td class="border-td">Insuffisant</td><td class="border-td"></td></tr>
-                    <tr><td class="border-td">Risque de redoubler</td><td class="border-td"></td></tr>
-                    <tr><td class="border-td">Risque l\'exclusion</td><td class="border-td"></td></tr>
-                </table>
-            ';
-        }
-
-        return '
-            <table class="full-table" cellspacing="0">
-                <tr>
-                    <td style="width:50%; vertical-align:top; padding:0 4px 0 0;">' . $mention . '</td>
-                    <td style="width:50%; vertical-align:top; padding:0 0 0 4px;">' . $second . '</td>
-                </tr>
-            </table>
-        ';
-    }
+  
 
     protected $logUserRepository;
 
@@ -389,7 +206,11 @@ public function createUserForInscription($inscription)
 
  function generateCompetenceClassePdf(string $id)
     {
-        $inscriptions = Inscription::where('classe_id', $id)->get();
+        // Inscrits d'une seule année : la classe est réutilisée d'une année à l'autre (redoublants).
+        $anneeId = \App\Services\AnneeDesNotes::pourClasse((int) $id, request());
+        $inscriptions = Inscription::where('classe_id', $id)
+            ->when($anneeId, fn ($q) => $q->where('annee_academique_id', $anneeId))
+            ->get();
         $totalCompetence = Competence::where('niveau_etude_id', $inscriptions[0]->classe->niveau_etude_id)->get()->count();
 
         $legendes = [];
@@ -1457,6 +1278,174 @@ public function mesNotesAPC($inscriptionId)
         'obsFromNote'
     ));
 }
+  private function antiOverflowCssFor(float $scale, string $scope = ''): string
+    {
+        $scale = max(0.55, min(1.0, $scale));
 
+        $bodyFont     = round(12 * $scale, 2);
+        $tdFont       = round(12 * $scale, 2);
+        $tdPad        = round(0.3 * $scale, 3);
+        $mentionsFont = round(9.5 * $scale, 2);
+        $obsHeight    = max(18, round(70 * $scale));
+        $h1           = round(20 * $scale, 1);
+        $h2           = round(16 * $scale, 1);
+        $pFont        = round(13 * $scale, 1);
+        $titleFont    = max(11, round(18 * $scale, 1));
+
+        // ✅ Si $scope est fourni (ex: ".bulletin-42"), chaque règle est
+        // limitée à ce sous-arbre : indispensable quand plusieurs bulletins
+        // (avec chacun leur propre échelle de compaction) sont regroupés dans
+        // un même document PDF — sinon des règles non préfixées (body,
+        // .border-td...) s'appliqueraient à tout le document et écraseraient
+        // la compaction des autres bulletins.
+        $root = $scope !== '' ? $scope : 'body';
+        $d    = $scope !== '' ? $scope . ' ' : '';
+
+        return "
+            {$root} { font-size: {$bodyFont}px !important; }
+            .full-table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+            .wrap{ word-wrap:break-word; overflow-wrap:break-word; }
+            .num{ text-align:center; white-space:nowrap; }
+            {$d}.border-td{ border:1px solid #000; padding:{$tdPad}em !important; font-size:{$tdFont}px !important; vertical-align:top; white-space:normal; }
+            {$d}header h1 { font-size: {$h1}px !important; }
+            {$d}header h2 { font-size: {$h2}px !important; }
+            {$d}header p { font-size: {$pFont}px !important; margin: 1px 0 !important; }
+            {$d}header { margin-bottom: 4px !important; }
+            {$d}.title-band { font-size: {$titleFont}px !important; padding: 3px 8px !important; margin: 3px 0 5px 0 !important; }
+            {$d}.p-small { margin-top: 2px !important; }
+            {$d}.bloc-mentions table { font-size: {$mentionsFont}px !important; margin-top: 2px !important; }
+            {$d}.obs-box { min-height: {$obsHeight}px !important; }
+        ";
+    }
+
+   
+    private function fitContentOnePage(string $templateBase, \Dompdf\Options $options, string $scope = ''): array
+    {
+        $scale = 1.0;
+        $html  = $templateBase;
+
+        for ($attempt = 0; $attempt < 4; $attempt++) {
+            $html = str_replace('</style>', $this->antiOverflowCssFor($scale, $scope) . '</style>', $templateBase);
+
+            if ($scope !== '') {
+                $scopeClass = ltrim($scope, '.');
+                $wrapped = '<div class="' . $scopeClass . '">' . $this->extractBodyContent($html) . '</div>';
+                $html = $this->injectBodyContent($html, $wrapped);
+            }
+
+            $dompdf = new Dompdf($options);
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+
+            $pages = $dompdf->getCanvas()->get_page_count();
+            if ($pages <= 1 || $scale <= 0.55) {
+                break;
+            }
+
+            $scale = max(0.55, $scale - 0.12 * $pages);
+        }
+
+        return [$html, $scale];
+    }
+
+    /**
+     * Extrait uniquement le contenu de <body>...</body> d'un document HTML
+     * complet. Utilisé pour regrouper plusieurs bulletins dans un seul
+     * document final au lieu de concaténer des <html>/<body> complets (que
+     * Dompdf aplatit en un seul <body>, faisant "fuir" les <style> de l'un
+     * sur les autres).
+     */
+    private function extractBodyContent(string $html): string
+    {
+        $bodyOpenPos = strpos($html, '<body');
+        if ($bodyOpenPos === false) {
+            return $html;
+        }
+        $bodyOpenEnd = strpos($html, '>', $bodyOpenPos) + 1;
+
+        $bodyClosePos = strpos($html, '</body>');
+        if ($bodyClosePos === false) {
+            return substr($html, $bodyOpenEnd);
+        }
+
+        return substr($html, $bodyOpenEnd, $bodyClosePos - $bodyOpenEnd);
+    }
+
+    /**
+     * Remplace le contenu de <body>...</body> de $template par $bodyContent.
+     */
+    private function injectBodyContent(string $template, string $bodyContent): string
+    {
+        $bodyOpenPos = strpos($template, '<body');
+        if ($bodyOpenPos === false) {
+            return $template . $bodyContent;
+        }
+        $bodyOpenEnd = strpos($template, '>', $bodyOpenPos) + 1;
+
+        $bodyClosePos = strpos($template, '</body>');
+        if ($bodyClosePos === false) {
+            return substr($template, 0, $bodyOpenEnd) . $bodyContent;
+        }
+
+        return substr($template, 0, $bodyOpenEnd) . $bodyContent . substr($template, $bodyClosePos);
+    }
+
+    /**
+     * Bloc mentions : la mention (Félicitations...) reste toujours en 1ère position.
+     * En 2e position : mentions de travail (Travail excellent...) au 1er semestre,
+     * décision du conseil (passage/redoublement/exclusion) au 2e semestre.
+     */
+    // ✅ Affiche un nombre d'heures sans décimales inutiles (2 au lieu de 2.00, 2.5 au lieu de 2.50)
+    private function formatHeures($valeur): string
+    {
+        return rtrim(rtrim(number_format((float) $valeur, 2, '.', ''), '0'), '.') ?: '0';
+    }
+
+    private function blocMentionsHtml(?int $semestre): string
+    {
+        $mention = '
+            <table class="full-table" cellspacing="0">
+                <tr><td class="border-td">Félicitations</td><td class="border-td" style="width:22px;"></td></tr>
+                <tr><td class="border-td">Encouragements</td><td class="border-td"></td></tr>
+                <tr><td class="border-td">Tableau d\'honneur</td><td class="border-td"></td></tr>
+                <tr><td class="border-td">Passable</td><td class="border-td"></td></tr>
+                <tr><td class="border-td">Doit redoubler d\'effort</td><td class="border-td"></td></tr>
+                <tr><td class="border-td">Avertissement</td><td class="border-td"></td></tr>
+                <tr><td class="border-td">Blâme</td><td class="border-td"></td></tr>
+            </table>
+        ';
+
+        if ($semestre === 2) {
+            $second = '
+                <table class="full-table" cellspacing="0">
+                    <tr><td class="border-td bg-grey bold-exo centered" colspan="2">Décision du Conseil</td></tr>
+                    <tr><td class="border-td">Admis(e) en classe supérieure</td><td class="border-td" style="width:22px;"></td></tr>
+                    <tr><td class="border-td">Autorisé(e) à redoubler</td><td class="border-td"></td></tr>
+                    <tr><td class="border-td">Exclusion</td><td class="border-td"></td></tr>
+                </table>
+            ';
+        } else {
+            $second = '
+                <table class="full-table" cellspacing="0">
+                    <tr><td class="border-td">Travail excellent</td><td class="border-td" style="width:22px;"></td></tr>
+                    <tr><td class="border-td">Satisfaisant doit continuer</td><td class="border-td"></td></tr>
+                    <tr><td class="border-td">Peut mieux faire</td><td class="border-td"></td></tr>
+                    <tr><td class="border-td">Insuffisant</td><td class="border-td"></td></tr>
+                    <tr><td class="border-td">Risque de redoubler</td><td class="border-td"></td></tr>
+                    <tr><td class="border-td">Risque l\'exclusion</td><td class="border-td"></td></tr>
+                </table>
+            ';
+        }
+
+        return '
+            <table class="full-table" cellspacing="0">
+                <tr>
+                    <td style="width:50%; vertical-align:top; padding:0 4px 0 0;">' . $mention . '</td>
+                    <td style="width:50%; vertical-align:top; padding:0 0 0 4px;">' . $second . '</td>
+                </tr>
+            </table>
+        ';
+    }
 
 }

@@ -336,7 +336,10 @@ $this->annee_academique_id = $this->anneeAcademique;
 
       $anneeId = (int) ($this->annee_academique_id ?: $this->anneeAcademique);
 
-      DB::transaction(function () use ($ids, $matiereId, $semestre, $anneeId) {
+      // Chaque note prend l'année de l'inscription de l'apprenant (à défaut, celle de la page).
+      $anneesInscriptions = \App\Services\AnneeDesNotes::desInscriptions($ids);
+
+      DB::transaction(function () use ($ids, $matiereId, $semestre, $anneeId, $anneesInscriptions) {
 
     $rows = [];
 
@@ -356,7 +359,7 @@ $this->annee_academique_id = $this->anneeAcademique;
             'semestre'         => $semestre,
             'note_cc'          => $this->compositionMcc[$inscriptionId],
             'note_composition' => (float) $noteComp,
-        ] + \App\Services\AnneeDesNotes::attributs('evaluations', $anneeId);
+        ] + \App\Services\AnneeDesNotes::attributs('evaluations', $anneesInscriptions[$inscriptionId] ?? $anneeId);
     }
 
     if (!$rows) {

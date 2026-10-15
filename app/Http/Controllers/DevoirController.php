@@ -32,6 +32,8 @@ class DevoirController extends Controller
         $anneeAcademiqueId = $request->input('annee_academique_id')
             ?? session('annee_academique_id')
             ?? \App\Services\AnneeDesNotes::anneeParDefaut();
+        // Chaque note prend l'année de l'inscription de l'apprenant (à défaut, celle de la page).
+        $anneesInscriptions = \App\Services\AnneeDesNotes::desInscriptions(array_keys($request->notes));
 
         $touched = [];
 
@@ -51,7 +53,7 @@ class DevoirController extends Controller
                 ],
                 [
                     'note'                => (float) $note,
-                    'annee_academique_id' => $anneeAcademiqueId,
+                    'annee_academique_id' => $anneesInscriptions[(int) $inscription_id] ?? $anneeAcademiqueId,
                 ]
             );
 
@@ -216,8 +218,8 @@ class DevoirController extends Controller
 
         // Garder Evaluation.note_cc synchronisé : c'est ce champ qui est lu
         // ailleurs (composition, moyenne générale en réinscription) sans recalcul.
-        // L'évaluation prend l'année académique des devoirs qui la fondent (à défaut, l'année courante).
-        $annee = Devoir::where('inscription_id', $inscription_id)
+        // L'évaluation prend l'année de l'inscription (à défaut, celle des devoirs qui la fondent, puis l'année courante).
+        $annee = \App\Services\AnneeDesNotes::desInscriptions([$inscription_id])[(int) $inscription_id] ?? Devoir::where('inscription_id', $inscription_id)
             ->where('classe_id', $classe_id)
             ->where('matiere_id', $matiere_id)
             ->where('semestre', $semestre)

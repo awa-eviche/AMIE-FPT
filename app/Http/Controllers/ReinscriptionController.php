@@ -70,7 +70,6 @@ class ReinscriptionController extends Controller
     
 
 
-
     public function getAdmis($classe_id)
     {
         $classe = Classe::with('niveau_etude', 'inscriptions.apprenant')->findOrFail($classe_id);

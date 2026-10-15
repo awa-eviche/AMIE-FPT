@@ -9,16 +9,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
-/**
- * Construit les indicateurs et graphiques du tableau de bord selon le profil
- * de l'utilisateur connecté.
- *
- * Chaque méthode retourne la même structure :
- *  - type, titre, sous_titre
- *  - annee_id, annees (sélecteur d'année académique, null si non pertinent)
- *  - kpis   : [label, valeur, icone, couleur, modal?]
- *  - charts : [id, titre, type (bar|hbar|doughnut), labels, datasets, span]
- */
+
 class DashboardStats
 {
     /** Rôles qui voient les chiffres de tout le pays (agrégats uniquement). */
@@ -42,6 +33,9 @@ class DashboardStats
     private ?array $etabIds = null;
 
     private ?int $anneeId = null;
+
+    /** Année académique ouverte (false = pas encore cherchée). */
+    private int|null|false $anneeOuverte = false;
 
     /** @var Collection|null Lignes à plat de l'année (voir lignes()). */
     private ?Collection $lignes = null;
@@ -228,7 +222,7 @@ class DashboardStats
         $nom = DB::table('etablissements')->where('id', $etablissementId)->value('nom');
 
         $apprenants = fn (string $c) => $this->kpi('Apprenants inscrits', $this->apprenantsCount(), 'academic-cap', $c, 'etablissements.get-all-apprenant', 'Apprenants');
-        $classes = fn (string $c) => $this->kpi('Classes', $this->classesCount(), 'collection', $c);
+        $classes = fn (string $c) => $this->kpi('Classes', $this->classesEtablissementCount($etablissementId), 'collection', $c);
         $filieres = fn (string $c) => $this->kpi('Filières', $this->filieresCount(), 'briefcase', $c, 'etablissements.getAllFilliere', 'Filières', true);
         $personnel = fn (string $c) => $this->kpi('Personnel', $this->personnelCount(), 'users', $c, 'etablissements.get-all-personnel', 'Personnels', true);
 
@@ -360,7 +354,7 @@ class DashboardStats
             'titre' => 'Mes enseignements',
             'sous_titre' => 'Classes, matières et compétences qui vous sont confiées',
             'annee_id' => $this->anneeId,
-            'annees' => $this->anneesList(array_keys($annees)),
+            'annees' => $this->anneesSelectables(array_keys($annees)),
             'kpis' => $kpis,
             'charts' => array_values(array_filter([
                 $this->donut('sexe', 'Répartition des apprenants par sexe', $this->sexeSeries($sexe)),
@@ -504,9 +498,10 @@ class DashboardStats
     }
 
     /**
-     * Établissements actifs ayant au moins un inscrit, toutes années confondues :
-     * le nombre ne dépend pas de l'année choisie et reprend les mêmes critères que
-     * la liste « Voir le détail » (Dfpt\Getalletablissement).
+     * Établissements actifs ayant au moins une classe (même sans inscrit, pour
+     * compter un établissement dès sa création) : le nombre ne dépend pas de l'année
+     * choisie et reprend les mêmes critères que les listes « Voir le détail »
+     * (Dfpt\Getalletablissement, Ia\GetAllEtablissement).
      */
     private function etablissementsCount(): int
     {
@@ -516,8 +511,6 @@ class DashboardStats
             ->join('niveau_etudes as n', 'n.id', '=', 'c.niveau_etude_id')
             ->join('metiers as m', 'm.id', '=', 'n.metier_id')
             ->join('filieres as f', 'f.id', '=', 'm.filiere_id')
-            ->join('inscriptions as i', 'i.classe_id', '=', 'c.id')
-            ->join('annee_academiques as an', 'an.id', '=', 'i.annee_academique_id')
             ->where('e.is_active', 1)
             ->when($this->etabIds !== null, fn ($q) => $q->whereIn('e.id', $this->etabIds ?: [0]))
             ->distinct()->count('e.id');
@@ -531,6 +524,20 @@ class DashboardStats
     private function classesCount(): int
     {
         return $this->lignes()->pluck('classe_id')->unique()->count();
+    }
+
+    /**
+     * Classes d'un établissement. Une classe n'est pas rattachée à une année : pour
+     * l'année ouverte on compte toutes celles de l'établissement (les inscriptions
+     * peuvent ne pas avoir commencé), pour une année passée celles qui ont eu des inscrits.
+     */
+    private function classesEtablissementCount(int $etablissementId): int
+    {
+        if ($this->anneeId !== $this->anneeOuverte()) {
+            return $this->classesCount();
+        }
+
+        return DB::table('classes')->where('etablissement_id', $etablissementId)->count();
     }
 
     /**
@@ -564,6 +571,15 @@ class DashboardStats
 
     private function filieresCount(): int
     {
+        // Année ouverte d'un établissement : filières de ses classes, même sans inscrits (voir classesEtablissementCount()).
+        if ($this->etabIds !== null && count($this->etabIds) === 1 && $this->anneeId === $this->anneeOuverte()) {
+            return DB::table('classes as c')
+                ->join('niveau_etudes as n', 'n.id', '=', 'c.niveau_etude_id')
+                ->join('metiers as m', 'm.id', '=', 'n.metier_id')
+                ->whereIn('c.etablissement_id', $this->etabIds)
+                ->distinct()->count('m.filiere_id');
+        }
+
         return $this->lignes()->pluck('filiere_id')->filter()->unique()->count();
     }
 
@@ -582,7 +598,6 @@ class DashboardStats
     private function personnelCount(): int
     {
         $fin = $this->finAnnee();
-
         return DB::table('personnel_etablissements as p')
             ->when($this->etabIds !== null, fn ($q) => $q->whereIn('p.etablissement_id', $this->etabIds ?: [0]))
             ->when($fin, fn ($q) => $q->whereDate('p.created_at', '<=', $fin))
@@ -593,16 +608,17 @@ class DashboardStats
      * Année demandée si valide, sinon la plus récente ayant une activité
      * significative (≥ 20 % du volume de la plus chargée) : une année tout
      * juste ouverte avec quelques inscriptions ne doit pas vider le tableau.
+     * Sans aucune activité (nouvel établissement) : l'année ouverte.
      */
     private function resolveAnnee(?int $demande, ?array $volumes = null): ?int
     {
         $volumes ??= $this->volumesParAnnee();
 
-        if ($demande && isset($volumes[$demande])) {
+        if ($demande && (isset($volumes[$demande]) || $demande === $this->anneeOuverte())) {
             return $demande;
         }
         if (!$volumes) {
-            return AnneeDesNotes::anneeParDefaut() ?? DB::table('annee_academiques')->where('is_open', 1)->orderByDesc('id')->value('id');
+            return $this->anneeOuverte() ?? AnneeDesNotes::anneeParDefaut();
         }
 
         krsort($volumes);
@@ -616,9 +632,28 @@ class DashboardStats
         return (int) array_key_first($volumes);
     }
 
+    private function anneeOuverte(): ?int
+    {
+        if ($this->anneeOuverte === false) {
+            $id = DB::table('annee_academiques')->where('is_open', 1)->orderByDesc('id')->value('id');
+            $this->anneeOuverte = $id ? (int) $id : null;
+        }
+
+        return $this->anneeOuverte;
+    }
+
     private function annees(): array
     {
-        return $this->anneesList(array_keys($this->volumesParAnnee()));
+        return $this->anneesSelectables(array_keys($this->volumesParAnnee()));
+    }
+
+    /**
+     * Années proposées dans le sélecteur : celles ayant une activité, plus l'année
+     * ouverte et l'année affichée (un établissement sans inscrits garde ainsi son sélecteur).
+     */
+    private function anneesSelectables(array $ids): array
+    {
+        return $this->anneesList(array_filter([...$ids, $this->anneeOuverte(), $this->anneeId]));
     }
 
     private function anneesList(array $ids): array

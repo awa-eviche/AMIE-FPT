@@ -198,7 +198,12 @@ public function saveSomativeClasse()
         }
     }
 
-    DB::transaction(function () use ($criteresById) {
+    // Chaque note prend l'année de l'inscription de l'apprenant (à défaut, celle de la page).
+    $anneesInscriptions = \App\Services\AnneeDesNotes::desInscriptions(
+        array_merge(array_keys($this->somativeNoteRessource ?? []), array_keys($this->somativeNoteCritere ?? []))
+    );
+
+    DB::transaction(function () use ($criteresById, $anneesInscriptions) {
 
         /* ==============================
            1️⃣ COMPÉTENCES GÉNÉRALES
@@ -222,7 +227,7 @@ public function saveSomativeClasse()
                             'note'      => (float) $note,
                             'acquis'    => null,
                             'nonacquis' => null,
-                        ] + \App\Services\AnneeDesNotes::attributs('sommations', (int) $this->annee_academique_id)
+                        ] + \App\Services\AnneeDesNotes::attributs('sommations', $anneesInscriptions[(int) $inscId] ?? (int) $this->annee_academique_id)
                     );
                 }
             }
@@ -258,7 +263,7 @@ public function saveSomativeClasse()
                             'note'      => $noteFloat,
                             'acquis'    => $acquis ? 1 : 0,
                             'nonacquis' => $acquis ? 0 : 1,
-                        ] + \App\Services\AnneeDesNotes::attributs('sommations', (int) $this->annee_academique_id)
+                        ] + \App\Services\AnneeDesNotes::attributs('sommations', $anneesInscriptions[(int) $inscId] ?? (int) $this->annee_academique_id)
                     );
                 }
             }

@@ -8,6 +8,7 @@ use App\Models\Matiere;
 use App\Models\Evaluation;
 use App\Models\Inscription;
 use App\Models\AnneeAcademique;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class ListeAdmis extends Component
@@ -153,15 +154,15 @@ class ListeAdmis extends Component
         if ($suite) {
             $nom = trim(data_get($entry, 'inscription.apprenant.prenom') . ' ' . data_get($entry, 'inscription.apprenant.nom'));
 
-            // Toutes les tables rattachées à une inscription (notes, devoirs, absences, droits, comptes).
+            // Toutes les tables rattachées à une inscription (notes, devoirs, absences, droits).
             $liees = [];
             foreach (DB::select("SELECT table_name AS t FROM information_schema.columns
-                    WHERE table_schema = DATABASE() AND column_name = 'inscription_id'") as $table) {
+                    WHERE table_schema = DATABASE() AND column_name = 'inscription_id' AND table_name <> 'users'") as $table) {
                 if (DB::table($table->t)->where('inscription_id', $suite->id)->exists()) {
                     $liees[] = [
                         'absences' => 'absences', 'devoirs' => 'devoirs', 'devoirapc' => 'devoirs',
                         'evaluations' => 'notes', 'evalutes' => 'notes', 'sommations' => 'notes',
-                        'droit_inscription' => "droits d'inscription", 'users' => 'compte utilisateur',
+                        'droit_inscription' => "droits d'inscription",
                     ][$table->t] ?? $table->t;
                 }
             }
@@ -172,6 +173,8 @@ class ListeAdmis extends Component
                 return;
             }
 
+            // Le compte utilisateur de l'apprenant revient sur son inscription d'origine.
+            User::where('inscription_id', $suite->id)->update(['inscription_id' => data_get($entry, 'inscription.id')]);
             $suite->delete();
             session()->flash('success', "Réinscription de $nom annulée : vous pouvez maintenant choisir « Passe » ou « Redouble ».");
         }
@@ -230,102 +233,46 @@ class ListeAdmis extends Component
             );
         }
 
+        // L'inscription de l'année d'origine est toujours conservée (l'apprenant reste visible dans sa
+        // classe pour cette année) : la réinscription crée une nouvelle inscription sur une année postérieure.
+        $origine = AnneeAcademique::find($this->annee_academique_id);
+        $cible = AnneeAcademique::find($this->annee_reinscription_id);
+
+        if (!$origine || $cible->code <= $origine->code) {
+            $this->addError('annee_reinscription_id', "L'année de réinscription doit être postérieure à l'année d'origine.");
+            return;
+        }
+
         $ignorés = [];
         $nonAdmis = [];
         $traités = 0;
         $nbRedoublants = 0;
 
-        // Redoublement : l'inscription de l'année d'origine est conservée et une nouvelle inscription,
-        // marquée redoublant, est créée dans la même classe pour l'année de réinscription.
-        if (count($redoublants)) {
-            $origine = AnneeAcademique::find($this->annee_academique_id);
-            $cible = AnneeAcademique::find($this->annee_reinscription_id);
-
-            if (!$origine || $cible->code <= $origine->code) {
-                $this->addError('annee_reinscription_id', "Pour un redoublement, l'année de réinscription doit être postérieure à l'année d'origine.");
-                return;
+        // Redoublement : nouvelle inscription, marquée redoublant, dans la même classe.
+        foreach ($redoublants as $apprenant_id) {
+            if (!$this->creerInscription($apprenant_id, $this->currentClasse->id, true)) {
+                $ignorés[] = $apprenant_id;
+                continue;
             }
-
-            foreach ($redoublants as $apprenant_id) {
-                $déjà_inscrit = Inscription::where('apprenant_id', $apprenant_id)
-                    ->where('annee_academique_id', $this->annee_reinscription_id)
-                    ->exists();
-
-                if ($déjà_inscrit) {
-                    $ignorés[] = $apprenant_id;
-                    continue;
-                }
-
-                Inscription::create([
-                    'apprenant_id' => $apprenant_id,
-                    'classe_id' => $this->currentClasse->id,
-                    'annee_academique_id' => $this->annee_reinscription_id,
-                    'redoublant' => true,
-                    'dateInscription' => now(),
-                ]);
-                $traités++;
-                $nbRedoublants++;
-            }
+            $traités++;
+            $nbRedoublants++;
         }
 
-        if (!count($autres)) {
-            // Rien à transférer vers une autre classe.
-        } elseif ($this->currentClasse && $this->currentClasse->modalite === 'APC') {
-            // Transfert APC : on déplace l'inscription existante vers la nouvelle classe
-            // (et la nouvelle année académique), sans créer de doublon.
-            foreach ($autres as $apprenant_id) {
-                $inscription = Inscription::where('apprenant_id', $apprenant_id)
-                    ->where('classe_id', $this->currentClasse->id)
-                    ->where('annee_academique_id', $this->annee_academique_id)
-                    ->first();
+        // Passage dans une autre classe : en PPO il est réservé aux admis, les autres ne peuvent que redoubler.
+        $isApc = $this->currentClasse && $this->currentClasse->modalite === 'APC';
+        $admis = collect($this->admis)->where('admis', true)->pluck('inscription.apprenant_id')->all();
 
-                if (!$inscription) {
-                    continue;
-                }
-
-                $dejaAilleurs = Inscription::where('apprenant_id', $apprenant_id)
-                    ->where('annee_academique_id', $this->annee_reinscription_id)
-                    ->where('id', '!=', $inscription->id)
-                    ->exists();
-
-                if ($dejaAilleurs) {
-                    $ignorés[] = $apprenant_id;
-                    continue;
-                }
-
-                $inscription->update([
-                    'classe_id' => $this->nouvelle_classe_id,
-                    'annee_academique_id' => $this->annee_reinscription_id,
-                ]);
-                $traités++;
+        foreach ($autres as $apprenant_id) {
+            if (!$isApc && !in_array($apprenant_id, $admis)) {
+                $nonAdmis[] = $apprenant_id;
+                continue;
             }
-        } else {
-            // Passage dans une autre classe : réservé aux admis, les autres ne peuvent que redoubler.
-            $admis = collect($this->admis)->where('admis', true)->pluck('inscription.apprenant_id')->all();
 
-            foreach ($autres as $apprenant_id) {
-                if (!in_array($apprenant_id, $admis)) {
-                    $nonAdmis[] = $apprenant_id;
-                    continue;
-                }
-
-                $déjà_inscrit = Inscription::where('apprenant_id', $apprenant_id)
-                    ->where('annee_academique_id', $this->annee_reinscription_id)
-                    ->exists();
-
-                if ($déjà_inscrit) {
-                    $ignorés[] = $apprenant_id;
-                    continue;
-                }
-
-                Inscription::create([
-                    'apprenant_id' => $apprenant_id,
-                    'classe_id' => $this->nouvelle_classe_id,
-                    'annee_academique_id' => $this->annee_reinscription_id,
-                    'dateInscription' => now(),
-                ]);
-                $traités++;
+            if (!$this->creerInscription($apprenant_id, $this->nouvelle_classe_id)) {
+                $ignorés[] = $apprenant_id;
+                continue;
             }
+            $traités++;
         }
 
         $noms = fn($ids) => \App\Models\Apprenant::whereIn('id', $ids)->get()
@@ -353,6 +300,36 @@ class ListeAdmis extends Component
         $this->reset(['classe', 'currentClasse', 'admis', 'decisions', 'nouvelle_classe_id', 'page']);
     }
 
+
+    /**
+     * Crée l'inscription de l'année de réinscription, sauf si l'apprenant en a déjà une sur cette année.
+     * Le compte utilisateur de l'apprenant suit sa nouvelle inscription.
+     */
+    private function creerInscription($apprenantId, $classeId, $redoublant = false): bool
+    {
+        $déjà_inscrit = Inscription::where('apprenant_id', $apprenantId)
+            ->where('annee_academique_id', $this->annee_reinscription_id)
+            ->exists();
+
+        if ($déjà_inscrit) {
+            return false;
+        }
+
+        $nouvelle = Inscription::create([
+            'apprenant_id' => $apprenantId,
+            'classe_id' => $classeId,
+            'annee_academique_id' => $this->annee_reinscription_id,
+            'redoublant' => $redoublant,
+            'dateInscription' => now(),
+        ]);
+
+        $origineId = collect($this->admis)->pluck('inscription.id', 'inscription.apprenant_id')->get($apprenantId);
+        if ($origineId) {
+            User::where('inscription_id', $origineId)->update(['inscription_id' => $nouvelle->id]);
+        }
+
+        return true;
+    }
 
     private function calculerMoyenneGenerale($inscription, $matieres)
     {

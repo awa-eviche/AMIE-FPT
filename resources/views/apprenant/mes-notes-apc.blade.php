@@ -32,6 +32,8 @@
             </div>
         </div>
 
+        @include('apprenant.partials.choix-annee')
+
         {{-- Filtre semestre --}}
         @php
             $semActif = request('semestre', '');

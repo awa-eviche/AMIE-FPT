@@ -162,7 +162,7 @@ class ApprenantController extends Controller
         $apprenant = Apprenant::findOrFail($id);
         $pays  = Pays::all();
         $annees = AnneeAcademique::all(); // ✅ Ajouté ici
-        $inscription = Inscription::where('apprenant_id', $apprenant->id)->first();
+        $inscription = $this->inscriptionCourante($apprenant->id);
     
         return view('apprenant.edit', compact('apprenant','communes', 'pays', 'annees', 'inscription'));
     }
@@ -183,6 +183,16 @@ class ApprenantController extends Controller
 
     $apprenant = Apprenant::findOrFail($id);
 
+    // Un apprenant réinscrit a une inscription par année : on modifie la plus récente, et jamais
+    // vers une année où il a déjà une autre inscription (il disparaîtrait de l'année d'origine).
+    $inscription = $this->inscriptionCourante($apprenant->id);
+    if ($inscription && Inscription::where('apprenant_id', $apprenant->id)
+            ->where('annee_academique_id', $request->annee_academique_id)
+            ->where('id', '!=', $inscription->id)->exists()) {
+        return redirect()->back()->withInput()
+            ->with('error', "L'apprenant a déjà une inscription pour cette année académique.");
+    }
+
     // Vérifie si le sexe a été modifié
     $ancienSexe = $apprenant->sexe;
     $nouveauSexe = $request->sexe;
@@ -202,8 +212,7 @@ class ApprenantController extends Controller
     // Mise à jour de l'apprenant
     $apprenant->update($data);
 
-    // Mise à jour de l'inscription liée à l'apprenant
-    $inscription = Inscription::where('apprenant_id', $apprenant->id)->first();
+    // Mise à jour de l'inscription liée à l'apprenant (la plus récente, voir plus haut)
 
     if ($inscription) {
         $inscription->annee_academique_id = $request->annee_academique_id;
@@ -220,28 +229,34 @@ class ApprenantController extends Controller
 public function destroy($id)
 {
     $apprenant = Apprenant::findOrFail($id);
-    $inscription = Inscription::where('apprenant_id', $apprenant->id)->first();
+    $inscription = $this->inscriptionCourante($apprenant->id);
     $classeId = $inscription ? $inscription->classe_id : session('currentClasse');
     $this->logUserRepository->store([
         'action' => UserAction::DeleteApprenant,
         'model' => Model::Apprenant,
         'old_object' => json_encode($apprenant)
     ]);
-    if ($inscription) {
-        $user = User::where('inscription_id', $inscription->id)->first();
-
-        if ($user) {
-            $user->delete(); 
-        }
-    }
-    if ($inscription) {
-        $inscription->delete();
-    }
+    // Un apprenant réinscrit a une inscription par année : on les supprime toutes, avec leurs comptes.
+    $inscriptionIds = Inscription::where('apprenant_id', $apprenant->id)->pluck('id');
+    User::whereIn('inscription_id', $inscriptionIds)->delete();
+    Inscription::whereIn('id', $inscriptionIds)->delete();
 
     $apprenant->delete();
 
     return redirect()->route('classe.show', $classeId)
                      ->withMessage('L\'apprenant et son compte ont été supprimés avec succès.');
+}
+
+/**
+ * Inscription la plus récente de l'apprenant (il en a une par année une fois réinscrit).
+ */
+private function inscriptionCourante($apprenantId): ?Inscription
+{
+    return Inscription::where('apprenant_id', $apprenantId)
+        ->leftJoin('annee_academiques as a', 'a.id', '=', 'inscriptions.annee_academique_id')
+        ->orderByDesc('a.code')->orderByDesc('inscriptions.id')
+        ->select('inscriptions.*')
+        ->first();
 }
 
 public function genererMatriculeAvantInsertion($request)
