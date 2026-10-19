@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Devoir;
-use App\Models\Evaluation;
+use App\Services\NoteCc;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -11,6 +11,14 @@ class DevoirController extends Controller
 {
     public function store(Request $request)
     {
+        $anneeAcademiqueId = $request->input('annee_academique_id')
+            ?? session('annee_academique_id')
+            ?? \App\Services\AnneeDesNotes::anneeParDefaut();
+        // Chaque note prend l'année de l'inscription de l'apprenant (à défaut, celle de la page).
+        $anneesInscriptions = \App\Services\AnneeDesNotes::desInscriptions(array_keys((array) $request->notes));
+        // Année du devoir : celle des inscriptions notées (une classe est réutilisée d'une année à l'autre).
+        $anneeDevoir = collect($anneesInscriptions)->countBy()->sortDesc()->keys()->first() ?? $anneeAcademiqueId;
+
         $request->validate([
             'classe_id'  => 'required|exists:classes,id',
             'matiere_id' => 'required|exists:matieres,id',
@@ -18,22 +26,21 @@ class DevoirController extends Controller
             'libelle'    => [
                 'required',
                 'string',
-                Rule::unique('devoirs', 'libelle')->where(function ($q) use ($request) {
+                Rule::unique('devoirs', 'libelle')->where(function ($q) use ($request, $anneeDevoir) {
                     return $q->where('classe_id', $request->classe_id)
                              ->where('matiere_id', $request->matiere_id)
-                             ->where('semestre', $request->semestre);
+                             ->where('semestre', $request->semestre)
+                             ->where('annee_academique_id', $anneeDevoir);
                 }),
             ],
             'notes'      => 'required|array',
+            'notes.*'    => 'nullable|numeric|min:0|max:20',
         ], [
-            'libelle.unique' => 'Ce libellé existe déjà pour cette classe, cette matière et ce semestre.',
+            'libelle.unique'  => 'Ce libellé existe déjà pour cette classe, cette matière et ce semestre.',
+            'notes.*.numeric' => 'Chaque note doit être un nombre.',
+            'notes.*.min'     => 'Chaque note doit être comprise entre 0 et 20.',
+            'notes.*.max'     => 'Chaque note doit être comprise entre 0 et 20.',
         ]);
-
-        $anneeAcademiqueId = $request->input('annee_academique_id')
-            ?? session('annee_academique_id')
-            ?? \App\Services\AnneeDesNotes::anneeParDefaut();
-        // Chaque note prend l'année de l'inscription de l'apprenant (à défaut, celle de la page).
-        $anneesInscriptions = \App\Services\AnneeDesNotes::desInscriptions(array_keys($request->notes));
 
         $touched = [];
 
@@ -45,15 +52,15 @@ class DevoirController extends Controller
 
             Devoir::updateOrCreate(
                 [
-                    'classe_id'      => (int) $request->classe_id,
-                    'matiere_id'     => (int) $request->matiere_id,
-                    'semestre'       => (int) $request->semestre,
-                    'libelle'        => (string) $request->libelle,
-                    'inscription_id' => (int) $inscription_id,
+                    'classe_id'           => (int) $request->classe_id,
+                    'matiere_id'          => (int) $request->matiere_id,
+                    'semestre'            => (int) $request->semestre,
+                    'libelle'             => (string) $request->libelle,
+                    'inscription_id'      => (int) $inscription_id,
+                    'annee_academique_id' => $anneesInscriptions[(int) $inscription_id] ?? $anneeDevoir,
                 ],
                 [
-                    'note'                => (float) $note,
-                    'annee_academique_id' => $anneesInscriptions[(int) $inscription_id] ?? $anneeAcademiqueId,
+                    'note' => (float) $note,
                 ]
             );
 
@@ -61,14 +68,9 @@ class DevoirController extends Controller
             $touched[(int)$inscription_id] = true;
         }
 
-        // ✅ Recalcul MCC et ENREGISTREMENT dans la colonne mcc
+        // ✅ Recalcul MCC (devoirs.mcc et evaluations.note_cc)
         foreach (array_keys($touched) as $inscriptionId) {
-            $this->recalculerMCC(
-                (int) $inscriptionId,
-                (int) $request->classe_id,
-                (int) $request->matiere_id,
-                (int) $request->semestre
-            );
+            NoteCc::ppo((int) $inscriptionId, (int) $request->matiere_id, (int) $request->semestre);
         }
 
         return back()->with('success', 'Devoir et notes enregistrés avec succès');
@@ -127,6 +129,7 @@ class DevoirController extends Controller
             ->where('libelle', $devoir->libelle)
             ->where('matiere_id', $devoir->matiere_id)
             ->where('semestre', $devoir->semestre)
+            ->where(fn($q) => $this->memeAnnee($q, $devoir))
             ->get();
 
         return view('devoirsPPO.edit', [
@@ -149,12 +152,7 @@ class DevoirController extends Controller
             $devoir->note = (float) $request->note;
             $devoir->save();
 
-            $this->recalculerMCC(
-                (int) $devoir->inscription_id,
-                (int) $devoir->classe_id,
-                (int) $devoir->matiere_id,
-                (int) $devoir->semestre
-            );
+            NoteCc::ppo((int) $devoir->inscription_id, (int) $devoir->matiere_id, (int) $devoir->semestre);
 
             return response()->json([
                 'success' => true,
@@ -169,75 +167,44 @@ class DevoirController extends Controller
         }
     }
 
- public function destroy($id, Request $request)
-{
-    $devoir = Devoir::findOrFail($id);
+    /**
+     * Supprime un devoir pour toute la classe (même libellé, matière, semestre et année),
+     * puis recalcule le CC de chaque apprenant qui l'avait.
+     */
+    public function destroy($id, Request $request)
+    {
+        $devoir = Devoir::findOrFail($id);
 
-    $inscription_id = (int) $devoir->inscription_id;
-    $classe_id      = (int) $devoir->classe_id;
-    $matiere_id     = (int) $devoir->matiere_id;
-    $semestre       = (int) $request->input('semestre', $devoir->semestre);
+        $groupe = Devoir::where('libelle', $devoir->libelle)
+            ->where('classe_id', $devoir->classe_id)
+            ->where('matiere_id', $devoir->matiere_id)
+            ->where('semestre', $devoir->semestre)
+            ->where(fn($q) => $this->memeAnnee($q, $devoir));
 
-    // Supprimer tous les devoirs du même libellé pour le semestre choisi
-    Devoir::where('libelle', $devoir->libelle)
-           ->where('classe_id', $classe_id)
-           ->where('matiere_id', $matiere_id)
-           ->where('semestre', $semestre)
-           ->delete();
+        $inscriptionIds = (clone $groupe)->distinct()->pluck('inscription_id');
 
-    $this->recalculerMCC($inscription_id, $classe_id, $matiere_id, $semestre);
+        $groupe->delete();
 
-    if ($request->ajax()) {
-        return response()->json([
-            'success' => true,
-            'message' => 'Devoir supprimé avec succès.'
-        ]);
+        foreach ($inscriptionIds as $inscriptionId) {
+            NoteCc::ppo((int) $inscriptionId, (int) $devoir->matiere_id, (int) $devoir->semestre);
+        }
+
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Devoir supprimé avec succès.'
+            ]);
+        }
+
+        return back()->with('success', 'Devoir supprimé.');
     }
 
-    return back()->with('success', 'Devoir supprimé.');
-}
-
-    private function recalculerMCC(int $inscription_id, int $classe_id, int $matiere_id, int $semestre): float
+    /** Restreint aux devoirs de la même année académique que $devoir. */
+    private function memeAnnee($query, Devoir $devoir)
     {
-        $base = Devoir::where('inscription_id', $inscription_id)
-            ->where('classe_id', $classe_id)
-            ->where('matiere_id', $matiere_id)
-            ->where('semestre', $semestre)
-            ->whereNotNull('note');
-
-        $sum   = (float) $base->sum('note');
-        $count = (int) $base->count();
-
-        $mcc = $count > 0 ? round($sum / $count, 2) : 0.00;
-
-        Devoir::where('inscription_id', $inscription_id)
-            ->where('classe_id', $classe_id)
-            ->where('matiere_id', $matiere_id)
-            ->where('semestre', $semestre)
-            ->update(['mcc' => $mcc]);
-
-        // Garder Evaluation.note_cc synchronisé : c'est ce champ qui est lu
-        // ailleurs (composition, moyenne générale en réinscription) sans recalcul.
-        // L'évaluation prend l'année de l'inscription (à défaut, celle des devoirs qui la fondent, puis l'année courante).
-        $annee = \App\Services\AnneeDesNotes::desInscriptions([$inscription_id])[(int) $inscription_id] ?? Devoir::where('inscription_id', $inscription_id)
-            ->where('classe_id', $classe_id)
-            ->where('matiere_id', $matiere_id)
-            ->where('semestre', $semestre)
-            ->whereNotNull('annee_academique_id')
-            ->value('annee_academique_id') ?? \App\Services\AnneeDesNotes::courante();
-
-        Evaluation::updateOrCreate(
-            [
-                'inscription_id' => $inscription_id,
-                'matiere_id'     => $matiere_id,
-                'semestre'       => $semestre,
-            ],
-            [
-                'note_cc' => $mcc,
-            ] + \App\Services\AnneeDesNotes::attributs('evaluations', $annee)
-        );
-
-        return $mcc;
+        return $devoir->annee_academique_id
+            ? $query->where('annee_academique_id', $devoir->annee_academique_id)
+            : $query->whereNull('annee_academique_id');
     }
 
 // DevoirController

@@ -81,12 +81,29 @@ class ListeAdmis extends Component
 
         // Classes APC : pas de notion de moyenne.
         $isApc = $this->currentClasse->modalite === 'APC';
+        // Mêmes matières que le bulletin : celles du niveau affectées à la classe pour l'année.
+        $classeId = (int) $this->currentClasse->id;
+        $anneeId = $this->annee_academique_id;
         $matieres = $isApc
             ? collect()
-            : Matiere::where('niveau_etude_id', $this->currentClasse->niveau_etude_id)->get();
+            : Matiere::where('niveau_etude_id', $this->currentClasse->niveau_etude_id)
+                ->whereIn('id', function ($query) use ($classeId, $anneeId) {
+                    $query->select('matiere_id')
+                        ->from('classe_formateur_matiere')
+                        ->where('classe_id', $classeId)
+                        ->where('annee_academique_id', $anneeId)
+                        ->whereNotNull('formateur_id');
+                })
+                ->get();
+
+        $evaluations = $isApc
+            ? collect()
+            : Evaluation::whereIn('inscription_id', $inscriptions->pluck('id'))
+                ->get()
+                ->groupBy(['inscription_id', 'semestre']);
 
         foreach ($inscriptions as $inscription) {
-            $moyenne = $isApc ? null : $this->calculerMoyenneGenerale($inscription, $matieres);
+            $moyenne = $isApc ? null : $this->calculerMoyenneAnnuelle($evaluations->get($inscription->id), $matieres);
             $suite = $suites->get($inscription->apprenant_id);
 
             $this->admis[] = [
@@ -331,24 +348,38 @@ class ListeAdmis extends Component
         return true;
     }
 
-    private function calculerMoyenneGenerale($inscription, $matieres)
+    /**
+     * Moyenne annuelle calculée comme sur le bulletin : moyenne pondérée de chaque semestre
+     * (une matière ne compte que si CC et composition sont notés), puis moyenne des semestres.
+     * Seuls les semestres évalués comptent ; null si aucun ne l'est.
+     */
+    private function calculerMoyenneAnnuelle($evaluationsParSemestre, $matieres)
     {
-        $somme = 0;
-        $coeffs = 0;
+        $moyennes = [];
 
-        foreach ($matieres as $matiere) {
-            $eval = Evaluation::where('inscription_id', $inscription->id)
-                ->where('matiere_id', $matiere->id)
-                ->first();
+        foreach ([1, 2] as $semestre) {
+            $evaluations = ($evaluationsParSemestre?->get($semestre) ?? collect())->keyBy('matiere_id');
+            $somme = 0;
+            $coeffs = 0;
 
-            if ($eval && $matiere->coef > 0) {
-                $moy = ($eval->note_cc + $eval->note_composition) / 2;
-                $somme += $moy * $matiere->coef;
-                $coeffs += $matiere->coef;
+            foreach ($matieres as $matiere) {
+                $coef = (float) ($matiere->coef ?? 0);
+                $eval = $evaluations->get($matiere->id);
+
+                if ($coef <= 0 || !$eval || $eval->note_cc === null || $eval->note_composition === null) {
+                    continue;
+                }
+
+                $somme += (((float) $eval->note_cc + (float) $eval->note_composition) / 2) * $coef;
+                $coeffs += $coef;
+            }
+
+            if ($coeffs > 0) {
+                $moyennes[] = round($somme / $coeffs, 2);
             }
         }
 
-        return $coeffs > 0 ? $somme / $coeffs : null;
+        return $moyennes ? array_sum($moyennes) / count($moyennes) : null;
     }
 
     public function render()

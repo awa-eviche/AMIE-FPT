@@ -604,12 +604,7 @@ class DashboardStats
             ->distinct()->count('p.user_id');
     }
 
-    /**
-     * Année demandée si valide, sinon la plus récente ayant une activité
-     * significative (≥ 20 % du volume de la plus chargée) : une année tout
-     * juste ouverte avec quelques inscriptions ne doit pas vider le tableau.
-     * Sans aucune activité (nouvel établissement) : l'année ouverte.
-     */
+
     private function resolveAnnee(?int $demande, ?array $volumes = null): ?int
     {
         $volumes ??= $this->volumesParAnnee();
