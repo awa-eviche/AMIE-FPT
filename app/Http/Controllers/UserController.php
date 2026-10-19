@@ -27,6 +27,7 @@ use App\Models\Inspecteur;
 use App\Models\Role;
 use Illuminate\Support\Str;
 use App\Mail\UserResetPassword;
+
 class UserController extends Controller
 {
     protected $userRepository;
@@ -52,15 +53,11 @@ class UserController extends Controller
         $this->notificationService = $notificationService;
         $this->forumService = $forumService;
         $this->middleware('auth');
-        // $this->middleware('permission:gerer_administration');
         $this->middleware(['role:superadmin|admin'])->only(['destroy']);
     }
 
     /**
      * Display a listing of the resource.
-     *
-     * @param Request $request
-     * @return Response
      */
     public function index(Request $request)
     {
@@ -71,26 +68,27 @@ class UserController extends Controller
         $users = [];
         $roleStats = [];
         $allowedRoles = [];
-if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissement')) {
-        return $this->redirectAgentToHisView($request);
-    }      
+
+        if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissement')) {
+            return $this->redirectAgentToHisView($request);
+        }
+
         if (
             $loggedUser->hasRole('chef_etablissement') ||
             $loggedUser->hasRole('assistante')
-        )
-         {
+        ) {
             if ($loggedUser->personnel && $loggedUser->personnel->etablissement_id) {
                 $idEtablissement = $loggedUser->personnel->etablissement_id;
                 $allowedRoles = [
                     'formateur', 'intendant', 'surveillant',
                     'directeur_etude', 'comptable_matiere',
-                    'chef_de_travaux', 'assistante','gestionnaire','censeur'
+                    'chef_de_travaux', 'assistante', 'gestionnaire', 'censeur',
                 ];
             }
         }
-    
+
         $selectedRole = $request->input('role');
-    
+
         if (!empty($selectedRole)) {
             $users = $this->userRepository->getDataPaginateByRole($selectedRole, self::NB_ITEM, $idEtablissement);
         } elseif ($request->has('query')) {
@@ -98,41 +96,40 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
         } else {
             $users = $this->userRepository->getPaginate(self::NB_ITEM, $idEtablissement, $allowedRoles);
         }
-    
+
         $roleStats = $this->userRepository->getStats($idEtablissement, $except, $allowedRoles);
-    
+
         return view('admin.users.index', compact('users', 'roleStats', 'isDeletable', 'selectedRole'));
     }
 
-
     /**
      * Show the form for creating a new resource.
-     *
-     * @return Response
      */
     public function create()
-{
-    // Récupérer l'utilisateur connecté
-    $roles = $this->roleRepository->getList(Auth::user()); 
-    $ias = Ia::all();
-    $iefs = Ief::all();
-    $iaRoleIds = $this->getIaRoleIds();
-    $iefRoleIds = $this->getIefRoleIds();
-    return view('admin.users.create', compact('roles', 'ias', 'iefs', 'iaRoleIds', 'iefRoleIds'));
-}
+    {
+        $roles = $this->roleRepository->getList(Auth::user());
+        $ias = Ia::all();
+        $iefs = Ief::all();
 
+        $iaRoleIds = $this->getIaRoleIds();
+        $iefRoleIds = $this->getIefRoleIds();
+        $isRoleIds = $this->getIsRoleIds();
+
+        return view('admin.users.create', compact(
+            'roles', 'ias', 'iefs',
+            'iaRoleIds', 'iefRoleIds', 'isRoleIds'
+        ));
+    }
 
     /**
      * Store a newly created resource in storage.
-     *
-     * @param UserRequest $request
-     * @return Response
      */
     public function store(UserRequest $request)
     {
         DB::beginTransaction();
         $inputs = $request->all();
-        //Avatar
+
+        // Avatar
         if ($request->hasFile('profile_photo_path')) {
             $inputs['profile_photo_path'] = $this->uploadUtil->traiterFile($request->file('profile_photo_path'));
         }
@@ -140,56 +137,53 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
         $inputs['role_id'] = $inputs['roles'][0];
         $user = $this->userRepository->store($inputs);
         $role = $this->roleRepository->getById($inputs['roles'][0]);
-        $users['user_id'] = $user->id;
-
 
         if (optional(auth()->user()->personnel)->etablissement_id != null) {
-            $personnelEtablissement = PersonnelEtablissement::create(array(
+            PersonnelEtablissement::create([
                 'fonction' => $inputs['fonction'] ?? null,
                 'specialite' => $inputs['specialite'] ?? null,
                 'user_id' => $user->id,
                 'interne' => $inputs['interne'] ?? null,
                 'dernierDiplomeAcademique' => $inputs['dernierDiplomeAcademique'] ?? null,
                 'dernierDiplomeProfessionnel' => $inputs['dernierDiplomeProfessionnel'] ?? null,
-                'etablissement_id' => auth()->user()->personnel->etablissement_id
-            ));
-          
+                'etablissement_id' => auth()->user()->personnel->etablissement_id,
+            ]);
         }
 
-        ($inputs['ia'] ?? null) != null || ($inputs['ief'] ?? null) != null ? Inspecteur::create(['ia_id' => $inputs['ia'] ?? null, 'ief_id' => $inputs['ief'] ?? null, 'user_id' => $user->id]) : null;
+        // Rattachement IA / IEF
+        if (
+            ($inputs['ia'] ?? null) != null ||
+            ($inputs['ief'] ?? null) != null
+        ) {
+            Inspecteur::create([
+                'ia_id' => $inputs['ia'] ?? null,
+                'ief_id' => $inputs['ief'] ?? null,
+                'user_id' => $user->id,
+            ]);
+        }
 
-           //Email notification
-        if (!$user)
-        {
+        if (!$user) {
             DB::rollback();
-            return \redirect()->back()->withErrors("Erreur lors de la création...");
+            return redirect()->back()->withErrors("Erreur lors de la création...");
         }
-           
-        //Logs
-        // $this->logUserRepository->store(['action' => UserAction::AddUser, 'model' => Model::User, 'new_object' => json_encode($user)]);
-        // Mail::to($user->email)->send(new UserCreated($user));
 
-        // $user->markEmailAsVerified();
         DB::commit();
-        return \redirect()->route('users.index')->withMessage("L'utilisateur " . $user->identite . " a été créé.");
+        return redirect()->route('users.index')
+            ->withMessage("L'utilisateur " . $user->identite . " a été créé.");
     }
-
-
 
     public function accessForum($id)
     {
         $user = $this->userRepository->getById($id);
-        $username = $user->nom . '_'. $user->prenom . '_' .$user->telephone; 
+        $username = $user->nom . '_' . $user->prenom . '_' . $user->telephone;
         $data = ['email' => $user->email, 'password' => $user->password, 'username' => $username];
         $this->forumService->createForumAccount($data);
-        return \redirect()->route('users.index')->withMessage("L'accès au forum de " . $user->identite . " a été créé.");
+        return redirect()->route('users.index')
+            ->withMessage("L'accès au forum de " . $user->identite . " a été créé.");
     }
 
     /**
      * Display the specified resource.
-     *
-     * @param  int $id
-     * @return Response
      */
     public function show($id)
     {
@@ -199,55 +193,59 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
 
     /**
      * Show the form for editing the specified resource.
-     *
-     * @param  int $id
-     * @return Response
      */
     public function edit($id)
     {
         $user = $this->userRepository->getById($id);
         $roles = $this->roleRepository->getList(Auth::user());
+
         $personnelEtablissement = PersonnelEtablissement::where('user_id', $user->id)->first();
         if ($personnelEtablissement !== null) {
-            // Assigner les diplômes à l'utilisateur
             $user->dernierDiplomeAcademique = $personnelEtablissement->dernierDiplomeAcademique;
             $user->dernierDiplomeProfessionnel = $personnelEtablissement->dernierDiplomeProfessionnel;
             $user->fonction = $personnelEtablissement->fonction;
             $user->specialite = $personnelEtablissement->specialite;
             $user->interne = $personnelEtablissement->interne;
         }
+
         if ($user->inspecteur) {
             $user->ia = $user->inspecteur->ia_id;
             $user->ief = $user->inspecteur->ief_id;
         }
+
         $ias = Ia::all();
-		$iefs = Ief::all();
+        $iefs = Ief::all();
+
         $iaRoleIds = $this->getIaRoleIds();
         $iefRoleIds = $this->getIefRoleIds();
-        return view('admin.users.edit', compact('user', 'roles', 'ias', 'iefs', 'iaRoleIds', 'iefRoleIds'));
+        $isRoleIds = $this->getIsRoleIds();
+
+        return view('admin.users.edit', compact(
+            'user', 'roles', 'ias', 'iefs',
+            'iaRoleIds', 'iefRoleIds', 'isRoleIds'
+        ));
     }
 
     /**
      * Update the specified resource in storage.
-     *
-     * @param UserRequest $request
-     * @param  int $id
-     * @return Response
      */
     public function update(UserRequest $request, $id)
     {
         $user = $this->userRepository->getById($id);
         $oldUser = clone $user;
         $inputs = $request->all();
-        //Avatar
+
+        // Avatar
         if ($request->hasFile('profile_photo_path')) {
             $inputs['profile_photo_path'] = $this->uploadUtil->traiterFile($request->file('profile_photo_path'));
             $oldFilename = $user->avatar;
         }
+
         $userUpdated = $this->userRepository->update($id, $inputs);
 
-        if (!$userUpdated)
-            return \redirect()->back()->withErrors("Erreur lors de la modification...");
+        if (!$userUpdated) {
+            return redirect()->back()->withErrors("Erreur lors de la modification...");
+        }
 
         if (optional(auth()->user()->personnel)->etablissement_id != null) {
             PersonnelEtablissement::updateOrCreate(
@@ -258,12 +256,16 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
                     'interne' => $inputs['interne'] ?? null,
                     'dernierDiplomeAcademique' => $inputs['dernierDiplomeAcademique'] ?? null,
                     'dernierDiplomeProfessionnel' => $inputs['dernierDiplomeProfessionnel'] ?? null,
-                    'etablissement_id' => auth()->user()->personnel->etablissement_id
+                    'etablissement_id' => auth()->user()->personnel->etablissement_id,
                 ]
             );
         }
 
-        if (($inputs['ia'] ?? null) != null || ($inputs['ief'] ?? null) != null || $user->inspecteur) {
+        if (
+            ($inputs['ia'] ?? null) != null ||
+            ($inputs['ief'] ?? null) != null ||
+            $user->inspecteur
+        ) {
             Inspecteur::updateOrCreate(
                 ['user_id' => $user->id],
                 [
@@ -273,35 +275,38 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
             );
         }
 
-        //Logs
         $this->logUserRepository->store([
-            'action' => UserAction::UpdateUser, 'model' => Model::User,
-            'old_object' => json_encode($oldUser), 'new_object' => json_encode($this->userRepository->getById($id))
+            'action' => UserAction::UpdateUser,
+            'model' => Model::User,
+            'old_object' => json_encode($oldUser),
+            'new_object' => json_encode($this->userRepository->getById($id)),
         ]);
-        //Suppression ancien avatar
-        if (!empty($oldFilename))
+
+        if (!empty($oldFilename)) {
             $this->uploadUtil->deleteFile($oldFilename);
-        return \redirect()->route('users.index')->withMessage("L'utilisateur " . $request->input('prenom') . " " . $request->input('nom') . " a été modifié.");
+        }
+
+        return redirect()->route('users.index')
+            ->withMessage("L'utilisateur " . $request->input('prenom') . " " . $request->input('nom') . " a été modifié.");
     }
 
     /**
      * Remove the specified resource from storage.
-     *
-     * @param  int $id
-     * @return Response
      */
     public function destroy($id)
     {
         $user = $this->userRepository->getById($id);
+
         if ($this->userRepository->forceDestroy($user)) {
-            //Logs
             $this->logUserRepository->store([
-                'action' => UserAction::DeleteUser, 'model' => Model::User,
-                'old_object' => json_encode($user)
+                'action' => UserAction::DeleteUser,
+                'model' => Model::User,
+                'old_object' => json_encode($user),
             ]);
             return redirect()->back()->withMessage("La suppression est effective");
-        } else
-            return redirect()->back()->withErrors("Cet utilisateur ne peut être supprimé...");
+        }
+
+        return redirect()->back()->withErrors("Cet utilisateur ne peut être supprimé...");
     }
 
     public function searchByRole($role)
@@ -309,12 +314,10 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
         $loggedUser = Auth::user();
         $except = [];
         $isDeletable = true;
-        /* if (!$loggedUser->isAdmin()) {
-            $except[] = config('constants.roles.admin');
-            $isDeletable = false;
-        }*/
+
         $users = $this->userRepository->getDataPaginateByRole($role, self::NB_ITEM);
         $roleStats = $this->userRepository->getStats($except);
+
         return view('admin.users.index', compact('users', 'roleStats', 'role', 'isDeletable'));
     }
 
@@ -323,13 +326,9 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
         $logs = [];
         $title = "Historique des actions des utilisateurs";
         $fromUser = false;
-    
-        // Récupérer l'email de l'utilisateur connecté
         $userEmail = auth()->user()->email;
-    
-        // Vérifier si l'utilisateur est un superadmin
+
         if (auth()->user()->profil && auth()->user()->profil->name === 'superadmin') {
-            // Le superadmin peut voir tous les logs
             if ($userid == null) {
                 $logs = $this->logUserRepository->getPaginate(self::NB_ITEM);
             } else {
@@ -338,35 +337,25 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
                 $fromUser = true;
             }
         } else {
-            // Vérifier si l'utilisateur est un chef d'établissement
             $isChefEtablissement = auth()->user()->personnel && auth()->user()->personnel->fonction === 'Chef Etablissement';
-    
+
             if ($isChefEtablissement) {
-                // Si l'utilisateur est un chef d'établissement, il voit ses propres logs et ceux de son personnel
-                // Récupérer tous les utilisateurs associés à l'établissement du chef d'établissement
                 $etablissementId = auth()->user()->personnel->etablissement_id;
-    
-                // Récupérer les emails de tous les utilisateurs dans l'établissement
-                $userEmails = \App\Models\User::whereHas('personnel', function($query) use ($etablissementId) {
+                $userEmails = \App\Models\User::whereHas('personnel', function ($query) use ($etablissementId) {
                     $query->where('etablissement_id', $etablissementId);
                 })->pluck('email')->toArray();
-    
-                // Ajouter l'email du chef d'établissement dans la liste
                 $userEmails[] = $userEmail;
-    
-                // Récupérer tous les logs associés à ces utilisateurs
+
                 $logs = $this->logUserRepository->getPaginateByUserEmails(self::NB_ITEM, $userEmails);
                 $title = "Historique des actions de votre établissement";
                 $fromUser = true;
             } else {
-                // Pour les autres utilisateurs, récupérer uniquement leurs propres logs
                 $logs = $this->logUserRepository->getPaginateByUser(self::NB_ITEM, $userEmail);
                 $title = "Historique de vos actions";
                 $fromUser = true;
             }
         }
-    
-        // Retourner la vue avec les logs
+
         return view('admin.users.index_logs', compact('logs', 'title', 'fromUser'));
     }
 
@@ -376,172 +365,156 @@ if ($loggedUser->hasRole(['agent', 'superadmin']) && $request->has('etablissemen
         return view('admin.users.show_logs', compact('log'));
     }
 
-    // public function resetPasswordAncien($id)
-    // {
-    //     $user = $this->userRepository->getById($id);
-    
-    //     // Générer un nouveau mot de passe aléatoire
-    //     $newPassword = Str::random(10);
-    //     $user->password = bcrypt($newPassword);
-    //     $user->save();
-    
-    //     // Envoyer l'email avec le nouveau mot de passe
-    //     Mail::to($user->email)->send(new UserResetPassword($user, $newPassword));
-    
-    //     return redirect()->back()->withMessage(
-    //         "Le mot de passe de " . $user->identite . " a été réinitialisé et envoyé par email."
-    //     );
-    // }
-     public function resetPassword($id)
-{
-    $user = $this->userRepository->getById($id);
-    $loggedUser = Auth::user();
+    public function resetPassword($id)
+    {
+        $user = $this->userRepository->getById($id);
+        $loggedUser = Auth::user();
 
-    if (
-        $loggedUser->hasRole('chef_etablissement') &&
-        !$loggedUser->hasRole(['superadmin', 'admin'])
-    ) {
-        $chefEtablissementId = $loggedUser->personnel?->etablissement_id;
-        $targetEtablissementId = $user->personnel?->etablissement_id;
+        if (
+            $loggedUser->hasRole('chef_etablissement') &&
+            !$loggedUser->hasRole(['superadmin', 'admin'])
+        ) {
+            $chefEtablissementId = $loggedUser->personnel?->etablissement_id;
+            $targetEtablissementId = $user->personnel?->etablissement_id;
 
-        if (!$chefEtablissementId || $chefEtablissementId !== $targetEtablissementId) {
-            abort(403, "Vous ne pouvez réinitialiser que le mot de passe du personnel de votre établissement.");
+            if (!$chefEtablissementId || $chefEtablissementId !== $targetEtablissementId) {
+                abort(403, "Vous ne pouvez réinitialiser que le mot de passe du personnel de votre établissement.");
+            }
+        } elseif (!$loggedUser->hasRole(['superadmin', 'admin', 'chef_etablissement'])) {
+            abort(403, "Action non autorisée.");
         }
-    } elseif (!$loggedUser->hasRole(['superadmin', 'admin', 'chef_etablissement'])) {
-        abort(403, "Action non autorisée.");
+
+        $newPassword = 'password';
+        $user->password = Hash::make($newPassword);
+        $user->save();
+
+        $this->logUserRepository->store([
+            'action' => UserAction::UpdateUser,
+            'model' => Model::User,
+            'old_object' => null,
+            'new_object' => json_encode(['reset_password_for' => $user->id]),
+        ]);
+
+        return redirect()->back()
+            ->withMessage("Mot de passe de " . $user->identite . " réinitialisé avec succès.")
+            ->with('new_password', $newPassword);
     }
-
-    // GÃ©nÃ©rer un nouveau mot de passe alÃ©atoire
-    //$newPassword = Str::random(10);
-    $newPassword = 'password';
-
-    // Mettre Ã  jour le mot de passe en base (sÃ©curisÃ©)
-    $user->password = Hash::make($newPassword);
-    $user->save();
-
-    // Log de l'action
-    $this->logUserRepository->store([
-        'action' => UserAction::UpdateUser,
-        'model' => Model::User,
-        'old_object' => null,
-        'new_object' => json_encode(['reset_password_for' => $user->id])
-    ]);
-
-    return redirect()->back()->withMessage(
-        "Mot de passe de " . $user->identite . " rÃ©initialisÃ© avec succÃ¨s."
-    )->with('new_password', $newPassword);
-}
-
 
     public function activation($id)
     {
         $user = $this->userRepository->getById($id);
         $oldUser = clone $user;
         $newUser = $this->userRepository->changeStatus($user);
-        //Logs
+
         $this->logUserRepository->store([
-            'action' => UserAction::ChangeStatusUser, 'model' => Model::User,
-            'old_object' => json_encode($oldUser), 'new_object' => json_encode($newUser)
+            'action' => UserAction::ChangeStatusUser,
+            'model' => Model::User,
+            'old_object' => json_encode($oldUser),
+            'new_object' => json_encode($newUser),
         ]);
+
         return redirect()->back()->withMessage("Le changement est effectif");
     }
 
     public function activationEtablissement($id, $action)
     {
-      $users = $this->userRepository->getEtablissementInfoFromUser($id);
-      Etablissement::find($id)->update(['is_active' => !$action]);
-      foreach ($users as $user) {
-        $this->userRepository->restrictAccess($user, $action);
-        if($user->hasRole(config('constants.roles.chef_etablissement')))
-        {
-            Mail::to($user->personnel->etablissement->email)->send(new AccesCompteEtablissement(['nom' => $user->personnel->etablissement->sigle .' '. $user->personnel->etablissement->nom, 'action' => $action]));
+        $users = $this->userRepository->getEtablissementInfoFromUser($id);
+        Etablissement::find($id)->update(['is_active' => !$action]);
+
+        foreach ($users as $user) {
+            $this->userRepository->restrictAccess($user, $action);
+            if ($user->hasRole(config('constants.roles.chef_etablissement'))) {
+                Mail::to($user->personnel->etablissement->email)->send(
+                    new AccesCompteEtablissement([
+                        'nom' => $user->personnel->etablissement->sigle . ' ' . $user->personnel->etablissement->nom,
+                        'action' => $action,
+                    ])
+                );
+            }
         }
-      }
 
-     
-      if($action == true)
-      {
-        return redirect()->back()->withMessage("L'établissement a été désactivé avec succès");
-      }
+        if ($action == true) {
+            return redirect()->back()->withMessage("L'établissement a été désactivé avec succès");
+        }
 
-      return redirect()->back()->withMessage("L'établissement a été activé avec succès");
-
+        return redirect()->back()->withMessage("L'établissement a été activé avec succès");
     }
 
-private function redirectAgentToHisView($request)
-{
-    // Récupérer l'établissement demandé via l'URL
-    $idEtablissement = $request->get('etablissement');
+    private function redirectAgentToHisView($request)
+    {
+        $idEtablissement = $request->get('etablissement');
 
-    // Si aucun établissement demandé, fallback = celui de l'agent
-    if (!$idEtablissement) {
-        $idEtablissement = Auth::user()->personnel->etablissement_id;
+        if (!$idEtablissement) {
+            $idEtablissement = Auth::user()->personnel->etablissement_id;
+        }
+
+        $allowedRoles = [
+            'formateur', 'intendant', 'surveillant',
+            'directeur_etude', 'comptable_matiere',
+            'chef_de_travaux', 'assistante', 'gestionnaire', 'censeur', 'chef_etablissement',
+        ];
+
+        $selectedRole = $request->input('role');
+
+        if ($selectedRole) {
+            $users = $this->userRepository->getDataPaginateByRole($selectedRole, self::NB_ITEM, $idEtablissement);
+        } elseif ($request->has('query')) {
+            $users = $this->userRepository->getSearchPaginate($request->get('query'), self::NB_ITEM, $idEtablissement, $allowedRoles);
+        } else {
+            $users = $this->userRepository->getPaginate(self::NB_ITEM, $idEtablissement, $allowedRoles);
+        }
+
+        $roleStats = $this->userRepository->getStats($idEtablissement, [], $allowedRoles);
+
+        return view('admin.users.index', compact('users', 'roleStats'))
+            ->with('isDeletable', false)
+            ->with('selectedRole', $selectedRole);
     }
 
-    // Rôles visibles
-    $allowedRoles = [
-        'formateur', 'intendant', 'surveillant',
-        'directeur_etude', 'comptable_matiere',
-        'chef_de_travaux', 'assistante', 'gestionnaire', 'censeur', 'chef_etablissement',
-    ];
-
-    // Filtres existants
-    $selectedRole = $request->input('role');
-
-    if ($selectedRole) {
-        $users = $this->userRepository->getDataPaginateByRole($selectedRole, self::NB_ITEM, $idEtablissement);
-    } elseif ($request->has('query')) {
-        $users = $this->userRepository->getSearchPaginate($request->get('query'), self::NB_ITEM, $idEtablissement, $allowedRoles);
-    } else {
-        $users = $this->userRepository->getPaginate(self::NB_ITEM, $idEtablissement, $allowedRoles);
+    /**
+     * Rôles correspondant au profil IA (Inspecteur Académique).
+     */
+    private function getIaRoleIds(): array
+    {
+        return Role::query()
+            ->where(function ($query) {
+                $query->where('name', config('constants.roles.ia'))
+                      ->orWhere('code', config('constants.roles.ia'))
+                      ->orWhere('name', 'like', '%inspecteur académique%')
+                      ->orWhere('description', 'like', '%inspecteur académique%');
+            })
+            ->pluck('id')
+            ->map(fn ($id) => (string) $id)
+            ->toArray();
     }
 
-    $roleStats = $this->userRepository->getStats($idEtablissement, [], $allowedRoles);
+    /**
+     * Rôles correspondant au profil IS (Inspecteur de Spécialité).
+     */
+    private function getIsRoleIds(): array
+    {
+        return Role::query()
+            ->where(function ($query) {
+                $query->where('name', 'is')
+                      ->orWhere('code', 'is')
+                      ->orWhere('name', 'like', '%inspecteur de spécialit%')
+                      ->orWhere('description', 'like', '%inspecteur de spécialit%');
+            })
+            ->pluck('id')
+            ->map(fn ($id) => (string) $id)
+            ->toArray();
+    }
 
-    return view('admin.users.index', compact('users', 'roleStats'))
-        ->with('isDeletable', false)
-        ->with('selectedRole', $selectedRole);
+    /**
+     * Rôles correspondant au profil IEF.
+     */
+    private function getIefRoleIds(): array
+    {
+        return Role::query()
+            ->where('name', config('constants.roles.ief'))
+            ->orWhere('code', config('constants.roles.ief'))
+            ->pluck('id')
+            ->map(fn ($id) => (string) $id)
+            ->toArray();
+    }
 }
-
-private function getIaRoleIds(): array
-{
-    return Role::query()
-        ->where(function ($query) {
-            $query->where('name', config('constants.roles.ia'))
-                ->orWhere('code', config('constants.roles.ia'))
-                ->orWhere(function ($query) {
-                    $query->where(function ($query) {
-                        $query->where('name', 'like', '%inspect%')
-                            ->orWhere('code', 'like', '%inspect%')
-                            ->orWhere('description', 'like', '%Inspect%');
-                    })->where(function ($query) {
-                        $query->where('name', 'like', '%special%')
-                            ->orWhere('code', 'like', '%special%')
-                            ->orWhere('description', 'like', '%special%')
-                            ->orWhere('description', 'like', '%spécial%');
-                    });
-                });
-        })
-        ->pluck('id')
-        ->map(fn ($id) => (string) $id)
-        ->toArray();
-}
-
-private function getIefRoleIds(): array
-{
-    return Role::query()
-        ->where('name', config('constants.roles.ief'))
-        ->orWhere('code', config('constants.roles.ief'))
-        ->pluck('id')
-        ->map(fn ($id) => (string) $id)
-        ->toArray();
-}
-
-
-
-
-    
-}
-
-
-

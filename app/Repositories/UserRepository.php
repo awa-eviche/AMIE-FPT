@@ -21,22 +21,22 @@ class UserRepository extends ResourceRepository
     }
 
     public function getPaginate($nb, $idEtablissement = null, $allowedRoles = [])
-{
-    $query = $this->model->newQuery();
-
-    if ($idEtablissement) {
-        $query->byEtablissement($idEtablissement); // Filtrer par établissement
+    {
+        $query = $this->model->newQuery()
+            ->with(['roles', 'personnel.etablissement']);  // ⬅️ AJOUT
+    
+        if ($idEtablissement) {
+            $query->byEtablissement($idEtablissement);
+        }
+    
+        if (!empty($allowedRoles)) {
+            $query->whereHas('roles', function ($q) use ($allowedRoles) {
+                $q->whereIn('name', $allowedRoles);
+            });
+        }
+    
+        return $query->paginate($nb);
     }
-
-    if (!empty($allowedRoles)) {
-        // Filtrer par rôles autorisés
-        $query->whereHas('roles', function ($q) use ($allowedRoles) {
-            $q->whereIn('name', $allowedRoles);
-        });
-    }
-
-    return $query->paginate($nb);
-}
 
 
 
@@ -75,21 +75,21 @@ class UserRepository extends ResourceRepository
     public function getSearchPaginate($querySearch, $nb, $idEtablissement = null, $allowedRoles = [])
     {
         $query = $this->model->newQuery()
-        ->where(function ($q) use ($querySearch) {
-            $q->where('nom', 'like', '%' . $querySearch . '%')
-              ->orWhere('prenom', 'like', '%' . $querySearch . '%')
-              ->orWhere('email', 'like', '%' . $querySearch . '%')
-              ->orWhereHas('personnel', function ($personnelQuery) use ($querySearch) {
-                  $personnelQuery->where('specialite', 'like', '%' . $querySearch . '%');
-              });
-        });
+            ->with(['roles', 'personnel.etablissement'])   // ⬅️ AJOUT
+            ->where(function ($q) use ($querySearch) {
+                $q->where('nom', 'like', '%' . $querySearch . '%')
+                  ->orWhere('prenom', 'like', '%' . $querySearch . '%')
+                  ->orWhere('email', 'like', '%' . $querySearch . '%')
+                  ->orWhereHas('personnel', function ($personnelQuery) use ($querySearch) {
+                      $personnelQuery->where('specialite', 'like', '%' . $querySearch . '%');
+                  });
+            });
     
         if ($idEtablissement) {
-            $query->byEtablissement($idEtablissement); // Filtrer par établissement
+            $query->byEtablissement($idEtablissement);
         }
     
         if (!empty($allowedRoles)) {
-            // Filtrer par rôles autorisés
             $query->whereHas('roles', function ($q) use ($allowedRoles) {
                 $q->whereIn('name', $allowedRoles);
             });
@@ -97,7 +97,6 @@ class UserRepository extends ResourceRepository
     
         return $query->paginate($nb);
     }
-    
 
     public function getDataPaginateByRole($role, $n, $idEtablissement = null)
     {
@@ -241,30 +240,47 @@ class UserRepository extends ResourceRepository
 
     public function getStats($idEtablissement = null, $except = [], $allowedRoles = [])
     {
+        // 1. Récupérer tous les rôles en une fois
         $roles = $this->roleRepository->getData();
-        $data = [
-            'total' => 0,
-            'items' => []
-        ];
     
-        foreach ($roles as $role) {
-            if (
-                $role->name !== config('constants.roles.superadmin') &&
-                !in_array($role->name, $except) &&
-                (empty($allowedRoles) || in_array($role->name, $allowedRoles))
-            ) {
-                $nb = $this->model->role([$role->name])->byEtablissement($idEtablissement)->count();
-                $data['items'][$role->name] = [
-                    'nom' => $role->description,
-                    'nb' => $nb
-                ];
-                $data['total'] += $nb;
-            }
+        // 2. Filtrer les rôles à compter
+        $rolesToCount = $roles->filter(function ($role) use ($except, $allowedRoles) {
+            return $role->name !== config('constants.roles.superadmin')
+                && !in_array($role->name, $except)
+                && (empty($allowedRoles) || in_array($role->name, $allowedRoles));
+        });
+    
+        $roleNames = $rolesToCount->pluck('name')->toArray();
+    
+        // 3. Une seule requête pour compter tous les rôles
+        $counts = DB::table('users')
+            ->join('model_has_roles', 'model_has_roles.model_id', '=', 'users.id')
+            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+            ->where('model_has_roles.model_type', 'App\\Models\\User')
+            ->whereIn('roles.name', $roleNames)
+            ->when($idEtablissement, function ($q) use ($idEtablissement) {
+                $q->join('personnel_etablissements', 'personnel_etablissements.user_id', '=', 'users.id')
+                  ->where('personnel_etablissements.etablissement_id', $idEtablissement);
+            })
+            ->select('roles.name', DB::raw('COUNT(DISTINCT users.id) as nb'))
+            ->groupBy('roles.name')
+            ->pluck('nb', 'roles.name')
+            ->toArray();
+    
+        // 4. Construire le tableau de retour
+        $data = ['total' => 0, 'items' => []];
+    
+        foreach ($rolesToCount as $role) {
+            $nb = $counts[$role->name] ?? 0;
+            $data['items'][$role->name] = [
+                'nom' => $role->description,
+                'nb'  => $nb,
+            ];
+            $data['total'] += $nb;
         }
     
         return $data;
     }
-
     public function getUsersByRoles($roleIds)
     {
         return User::whereHas('roles', function ($query) use ($roleIds) {
