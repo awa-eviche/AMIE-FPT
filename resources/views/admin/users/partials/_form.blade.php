@@ -139,48 +139,36 @@
 
 @push('myJS')
 <script>
-    const iaRoleIds = @json($iaRoleIds ?? []);
+    const iaRoleIds  = @json($iaRoleIds ?? []);
     const iefRoleIds = @json($iefRoleIds ?? []);
+    const isRoleIds  = @json($isRoleIds ?? []);
 
     function refreshInspectionFields() {
         var selectedRole = String($('#roles').val() || '');
 
+        // Masquer tous les groupes par défaut
+        $('#iasGroup').hide();
+        $('#iefsGroup').hide();
+
         if (iefRoleIds.includes(selectedRole)) {
+            // IEF → IA + IEF
             $('#iasGroup').show();
             $('#iefsGroup').show();
-        } else if (iaRoleIds.includes(selectedRole)) {
+        } else if (iaRoleIds.includes(selectedRole) || isRoleIds.includes(selectedRole)) {
+            // IA ou IS → IA uniquement
             $('#iasGroup').show();
-            $('#iefsGroup').hide();
-        } else {
-            $('#iasGroup').hide();
-            $('#iefsGroup').hide();
         }
     }
 
     $(document).ready(function() {
-
         $('#roles').change(function() {
             refreshInspectionFields();
         });
 
-        function executeOnPageLoad() {
-            console.log("Executed Page Load");
-            refreshInspectionFields();
-            // Ajoutez ici d'autres actions à exécuter au chargement de la page si nécessaire
-        },
+        refreshInspectionFields();
 
-        // Appel de la fonction au chargement de la page
-        executeOnPageLoad(),
-        
-
-
-
-
-        function() {
-            'use strict';
-            $('.select2').select2();
-            $(".apix-form").parsley()
-        }
-    );
+        $('.select2').select2();
+        $(".apix-form").parsley();
+    });
 </script>
 @endpush

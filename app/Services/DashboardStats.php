@@ -62,7 +62,7 @@ class DashboardStats
             return Cache::remember("dashboard:national:$annee", $ttl, fn () => $stats->national($anneeId));
         }
         // Les inspecteurs de spécialité rattachés à une IA voient le périmètre de cette IA.
-        if ($user->hasRole('ia') || ($user->hasRole('Inspecteur de spécialité') && $user->inspecteur?->ia_id)) {
+        if ($user->hasRole('ia') || ($user->hasRole('is') && $user->inspecteur?->ia_id)) {
             $iaId = $user->inspecteur?->ia_id;
 
             return Cache::remember("dashboard:ia:$iaId:$annee", $ttl, fn () => $stats->ia($user, $anneeId));
@@ -170,7 +170,7 @@ class DashboardStats
                 return $stats->saisieNotes();
             });
         }
-        if ($user->hasRole('ia') || ($user->hasRole('Inspecteur de spécialité') && $user->inspecteur?->ia_id)) {
+        if ($user->hasRole('ia') || ($user->hasRole('is') && $user->inspecteur?->ia_id)) {
             return Cache::remember("dashboard:saisie:ia:{$user->inspecteur?->ia_id}:$annee", $ttl, function () use ($stats, $user, $anneeId) {
                 $stats->perimetreIa($user);
                 $stats->anneeId = $stats->resolveAnnee($anneeId);
