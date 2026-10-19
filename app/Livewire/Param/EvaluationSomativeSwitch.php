@@ -187,13 +187,15 @@ public function saveSomativeClasse()
         return;
     }
 
-    // ✅ Les notes sont saisies sur 20, comme celles des disciplines.
-    foreach ($this->somativeNoteCritere as $criteres) {
-        foreach ($criteres as $note) {
-            if ($note === "" || $note === null) continue;
-            if (!is_numeric($note) || (float) $note < 0 || (float) $note > 20) {
-                session()->flash('error', "La note doit être comprise entre 0 et 20.");
-                return;
+    // ✅ Les notes sont saisies sur 20 : critères (compétences particulières) et disciplines (compétences générales).
+    foreach ([$this->somativeNoteCritere, $this->somativeNoteRessource] as $notesParApprenant) {
+        foreach ($notesParApprenant as $notes) {
+            foreach ((array) $notes as $note) {
+                if ($note === "" || $note === null) continue;
+                if (!is_numeric($note) || (float) $note < 0 || (float) $note > 20) {
+                    session()->flash('error', "La note doit être comprise entre 0 et 20.");
+                    return;
+                }
             }
         }
     }

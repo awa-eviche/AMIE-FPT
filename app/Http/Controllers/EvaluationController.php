@@ -257,16 +257,17 @@ class EvaluationController extends Controller
     
     public function store(Request $request)
     {
-        $semestre = Session::get('selectedsemestre', $request->semestre);
-
         $request->validate([
             'inscription_id' => 'required|string|exists:inscriptions,id',
             'matiere_id'     => 'required|string|exists:matieres,id',
             'semestre'       => 'required|in:1,2',
            // 'note_cc'        => 'required|numeric|max:20',
-            'note_composition' => 'required|numeric|max:20',
+            'note_composition' => 'required|numeric|min:0|max:20',
             // On ne valide pas "appreciation", car elle sera générée automatiquement
         ]);
+
+        // Un seul semestre pour le contrôle des doublons, le CC et l'enregistrement : celui du formulaire.
+        $semestre = (int) $request->semestre;
 
 // ✅ Vérification d’accès AVANT tout enregistrement
     $inscription = Inscription::findOrFail($request->inscription_id);
@@ -286,9 +287,9 @@ class EvaluationController extends Controller
        
         $existingEvaluation = Evaluation::where('inscription_id', $request->inscription_id)
             ->where('matiere_id', $request->matiere_id)
-            ->where('semestre', $request->semestre)
+            ->where('semestre', $semestre)
             ->exists();
-    
+
         if ($existingEvaluation) {
             return redirect()->route('evaluation.index')
                 ->withMessage('Vous avez déjà évalué cet apprenant pour ce semestre et cette matière.');
@@ -300,23 +301,23 @@ class EvaluationController extends Controller
             $moyenneCC = Devoir::where([
                 'inscription_id' => $request->inscription_id,
                 'matiere_id'     => $request->matiere_id,
-                'semestre'       => $request->semestre,
-            ])->avg('note');
-        
-            $moyenneCC = round($moyenneCC ?? 0, 2);
-        
+                'semestre'       => $semestre,
+            ])->whereNotNull('note')->avg('note');
+
+            // Sans devoir noté, pas de CC (la matière ne compte pas pour 0 dans la moyenne).
+            $moyenneCC = $moyenneCC !== null ? round((float) $moyenneCC, 2) : null;
+
             // ✅ 2. Calcul de la moyenne finale
             $moyenne = $this->calculerMoyenne($moyenneCC, $request->note_composition);
-        
+
             // ✅ 3. Appréciation automatique
-            $appreciation = $this->noteAppreciation($moyenne);
+            $appreciation = $moyenne !== null ? $this->noteAppreciation($moyenne) : null;
         
             // ✅ 4. Enregistrement de l’évaluation
             $evaluation = Evaluation::create([
                 'inscription_id'   => $request->inscription_id,
                 'matiere_id'       => $request->matiere_id,
-               // 'semestre'         => Session::get('selectedsemestre', $request->semestre),
-               'semestre'         => $semestre,
+                'semestre'         => $semestre,
                 'note_cc'          => $moyenneCC, // 🔥 AUTO
                 'note_composition' => $request->note_composition,
                 'appreciation'     => $appreciation,
@@ -342,12 +343,6 @@ class EvaluationController extends Controller
             return redirect()->back()
                 ->withErrors('Une erreur s\'est produite lors de l\'enregistrement.');
         }
-        dd(
-            $semestre,
-            Devoir::where('semestre', $semestre)->count(),
-            Devoir::where('inscription_id', $request->inscription_id)->count()
-        );
-        
     }
     
 
@@ -407,15 +402,16 @@ class EvaluationController extends Controller
             'inscription_id' => $evaluation->inscription_id,
             'matiere_id'     => $evaluation->matiere_id,
             'semestre'       => $evaluation->semestre,
-        ])->avg('note');
-    
-        $moyenneCC = round($moyenneCC ?? 0, 2);
-    
+        ])->whereNotNull('note')->avg('note');
+
+        // Sans devoir noté, pas de CC (la matière ne compte pas pour 0 dans la moyenne).
+        $moyenneCC = $moyenneCC !== null ? round((float) $moyenneCC, 2) : null;
+
         // ✅ Moyenne finale
         $moyenne = $this->calculerMoyenne($moyenneCC, $request->note_composition);
-    
+
         // ✅ Appréciation
-        $appreciation = $this->noteAppreciation($moyenne);
+        $appreciation = $moyenne !== null ? $this->noteAppreciation($moyenne) : null;
     
         // ✅ Historique (trace propre)
         HistoryNote::create([

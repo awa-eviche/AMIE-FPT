@@ -31,10 +31,16 @@ class Evalute extends Model
         return $this->belongsTo(DevoirAPC::class, 'devoirapc_id');
     }
 
-    /* 🔵 MCC direct */
+    /* 🔵 MCC : moyenne des devoirs de l'apprenant pour la ressource et le semestre */
     public function getMccAttribute()
     {
-        return $this->devoir?->mcc ?? 0;
+        $moyenne = DevoirAPC::where('inscription_id', $this->inscription_id)
+            ->where('ressource_id', $this->ressource_id)
+            ->where('semestre', $this->semestre)
+            ->whereNotNull('note')
+            ->avg('note');
+
+        return $moyenne !== null ? round((float) $moyenne, 2) : 0;
     }
 
     /* 🔵 Moyenne calculée */
