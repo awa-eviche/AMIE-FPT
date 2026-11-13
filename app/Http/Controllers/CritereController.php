@@ -41,7 +41,7 @@ class CritereController extends Controller
         'libelle' => 'required|string|max:191',
         'element' => 'required|array',
         'element.*' => 'exists:element_competences,id',
-        'competence_id' => 'required|exists:element_competences,id',
+        'competence_id' => 'required|exists:competences,id',
         'niveau_etude_id' => 'required|exists:niveau_etudes,id',
     ]);
 

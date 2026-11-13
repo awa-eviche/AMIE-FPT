@@ -381,6 +381,18 @@ if ($classe->modalite === 'PPO') {
 
     public function destroy(Classe $classe)
     {
+        // Seul le super admin peut supprimer une classe
+        if (!auth()->user()->hasRole(config('constants.roles.superadmin'))) {
+            return redirect()->route('classe.show', $classe->id)
+                ->withErrors('Vous n\'êtes pas autorisé à supprimer une classe.');
+        }
+
+        // Une classe contenant des apprenants inscrits ne peut pas être supprimée
+        if ($classe->inscriptions()->exists()) {
+            return redirect()->route('classe.show', $classe->id)
+                ->withErrors('Impossible de supprimer cette classe : elle contient des apprenants inscrits.');
+        }
+
         $this->logUserRepository->store([
             'action' => UserAction::DeleteClasse, 'model' => Model::Classe,
             'old_object' => json_encode($classe)

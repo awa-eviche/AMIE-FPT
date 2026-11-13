@@ -76,9 +76,40 @@
                             class="bg-green-700 text-white text-sm px-4 py-2 rounded hover:bg-green-800 cursor-pointer">
                             Modifier
                         </button>
+                    @endif
+                    @if($user->hasRole('superadmin'))
+                        @php $donneesClasse = $classe->donneesLiees(); @endphp
                         <form action="{{ route('classe.destroy', $classe->id) }}" method="POST"
-                            onsubmit="return confirm('Supprimer cette classe ?')">
+                            onsubmit="return confirmerSuppressionClasse(this)">
                             @csrf @method('DELETE')
+                            <input type="hidden" name="confirmation_libelle">
+                            <script>
+                                function confirmerSuppressionClasse(form) {
+                                    const libelle = @json($classe->libelle);
+                                    const apprenants = {{ $donneesClasse['apprenants'] }};
+                                    const notes = {{ $donneesClasse['notes'] }};
+
+                                    if (apprenants === 0 && notes === 0) {
+                                        return confirm('Supprimer cette classe ?');
+                                    }
+
+                                    const saisie = prompt(
+                                        'ATTENTION : la classe « ' + libelle + ' » contient ' + apprenants
+                                        + ' apprenant(s) et ' + notes + ' note(s).\n'
+                                        + 'Ils ne seront plus visibles dans l\'application.\n\n'
+                                        + 'Pour confirmer la suppression, saisissez exactement le nom de la classe :'
+                                    );
+                                    if (saisie === null) {
+                                        return false;
+                                    }
+                                    if (saisie.trim() !== libelle.trim()) {
+                                        alert('Le nom saisi ne correspond pas. Suppression annulée.');
+                                        return false;
+                                    }
+                                    form.confirmation_libelle.value = saisie;
+                                    return true;
+                                }
+                            </script>
                             <button type="submit"
                                 class="bg-red-600 text-white text-sm px-4 py-2 rounded hover:bg-red-700">
                                 Supprimer

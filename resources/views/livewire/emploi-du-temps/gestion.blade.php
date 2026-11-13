@@ -162,15 +162,17 @@
                         $heures    = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
                         $joursKeys = ['lundi','mardi','mercredi','jeudi','vendredi','samedi'];
                         $parJour   = $emploiCourant->creneaux->groupBy('jour');
+                        $grille    = \App\Models\CreneauEmploiDuTemps::grille($parJour, $heures, $joursKeys);
                     @endphp
-                    @foreach($heures as $h)
+                    @foreach($heures as $i => $h)
                         <tr class="border-b border-gray-200 hover:bg-gray-50">
                             <td class="px-2 py-2 border border-gray-300 bg-gray-50 text-xs font-semibold text-gray-500 text-center align-top">{{ $h }}</td>
                             @foreach($joursKeys as $jour)
-                                <td class="p-1 border border-gray-300 align-top">
-                                    @foreach($parJour->get($jour, collect()) as $cr)
-                                        @if(substr($cr->heure_debut,0,2) === substr($h,0,2))
-                                            <div class="rounded p-2 mb-1 text-xs {{ $cr->matiere_id ? 'bg-blue-50 border-l-4 border-blue-600' : 'bg-green-50 border-l-4 border-green-600' }}">
+                                @php $cellule = $grille[$i][$jour] ?? null; @endphp
+                                @continue($cellule === false)
+                                <td class="p-1 border border-gray-300 align-top" @if($cellule) rowspan="{{ $cellule['rowspan'] }}" style="height:1px" @endif>
+                                    @foreach($cellule['creneaux'] ?? [] as $cr)
+                                            <div class="rounded p-2 mb-1 text-xs {{ $cellule['creneaux']->count() === 1 ? 'h-full' : '' }} {{ $cr->matiere_id ? 'bg-blue-50 border-l-4 border-blue-600' : 'bg-green-50 border-l-4 border-green-600' }}">
                                                 <div class="font-bold {{ $cr->matiere_id ? 'text-blue-800' : 'text-green-800' }}">
                                                     {{ $cr->contenu ?: '—' }}
                                                 </div>
@@ -197,7 +199,6 @@
                                                     </div>
                                                 @endif
                                             </div>
-                                        @endif
                                     @endforeach
                                 </td>
                             @endforeach
@@ -286,12 +287,19 @@
                         <select class="w-full border rounded-md shadow-sm text-sm px-3 py-2 focus:border-green-500 focus:ring-green-500 {{ $errors->has('formateurId') ? 'border-red-500' : 'border-gray-300' }}"
                                 wire:model.live="formateurId">
                             <option value="">-- Sélectionner --</option>
+                            @php $occupes = $this->formateursOccupes; @endphp
                             @foreach($formateurs as $f)
-                                <option value="{{ $f->id }}">
+                                <option value="{{ $f->id }}" @if(isset($occupes[$f->id]) && $f->id != $formateurId) disabled @endif>
                                     {{ optional($f->user)->prenom }} {{ optional($f->user)->nom }}
+                                    @if(isset($occupes[$f->id])) (déjà pris) @endif
                                 </option>
                             @endforeach
                         </select>
+                        @if($formateurId && isset($occupes[$formateurId]) && !$errors->has('formateurId'))
+                            <p class="text-red-600 text-xs mt-1">
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i>{{ $occupes[$formateurId] }}
+                            </p>
+                        @endif
                         @if($formateurs->isEmpty())
                             <p class="text-yellow-600 text-xs mt-1">
                                 <i class="fa-solid fa-triangle-exclamation me-1"></i>
