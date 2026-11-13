@@ -162,15 +162,17 @@
                                 $heures    = ['07:00','08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
                                 $joursKeys = ['lundi','mardi','mercredi','jeudi','vendredi','samedi'];
                                 $parJour   = $data['parJour'];
+                                $grille    = \App\Models\CreneauEmploiDuTemps::grille($parJour, $heures, $joursKeys);
                             @endphp
-                            @foreach($heures as $h)
+                            @foreach($heures as $i => $h)
                                 <tr class="border-b border-gray-200 hover:bg-gray-50">
                                     <td class="px-2 py-2 border border-gray-300 bg-gray-50 text-xs font-semibold text-gray-500 text-center align-top">{{ $h }}</td>
                                     @foreach($joursKeys as $jour)
-                                        <td class="p-1 border border-gray-300 align-top">
-                                            @foreach($parJour->get($jour, collect()) as $cr)
-                                                @if(substr($cr->heure_debut,0,2) === substr($h,0,2))
-                                                    <div class="rounded p-2 mb-1 text-xs {{ $cr->matiere_id ? 'bg-blue-50 border-l-4 border-blue-600' : 'bg-green-50 border-l-4 border-green-600' }}">
+                                        @php $cellule = $grille[$i][$jour] ?? null; @endphp
+                                        @continue($cellule === false)
+                                        <td class="p-1 border border-gray-300 align-top" @if($cellule) rowspan="{{ $cellule['rowspan'] }}" style="height:1px" @endif>
+                                            @foreach($cellule['creneaux'] ?? [] as $cr)
+                                                    <div class="rounded p-2 mb-1 text-xs {{ $cellule['creneaux']->count() === 1 ? 'h-full' : '' }} {{ $cr->matiere_id ? 'bg-blue-50 border-l-4 border-blue-600' : 'bg-green-50 border-l-4 border-green-600' }}">
                                                         <div class="font-bold {{ $cr->matiere_id ? 'text-blue-800' : 'text-green-800' }}">
                                                             {{ $cr->contenu ?: '—' }}
                                                         </div>
@@ -181,7 +183,6 @@
                                                             @endif
                                                         </div>
                                                     </div>
-                                                @endif
                                             @endforeach
                                         </td>
                                     @endforeach

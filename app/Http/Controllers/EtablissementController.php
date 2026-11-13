@@ -116,16 +116,29 @@ class EtablissementController extends Controller
             $user->assignRole(config('constants.roles.chef_etablissement'));
             $user->markEmailAsVerified();
 
-            Mail::to($user->email)->send(new CodeAccesEtablissementGenerated($tmp));
             $this->logUserRepository->store(['action' => UserAction::AddEtablissement, 'model' => Model::Etablissement, 'new_object' => json_encode($etablissement)]);
 
             DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollback();
+            Log::error("Erreur lors de la création de l'établissement : " . $e->getMessage(), ['exception' => $e]);
+
+            return redirect()->back()->withInput()
+                ->withErrors('Une erreur est survenue lors de l\'enregistrement de l\'établissement : ' . $e->getMessage());
+        }
+
+        // L'échec de l'envoi du mail ne doit pas annuler la création de l'établissement
+        try {
+            Mail::to($user->email)->send(new CodeAccesEtablissementGenerated($tmp));
+        } catch (\Throwable $e) {
+            Log::error("Erreur lors de l'envoi du mail d'accès établissement : " . $e->getMessage());
 
             return redirect()->route('etablissement.index')
-                ->withMessage('L\'établissement a été créé avec succès.');
-        } catch (\Exception $e) {
-            DB::rollback();
+                ->withMessage('L\'établissement a été créé avec succès, mais l\'email d\'accès n\'a pas pu être envoyé.');
         }
+
+        return redirect()->route('etablissement.index')
+            ->withMessage('L\'établissement a été créé avec succès.');
     }
 
 public function sendAccountAcces($id)

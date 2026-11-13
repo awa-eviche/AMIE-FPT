@@ -67,6 +67,24 @@ class Classe extends Model
         return $this->hasMany(Inscription::class, 'classe_id');
     }
 
+    /**
+     * Nombre d'apprenants inscrits et de notes (devoirs PPO, devoirs APC, évaluations)
+     * rattachés à la classe, toutes années confondues.
+     */
+    public function donneesLiees(): array
+    {
+        $inscriptionIds = $this->inscriptions()->pluck('id');
+
+        $notes = \App\Models\Devoir::where('classe_id', $this->id)->count()
+            + \App\Models\DevoirAPC::whereHas('ressource', fn ($q) => $q->where('classe_id', $this->id))->count()
+            + \App\Models\Evaluation::whereIn('inscription_id', $inscriptionIds)->count();
+
+        return [
+            'apprenants' => $inscriptionIds->count(),
+            'notes' => $notes,
+        ];
+    }
+
 
   // Tous les formateurs (historique complet)
 public function formateurs()

@@ -49,6 +49,9 @@
     .c-ppo .c-titre { color:#1d4ed8; }
     .c-apc .c-titre { color:#15803d; }
     .c-time { font-size:6.5px; color:#6b7280; }
+    /* Cellule fusionnée (créneau sur plusieurs heures) : la couleur remplit toute la hauteur */
+    .grille td.cell-ppo, .grille tr:nth-child(even) td.cell-ppo { background:#dbeafe; border-left:3px solid #2563eb; }
+    .grille td.cell-apc, .grille tr:nth-child(even) td.cell-apc { background:#dcfce7; border-left:3px solid #16a34a; }
 
     /* Footer */
     .footer { display:table; width:100%; margin-top:12px; border-top:1.5px solid #e2e8f0; padding-top:6px; font-size:7.5px; color:#9ca3af; }
@@ -137,6 +140,7 @@
             </span>
         </div>
 
+        @php $grille = \App\Models\CreneauEmploiDuTemps::grille($data['parJour'], $heures, $jours); @endphp
         <table class="grille">
             <thead>
                 <tr>
@@ -147,13 +151,14 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($heures as $h)
+                @foreach($heures as $i => $h)
                     <tr>
                         <td class="heure-col">{{ $h }}</td>
                         @foreach($jours as $j)
-                            <td>
-                                @foreach($data['parJour']->get($j, collect()) as $cr)
-                                    @if(substr($cr->heure_debut,0,2) === substr($h,0,2))
+                            @php $cellule = $grille[$i][$j] ?? null; @endphp
+                            @continue($cellule === false)
+                            <td @if($cellule) rowspan="{{ $cellule['rowspan'] }}" class="{{ $cellule['creneaux']->count() === 1 ? ($cellule['creneaux']->first()->matiere_id ? 'cell-ppo' : 'cell-apc') : '' }}" @endif>
+                                @foreach($cellule['creneaux'] ?? [] as $cr)
                                         <div class="creneau {{ $cr->matiere_id ? 'c-ppo' : 'c-apc' }}">
                                             <div class="c-titre">{{ $cr->contenu ?: '—' }}</div>
                                             <div class="c-time">
@@ -161,7 +166,6 @@
                                                 @if($cr->salle) | {{ $cr->salle }} @endif
                                             </div>
                                         </div>
-                                    @endif
                                 @endforeach
                             </td>
                         @endforeach

@@ -121,12 +121,13 @@ class GestionEmploiDuTemps extends Component
         }
 
         if ($this->classeCourante->modalite === 'APC') {
-            $competenceIds = DB::table('classe_formateur_competence')
+              $competenceIds = DB::table('classe_formateur_competence')
                 ->where('classe_id', $this->classeCourante->id)
                 ->where('formateur_id', $userId)
                 ->where('annee_academique_id', $this->anneeAcademiqueId)
                 ->pluck('competence_id')
                 ->unique();
+
 
             $competences = Competence::whereIn('id', $competenceIds)->get()->keyBy('id');
 
@@ -167,6 +168,45 @@ class GestionEmploiDuTemps extends Component
                 'creneaux.competence',
                 'creneaux.elementCompetence',
             ])->first();
+    }
+
+    /**
+     * Formateurs déjà pris sur le jour/horaire saisi (toutes classes, toutes matières) pour la même période.
+     * Retourne [personnel_etablissement_id => message].
+     */
+    public function getFormateursOccupesProperty(): array
+    {
+        $debut = substr((string) $this->heureDebut, 0, 5);
+        $fin   = substr((string) $this->heureFin, 0, 5);
+        $edt   = $this->emploiDuTempsId ? EmploiDuTemps::find($this->emploiDuTempsId) : $this->requeteEdtCourant()->first();
+
+        if (!$edt || !$this->jour || strlen($debut) < 5 || strlen($fin) < 5 || $fin <= $debut) return [];
+
+        return CreneauEmploiDuTemps::with('emploiDuTemps.classe')
+            ->where('jour', $this->jour)
+            ->where('heure_debut', '<', $fin . ':00')
+            ->where('heure_fin', '>', $debut . ':00')
+            ->when($this->creneauId, fn ($q) => $q->where('id', '!=', $this->creneauId))
+            ->whereHas('emploiDuTemps', function ($q) use ($edt) {
+                $q->where('annee_academique_id', $edt->annee_academique_id)
+                  ->where('type_planning', $edt->type_planning);
+                if ($edt->type_planning === 'hebdomadaire') {
+                    $q->where('semaine', $edt->semaine);
+                } else {
+                    $q->where('semestre', $edt->semestre);
+                }
+            })
+            ->get()
+            ->unique('personnel_etablissement_id')
+            ->mapWithKeys(fn ($c) => [$c->personnel_etablissement_id => sprintf(
+                'Ce formateur est déjà pris le %s de %s à %s (classe %s%s).',
+                $c->jour,
+                substr($c->heure_debut, 0, 5),
+                substr($c->heure_fin, 0, 5),
+                $c->emploiDuTemps?->classe?->libelle ?? '—',
+                $c->contenu ? ', ' . $c->contenu : ''
+            )])
+            ->all();
     }
 
     private function requeteEdtCourant()
@@ -341,6 +381,19 @@ class GestionEmploiDuTemps extends Component
             'formateurId.required' => 'Veuillez sélectionner un formateur.',
             'formateurId.exists'   => 'Le formateur sélectionné est invalide.',
         ]);
+
+        $debut = substr($this->heureDebut, 0, 5);
+        $fin   = substr($this->heureFin, 0, 5);
+
+        if ($fin <= $debut) {
+            $this->addError('heureFin', 'L\'heure de fin doit être après l\'heure de début.');
+            return;
+        }
+
+        if ($message = $this->formateursOccupes[$this->formateurId] ?? null) {
+            $this->addError('formateurId', $message);
+            return;
+        }
 
         $ressourceId  = null;
         $competenceId = null;
